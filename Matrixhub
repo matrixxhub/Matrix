@@ -47,7 +47,7 @@ title.BackgroundTransparency = 1
 title.Position = UDim2.fromOffset(12, 12)
 title.Size = UDim2.new(1, -24, 0, 30)
 title.Font = Enum.Font.Code
-title.Text = "MATRIX // ACCESS PROTOCOL"
+title.Text = "matrix-hub // ACCESS PROTOCOL"
 title.TextColor3 = Color3.fromRGB(80, 255, 150)
 title.TextSize = 17
 title.Parent = frame
@@ -178,7 +178,7 @@ local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
-    Title = "MATRIX",
+    Title = "matrix-hub",
     Author = "SANOX",
     Font = Enum.Font.Code,
     Folder = "MATRIXHUB",
@@ -187,7 +187,7 @@ MATRIXHUB_UI:CreateWindow({
     NewElements = true,
     HideSearchBar = false,
     OpenButton = {
-        Title = "MATRIX",
+        Title = "matrix-hub",
         Icon = "ghost",
         CornerRadius = UDim.new(0, 14),
         StrokeThickness = 1.1,
@@ -201,21 +201,27 @@ MATRIXHUB_UI:CreateWindow({
 MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
 MATRIXHUB_UI:SetTheme("Emerald")
 
--- MATRIX DIGITAL RAIN: efecto decorativo ligero y limitado a 12.5 actualizaciones por segundo.
+-- MATRIX-HUB DIGITAL RAIN: solo dentro de la ventana abierta y expandida.
 do
-    local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-    local oldRain = playerGui:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
+    local oldRain = MATRIXHUB.UIElements.Main:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
     if oldRain then oldRain:Destroy() end
 
-    local rainGui = Instance.new("ScreenGui")
-    rainGui.Name = "MATRIXHUB_DIGITAL_LAYER"
-    rainGui.IgnoreGuiInset = true
-    rainGui.ResetOnSpawn = false
-    rainGui.DisplayOrder = 998
-    rainGui.Parent = playerGui
+    local mainWindow = MATRIXHUB.UIElements.Main
+    mainWindow.ClipsDescendants = true
+
+    local rainFrame = Instance.new("Frame")
+    rainFrame.Name = "MATRIXHUB_DIGITAL_LAYER"
+    rainFrame.BackgroundTransparency = 1
+    rainFrame.BorderSizePixel = 0
+    rainFrame.Position = UDim2.fromScale(0, 0)
+    rainFrame.Size = UDim2.fromScale(1, 1)
+    rainFrame.ClipsDescendants = true
+    rainFrame.Active = false
+    rainFrame.Selectable = false
+    rainFrame.ZIndex = 0
+    rainFrame.Parent = mainWindow
 
     local glyphs = {"0", "1", "X", "7", "M", "A", "T", "R", "I", "C"}
     local columns = {}
@@ -226,11 +232,11 @@ do
         for n = 1, 10 do
             stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
         end
-        return table.concat(stream, "\n")
+        return table.concat(stream, "\\n")
     end
 
-    -- Seis columnas discretas: tres por cada borde de la pantalla.
-    local xPositions = {0.015, 0.045, 0.075, 0.895, 0.925, 0.955}
+    -- Seis columnas dentro de los bordes de la ventana.
+    local xPositions = {0.025, 0.065, 0.105, 0.865, 0.905, 0.945}
     for i, x in ipairs(xPositions) do
         local label = Instance.new("TextLabel")
         label.Name = "DataStream_" .. i
@@ -249,7 +255,7 @@ do
         label.Selectable = false
         label.ZIndex = 1
         label.Text = randomStream()
-        label.Parent = rainGui
+        label.Parent = rainFrame
 
         columns[#columns + 1] = {
             Label = label,
@@ -263,8 +269,19 @@ do
     local accumulator = 0
     local rainConnection
     rainConnection = RunService.Heartbeat:Connect(function(dt)
-        if not rainGui.Parent then
+        if not mainWindow.Parent or not rainFrame.Parent then
             if rainConnection then rainConnection:Disconnect() end
+            return
+        end
+
+        -- La cascada solo se muestra cuando el menú está abierto y en tamaño grande.
+        local expanded = mainWindow.Visible
+            and mainWindow.AbsoluteSize.X >= 300
+            and mainWindow.AbsoluteSize.Y >= 250
+
+        rainFrame.Visible = expanded
+        if not expanded then
+            accumulator = 0
             return
         end
 
@@ -1147,7 +1164,7 @@ end
 local function getGameName()
     local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
     if ok and info and info.Name then return info.Name end
-    return "MATRIXHUB"
+    return "matrix-hub"
 end
 local avatarThumb = "rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=420&h=420"
 local gameThumb = "rbxthumb://type=GameIcon&id="..game.GameId.."&w=512&h=512"
