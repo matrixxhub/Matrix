@@ -1,4 +1,4 @@
--- MATRIXHUB // ACCESS PROTOCOL
+-- MATRIX // ACCESS PROTOCOL
 -- Nota: las keys estan dentro del cliente; esto es un bloqueo basico, no una
 -- autenticacion segura contra alguien que pueda inspeccionar o modificar el script.
 local MATRIXHUB_KEYS = {
@@ -47,7 +47,7 @@ title.BackgroundTransparency = 1
 title.Position = UDim2.fromOffset(12, 12)
 title.Size = UDim2.new(1, -24, 0, 30)
 title.Font = Enum.Font.Code
-title.Text = "MATRIXHUB // ACCESS PROTOCOL"
+title.Text = "MATRIX // ACCESS PROTOCOL"
 title.TextColor3 = Color3.fromRGB(80, 255, 150)
 title.TextSize = 17
 title.Parent = frame
@@ -178,8 +178,8 @@ local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
-    Title = "MATRIXHUB // NEXUS <font color='#39FF88'>[SYSTEM ONLINE]</font>",
-    Author = "MATRIX DIVISION",
+    Title = "MATRIX",
+    Author = "SANOX",
     Font = Enum.Font.Code,
     Folder = "MATRIXHUB",
     Acrylic = false,
@@ -187,7 +187,7 @@ MATRIXHUB_UI:CreateWindow({
     NewElements = true,
     HideSearchBar = false,
     OpenButton = {
-        Title = "ACCESS NEXUS",
+        Title = "MATRIX",
         Icon = "ghost",
         CornerRadius = UDim.new(0, 14),
         StrokeThickness = 1.1,
@@ -201,7 +201,7 @@ MATRIXHUB_UI:CreateWindow({
 MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
 MATRIXHUB_UI:SetTheme("Emerald")
 
--- MATRIX VISUAL LAYER: lluvia de caracteres decorativa, sin alterar funciones.
+-- MATRIX DIGITAL RAIN: efecto decorativo ligero y limitado a 12.5 actualizaciones por segundo.
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -217,55 +217,69 @@ do
     rainGui.DisplayOrder = 998
     rainGui.Parent = playerGui
 
-    local glyphs = {"0","1","X","7","M","A","T","R","I","C","//","::"}
+    local glyphs = {"0", "1", "X", "7", "M", "A", "T", "R", "I", "C"}
     local columns = {}
     local rng = Random.new()
 
-    for i = 1, 8 do
+    local function randomStream()
+        local stream = table.create(10)
+        for n = 1, 10 do
+            stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
+        end
+        return table.concat(stream, "\n")
+    end
+
+    -- Seis columnas discretas: tres por cada borde de la pantalla.
+    local xPositions = {0.015, 0.045, 0.075, 0.895, 0.925, 0.955}
+    for i, x in ipairs(xPositions) do
         local label = Instance.new("TextLabel")
         label.Name = "DataStream_" .. i
         label.BackgroundTransparency = 1
         label.BorderSizePixel = 0
-        label.Size = UDim2.new(0, 22, 0, 210)
-        label.Position = UDim2.new((i <= 4) and (0.012 + (i-1)*0.022) or (0.90 + (i-5)*0.022), 0, rng:NextNumber(-0.8, 0.2), 0)
+        label.Size = UDim2.new(0, 18, 0, 145)
+        local initialY = rng:NextNumber(-0.9, 0.15)
+        label.Position = UDim2.new(x, 0, initialY, 0)
         label.Font = Enum.Font.Code
-        label.TextSize = 14
+        label.TextSize = 12
         label.TextColor3 = Color3.fromRGB(0, 210, 105)
-        label.TextTransparency = 0.58
+        label.TextTransparency = 0.68
         label.TextWrapped = true
         label.TextYAlignment = Enum.TextYAlignment.Top
         label.Active = false
         label.Selectable = false
         label.ZIndex = 1
+        label.Text = randomStream()
         label.Parent = rainGui
 
-        local stream = {}
-        for n = 1, 15 do
-            stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
-        end
-        label.Text = table.concat(stream, "\n")
-        columns[#columns+1] = {Label = label, Speed = rng:NextNumber(0.12, 0.28), Offset = 0}
+        columns[#columns + 1] = {
+            Label = label,
+            X = x,
+            Y = initialY,
+            Speed = rng:NextNumber(0.12, 0.24)
+        }
     end
 
-    local elapsed = 0
+    local updateInterval = 1 / 12.5
+    local accumulator = 0
     local rainConnection
-    rainConnection = RunService.RenderStepped:Connect(function(dt)
+    rainConnection = RunService.Heartbeat:Connect(function(dt)
         if not rainGui.Parent then
             if rainConnection then rainConnection:Disconnect() end
             return
         end
-        elapsed += dt
+
+        accumulator += dt
+        if accumulator < updateInterval then return end
+        local step = math.min(accumulator, 0.12)
+        accumulator = 0
+
         for _, column in ipairs(columns) do
-            column.Offset += dt * column.Speed
-            if column.Offset >= 1.15 then
-                column.Offset = -0.25
-                local stream = {}
-                for n = 1, 15 do
-                    stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
-                end
-                column.Label.Text = table.concat(stream, "\n")
+            column.Y += step * column.Speed
+            if column.Y >= 1.05 then
+                column.Y = -0.22
+                column.Label.Text = randomStream()
             end
-            column.Label.Position = UDim2.new(column.Label.Position.X.Scale, 0, column.Offset, 0)
+            column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
         end
     end)
 end
@@ -1913,7 +1927,7 @@ Settings:Input({
 })
 
 local KillSoundEnabled = false
-local SelectedKillSound = "Onichaaan"
+local SelectedKillSound = "BESO"
 local KillSoundVolume = 1
 -- Estas variables se declaran antes de PlayKillSound para que el detector
 -- de kills y los controles de la interfaz compartan el mismo estado.
@@ -1921,7 +1935,7 @@ local CustomKillSoundId = ""
 local UseCustomKillSoundId = false
 
 local KillSounds = {
-    { Name = "LESLY", Id = "122147831931781" },
+    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
