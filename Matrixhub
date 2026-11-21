@@ -82,7 +82,7 @@ panelConstraint.MinSize = Vector2.new(280, 270)
 panelConstraint.Parent = panel
 
 local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 15)
+panelCorner.CornerRadius = UDim.new(0, 25)
 panelCorner.Parent = panel
 
 local panelStroke = Instance.new("UIStroke")
