@@ -178,6 +178,7 @@ discordButton.Activated:Connect(function()
     end
 end)
 
+local launchMatrixHub
 local loading = false
 local rainConnection
 rainConnection = RunService.Heartbeat:Connect(function(dt)
@@ -268,10 +269,14 @@ startButton.Activated:Connect(function()
         rainConnection = nil
     end
     startupGui:Destroy()
+    if launchMatrixHub then
+        task.spawn(launchMatrixHub)
+    end
 end)
 
 -- FIN DE LA PANTALLA DE INICIO
 
+launchMatrixHub = function()
 local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 local  MATRIXHUB =
@@ -2377,3 +2382,4 @@ Movimiento:Slider({
         MATRIXHUB_speed = v
     end
 })
+end -- FIN DE launchMatrixHub
