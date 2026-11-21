@@ -178,7 +178,6 @@ discordButton.Activated:Connect(function()
     end
 end)
 
-local launchMatrixHub
 local loading = false
 local rainConnection
 rainConnection = RunService.Heartbeat:Connect(function(dt)
@@ -205,6 +204,8 @@ rainConnection = RunService.Heartbeat:Connect(function(dt)
         column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
     end
 end)
+
+local launchMatrixHub
 
 startButton.Activated:Connect(function()
     if loading then return end
@@ -264,11 +265,16 @@ startButton.Activated:Connect(function()
         task.wait(0.035)
     end
 
+    -- Deja que el 100% se dibuje antes de mostrar el panel principal.
+    task.wait(0.15)
+
     if rainConnection then
         rainConnection:Disconnect()
         rainConnection = nil
     end
     startupGui:Destroy()
+
+    -- El panel principal se crea únicamente después de completar la carga.
     if launchMatrixHub then
         task.spawn(launchMatrixHub)
     end
@@ -2382,4 +2388,5 @@ Movimiento:Slider({
         MATRIXHUB_speed = v
     end
 })
+
 end -- FIN DE launchMatrixHub
