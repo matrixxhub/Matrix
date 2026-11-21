@@ -82,7 +82,7 @@ panelConstraint.MinSize = Vector2.new(280, 270)
 panelConstraint.Parent = panel
 
 local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 25)
+panelCorner.CornerRadius = UDim.new(0, 15)
 panelCorner.Parent = panel
 
 local panelStroke = Instance.new("UIStroke")
@@ -291,7 +291,7 @@ MATRIXHUB_UI:CreateWindow({
     Author = "SANOX",
     Font = Enum.Font.Code,
     Folder = "MATRIXHUB",
-    Acrylic = false,
+    Acrylic = true, -- Efecto translucido tipo glassmorphism
     Transparent = false,
     NewElements = true,
     HideSearchBar = false,
@@ -975,6 +975,85 @@ Settings:Dropdown({
         MATRIXHUB_UI:SetTheme(v)
     end
 })
+
+-- MATRIX HUB // MINI STATUS HUD (solo estetico, actualizacion ligera)
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local oldHud = playerGui:FindFirstChild("MATRIXHUB_STATUS_HUD")
+    if oldHud then oldHud:Destroy() end
+
+    local hudGui = Instance.new("ScreenGui")
+    hudGui.Name = "MATRIXHUB_STATUS_HUD"
+    hudGui.ResetOnSpawn = false
+    hudGui.IgnoreGuiInset = true
+    hudGui.DisplayOrder = 998
+    hudGui.Enabled = false
+    hudGui.Parent = playerGui
+
+    local hud = Instance.new("Frame")
+    hud.Name = "StatusPanel"
+    hud.AnchorPoint = Vector2.new(1, 0)
+    hud.Position = UDim2.new(1, -14, 0, 14)
+    hud.Size = UDim2.fromOffset(172, 54)
+    hud.BackgroundColor3 = Color3.fromRGB(3, 15, 10)
+    hud.BackgroundTransparency = 0.16
+    hud.BorderSizePixel = 0
+    hud.Parent = hudGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 9)
+    corner.Parent = hud
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 210, 105)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.2
+    stroke.Parent = hud
+
+    local info = Instance.new("TextLabel")
+    info.Name = "LiveInfo"
+    info.BackgroundTransparency = 1
+    info.Position = UDim2.fromOffset(9, 5)
+    info.Size = UDim2.new(1, -18, 1, -10)
+    info.Font = Enum.Font.Code
+    info.TextSize = 12
+    info.TextColor3 = Color3.fromRGB(115, 255, 170)
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Center
+    info.Text = "MATRIX // ONLINE\\nFPS: --  |  --:--:--"
+    info.Parent = hud
+
+    local frames = 0
+    local elapsed = 0
+    local fps = 0
+    local hudConnection
+    hudConnection = RunService.RenderStepped:Connect(function(dt)
+        if not hudGui.Parent then
+            if hudConnection then hudConnection:Disconnect() end
+            return
+        end
+        frames += 1
+        elapsed += dt
+        if elapsed >= 1 then
+            fps = math.floor(frames / elapsed + 0.5)
+            frames = 0
+            elapsed = 0
+            info.Text = "MATRIX // ONLINE\\nFPS: " .. fps .. "  |  " .. os.date("%H:%M:%S")
+        end
+    end)
+
+    Settings:Toggle({
+        Title = "LIVE STATUS HUD",
+        Icon = "activity",
+        Default = false,
+        Callback = function(enabled)
+            hudGui.Enabled = enabled
+        end
+    })
+end
 
 Settings:Button({
     Title = "RECONNECT SESSION",
