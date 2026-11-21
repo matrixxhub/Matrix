@@ -1857,6 +1857,10 @@ Settings:Input({
 local KillSoundEnabled = false
 local SelectedKillSound = "Onichaaan"
 local KillSoundVolume = 1
+-- Estas variables se declaran antes de PlayKillSound para que el detector
+-- de kills y los controles de la interfaz compartan el mismo estado.
+local CustomKillSoundId = ""
+local UseCustomKillSoundId = false
 
 local KillSounds = {
     { Name = "ES HACKER",       Id = "126835547301650" },
@@ -1889,8 +1893,15 @@ end
 
 local function PlayKillSound()
     if not KillSoundEnabled then return end
+
+    local soundId = GetKillSoundIdByName(SelectedKillSound)
+    if UseCustomKillSoundId and CustomKillSoundId ~= "" then
+        soundId = CustomKillSoundId
+    end
+    if not soundId or soundId == "" then return end
+
     KillSoundPlayer:Stop()
-    KillSoundPlayer.SoundId = "rbxassetid://" .. GetKillSoundIdByName(SelectedKillSound)
+    KillSoundPlayer.SoundId = "rbxassetid://" .. tostring(soundId)
     KillSoundPlayer.Volume = KillSoundVolume
     KillSoundPlayer:Play()
 end
@@ -1956,30 +1967,6 @@ SetupKillSoundDetector()
 -- SECCION INDEPENDIENTE: SONIDOS
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
 Sonidos:Section({ Title = "SONIDO DE MUERTE", Icon = "music", Opened = true })
-
--- Permite usar un ID personalizado o uno de los sonidos incluidos.
-local CustomKillSoundId = ""
-local UseCustomKillSoundId = false
-
-local function GetActiveKillSoundId()
-    if UseCustomKillSoundId and CustomKillSoundId ~= "" then
-        return CustomKillSoundId
-    end
-    return GetKillSoundIdByName(SelectedKillSound)
-end
-
--- Reemplaza únicamente la selección del audio; el detector de kills existente
--- sigue siendo el mismo y continúa llamando a TryPlayKillSound().
-local function PlayKillSound()
-    if not KillSoundEnabled then return end
-    local soundId = GetActiveKillSoundId()
-    if not soundId or soundId == "" then return end
-
-    KillSoundPlayer:Stop()
-    KillSoundPlayer.SoundId = "rbxassetid://" .. tostring(soundId)
-    KillSoundPlayer.Volume = KillSoundVolume
-    KillSoundPlayer:Play()
-end
 
 Sonidos:Toggle({
     Title = "ACTIVAR SONIDO DE MUERTE",
