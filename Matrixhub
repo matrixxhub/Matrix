@@ -1,3 +1,141 @@
+-- MATRIXHUB | KEY SYSTEM
+-- Nota: las keys estan dentro del cliente; esto es un bloqueo basico, no una
+-- autenticacion segura contra alguien que pueda inspeccionar o modificar el script.
+local MATRIXHUB_KEYS = {
+    ["SANOX-MATRIX-7K92-XP41"] = true,
+    ["MATRIX-2026-LQ83-9ZKA"] = true,
+    ["SANOX-HUB-52MX-8PQR"] = true,
+    ["MXHUB-K7T9-42NA-X621"] = true,
+    ["MATRIX-SNX-93QP-7LKA"] = true
+}
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local oldKeyGui = PlayerGui:FindFirstChild("MATRIXHUB_KEY_SYSTEM")
+if oldKeyGui then
+    oldKeyGui:Destroy()
+end
+
+local keyGui = Instance.new("ScreenGui")
+keyGui.Name = "MATRIXHUB_KEY_SYSTEM"
+keyGui.ResetOnSpawn = false
+keyGui.IgnoreGuiInset = true
+keyGui.DisplayOrder = 10000
+keyGui.Parent = PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Name = "Main"
+frame.Size = UDim2.fromOffset(310, 205)
+frame.Position = UDim2.new(0.5, -155, 0.5, -102)
+frame.BackgroundColor3 = Color3.fromRGB(5, 18, 12)
+frame.BorderSizePixel = 0
+frame.Parent = keyGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = frame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 220, 100)
+stroke.Thickness = 2
+stroke.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.BackgroundTransparency = 1
+title.Position = UDim2.fromOffset(12, 12)
+title.Size = UDim2.new(1, -24, 0, 30)
+title.Font = Enum.Font.GothamBold
+title.Text = "MATRIXHUB | KEY SYSTEM"
+title.TextColor3 = Color3.fromRGB(80, 255, 150)
+title.TextSize = 17
+title.Parent = frame
+
+local info = Instance.new("TextLabel")
+info.BackgroundTransparency = 1
+info.Position = UDim2.fromOffset(15, 45)
+info.Size = UDim2.new(1, -30, 0, 22)
+info.Font = Enum.Font.Gotham
+info.Text = "Introduce una de las 5 keys autorizadas"
+info.TextColor3 = Color3.fromRGB(220, 220, 220)
+info.TextSize = 11
+info.Parent = frame
+
+local keyBox = Instance.new("TextBox")
+keyBox.Name = "KeyInput"
+keyBox.Position = UDim2.fromOffset(18, 78)
+keyBox.Size = UDim2.new(1, -36, 0, 38)
+keyBox.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
+keyBox.BorderSizePixel = 0
+keyBox.ClearTextOnFocus = false
+keyBox.Font = Enum.Font.Gotham
+keyBox.PlaceholderText = "MATRIX-XXXX-XXXX"
+keyBox.Text = ""
+keyBox.TextColor3 = Color3.new(1, 1, 1)
+keyBox.PlaceholderColor3 = Color3.fromRGB(130, 150, 140)
+keyBox.TextSize = 13
+keyBox.Parent = frame
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 8)
+boxCorner.Parent = keyBox
+
+local submit = Instance.new("TextButton")
+submit.Name = "Verify"
+submit.Position = UDim2.fromOffset(18, 126)
+submit.Size = UDim2.new(1, -36, 0, 34)
+submit.BackgroundColor3 = Color3.fromRGB(0, 145, 65)
+submit.BorderSizePixel = 0
+submit.Font = Enum.Font.GothamBold
+submit.Text = "VERIFICAR KEY"
+submit.TextColor3 = Color3.new(1, 1, 1)
+submit.TextSize = 13
+submit.Parent = frame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 8)
+buttonCorner.Parent = submit
+
+local status = Instance.new("TextLabel")
+status.BackgroundTransparency = 1
+status.Position = UDim2.fromOffset(12, 165)
+status.Size = UDim2.new(1, -24, 0, 25)
+status.Font = Enum.Font.Gotham
+status.Text = "Esperando key..."
+status.TextColor3 = Color3.fromRGB(190, 190, 190)
+status.TextSize = 11
+status.Parent = frame
+
+local MATRIXHUB_AUTHORIZED = false
+local function verifyMatrixHubKey()
+    local enteredKey = string.upper((keyBox.Text or ""):gsub("^%s*(.-)%s*$", "%1"))
+    if MATRIXHUB_KEYS[enteredKey] then
+        MATRIXHUB_AUTHORIZED = true
+        status.Text = "KEY CORRECTA | CARGANDO..."
+        status.TextColor3 = Color3.fromRGB(80, 255, 150)
+        submit.Text = "AUTORIZADO"
+        submit.Active = false
+        submit.AutoButtonColor = false
+    else
+        status.Text = "KEY INCORRECTA. Intenta otra vez."
+        status.TextColor3 = Color3.fromRGB(255, 95, 95)
+    end
+end
+
+submit.Activated:Connect(verifyMatrixHubKey)
+keyBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        verifyMatrixHubKey()
+    end
+end)
+
+while not MATRIXHUB_AUTHORIZED do
+    task.wait(0.1)
+end
+
+keyGui:Destroy()
+-- FIN DEL KEY SYSTEM
 
 local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
