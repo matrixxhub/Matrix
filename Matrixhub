@@ -1953,8 +1953,36 @@ local function SetupKillSoundDetector()
 end
 SetupKillSoundDetector()
 
-AutoKills:Toggle({
-    Title = "SONIDO DE KILL",
+-- SECCION INDEPENDIENTE: SONIDOS
+local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
+Sonidos:Section({ Title = "SONIDO DE MUERTE", Icon = "music", Opened = true })
+
+-- Permite usar un ID personalizado o uno de los sonidos incluidos.
+local CustomKillSoundId = ""
+local UseCustomKillSoundId = false
+
+local function GetActiveKillSoundId()
+    if UseCustomKillSoundId and CustomKillSoundId ~= "" then
+        return CustomKillSoundId
+    end
+    return GetKillSoundIdByName(SelectedKillSound)
+end
+
+-- Reemplaza únicamente la selección del audio; el detector de kills existente
+-- sigue siendo el mismo y continúa llamando a TryPlayKillSound().
+local function PlayKillSound()
+    if not KillSoundEnabled then return end
+    local soundId = GetActiveKillSoundId()
+    if not soundId or soundId == "" then return end
+
+    KillSoundPlayer:Stop()
+    KillSoundPlayer.SoundId = "rbxassetid://" .. tostring(soundId)
+    KillSoundPlayer.Volume = KillSoundVolume
+    KillSoundPlayer:Play()
+end
+
+Sonidos:Toggle({
+    Title = "ACTIVAR SONIDO DE MUERTE",
     Value = false,
     Callback = function(v)
         KillSoundEnabled = v
@@ -1962,22 +1990,47 @@ AutoKills:Toggle({
     end
 })
 
+Sonidos:Input({
+    Title = "ID PERSONALIZADO DEL SONIDO",
+    Value = "",
+    Placeholder = "Ejemplo: 1234567890",
+    Callback = function(text)
+        local digits = tostring(text or ""):gsub("%D", "")
+        CustomKillSoundId = digits
+        UseCustomKillSoundId = digits ~= ""
+    end
+})
+
 local KillSoundDropdownValues = {}
 for _, s in ipairs(KillSounds) do table.insert(KillSoundDropdownValues, s.Name) end
 
-AutoKills:Dropdown({
-    Title = "SONIDO DE MUERTE",
+Sonidos:Dropdown({
+    Title = "SONIDOS PREDETERMINADOS",
     Values = KillSoundDropdownValues,
-    Value = "",
-    Callback = function(selected) SelectedKillSound = selected end
+    Value = KillSounds[1].Name,
+    Callback = function(selected)
+        SelectedKillSound = selected
+        UseCustomKillSoundId = false
+    end
 })
 
-AutoKills:Slider({
+Sonidos:Slider({
     Title = "VOLUMEN SONIDO",
     Value = { Min = 1, Max = 3, Default = 1 },
     Callback = function(v)
         KillSoundVolume = v
         KillSoundPlayer.Volume = v
+    end
+})
+
+Sonidos:Button({
+    Title = "PROBAR SONIDO",
+    Icon = "play",
+    Callback = function()
+        local wasEnabled = KillSoundEnabled
+        KillSoundEnabled = true
+        PlayKillSound()
+        KillSoundEnabled = wasEnabled
     end
 })
 
