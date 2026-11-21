@@ -62,39 +62,140 @@ Settings:Button({
 
 Settings:Section({ Title = "RENDIMIENTO", Icon = "zap" })
 
-local lowGraphicsCache = {}
+-- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
+-- Se guardan los valores originales para no activar efectos que ya estaban apagados.
+local Lighting = game:GetService("Lighting")
+local originalGlobalShadows = nil
+local graphicsCache = {}
+local fpsBoostEnabled = false
+local antiLagEnabled = false
+local refreshVersion = 0
+
+local function isEffectObject(obj)
+    return obj:IsA("ParticleEmitter")
+        or obj:IsA("Trail")
+        or obj:IsA("Smoke")
+        or obj:IsA("Fire")
+        or obj:IsA("Sparkles")
+        or obj:IsA("Explosion")
+end
+
+local function remember(obj, property)
+    local saved = graphicsCache[obj]
+    if not saved then
+        saved = {}
+        graphicsCache[obj] = saved
+    end
+    if saved[property] == nil then
+        local ok, value = pcall(function()
+            return obj[property]
+        end)
+        if ok then
+            saved[property] = value
+        end
+    end
+    return saved
+end
+
+local function applyGraphicsToObject(obj)
+    if not obj or not obj.Parent then return end
+
+    if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
+        local saved = remember(obj, "Material")
+        remember(obj, "CastShadow")
+
+        pcall(function()
+            if fpsBoostEnabled then
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.CastShadow = false
+            else
+                obj.Material = saved.Material
+                obj.CastShadow = saved.CastShadow
+            end
+        end)
+
+    elseif obj:IsA("Decal") or obj:IsA("Texture") then
+        local saved = remember(obj, "Transparency")
+        pcall(function()
+            obj.Transparency = fpsBoostEnabled and 1 or saved.Transparency
+        end)
+
+    elseif isEffectObject(obj) then
+        local saved = remember(obj, "Enabled")
+        pcall(function()
+            if fpsBoostEnabled or antiLagEnabled then
+                obj.Enabled = false
+            else
+                obj.Enabled = saved.Enabled
+            end
+        end)
+    end
+end
+
+local function restoreGraphicsObject(obj, saved)
+    if not obj or not obj.Parent or not saved then return end
+    for property, value in pairs(saved) do
+        pcall(function()
+            obj[property] = value
+        end)
+    end
+end
+
+local function refreshGraphics()
+    refreshVersion += 1
+    local myVersion = refreshVersion
+
+    task.spawn(function()
+        if fpsBoostEnabled then
+            if originalGlobalShadows == nil then
+                originalGlobalShadows = Lighting.GlobalShadows
+            end
+            pcall(function() Lighting.GlobalShadows = false end)
+        elseif originalGlobalShadows ~= nil then
+            pcall(function() Lighting.GlobalShadows = originalGlobalShadows end)
+        end
+
+        if not fpsBoostEnabled and not antiLagEnabled then
+            local processed = 0
+            for obj, saved in pairs(graphicsCache) do
+                if myVersion ~= refreshVersion then return end
+                restoreGraphicsObject(obj, saved)
+                processed += 1
+                if processed % 100 == 0 then task.wait() end
+            end
+
+            if myVersion ~= refreshVersion then return end
+            table.clear(graphicsCache)
+            if originalGlobalShadows ~= nil then
+                pcall(function() Lighting.GlobalShadows = originalGlobalShadows end)
+                originalGlobalShadows = nil
+            end
+            return
+        end
+
+        local descendants = workspace:GetDescendants()
+        for index, obj in ipairs(descendants) do
+            if myVersion ~= refreshVersion then return end
+            applyGraphicsToObject(obj)
+            if index % 100 == 0 then task.wait() end
+        end
+    end)
+end
+
+-- Los objetos que aparezcan después también reciben el estado activo.
+workspace.DescendantAdded:Connect(function(obj)
+    if fpsBoostEnabled or antiLagEnabled then
+        applyGraphicsToObject(obj)
+    end
+end)
+
 Settings:Toggle({
     Title = "FPS BOOST",
     Icon = "flame",
     Default = false,
-    Callback = function(v)
-        local Lighting = game:GetService("Lighting")
-        if v then
-            Lighting.GlobalShadows = false
-            Lighting.FogEnd = 1000000
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
-                    if not lowGraphicsCache[obj] then lowGraphicsCache[obj] = obj.Material end
-                    obj.Material = Enum.Material.SmoothPlastic
-                    obj.CastShadow = false
-                elseif obj:IsA("Decal") or obj:IsA("Texture") then
-                    obj.Transparency = 1
-                elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-                    obj.Enabled = false
-                end
-            end
-        else
-            Lighting.GlobalShadows = true
-            Lighting.FogEnd = 100000
-            for obj, mat in pairs(lowGraphicsCache) do
-                if obj and obj.Parent then obj.Material = mat obj.CastShadow = true end
-            end
-            lowGraphicsCache = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then obj.Enabled = true end
-                if obj:IsA("Decal") or obj:IsA("Texture") then obj.Transparency = 0 end
-            end
-        end
+    Callback = function(enabled)
+        fpsBoostEnabled = enabled
+        refreshGraphics()
     end
 })
 
@@ -102,12 +203,9 @@ Settings:Toggle({
     Title = "ANTI LAG",
     Icon = "wind",
     Default = false,
-    Callback = function(v)
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Explosion") then
-                obj.Enabled = not v
-            end
-        end
+    Callback = function(enabled)
+        antiLagEnabled = enabled
+        refreshGraphics()
     end
 })
 
