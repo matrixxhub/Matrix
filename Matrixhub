@@ -1855,7 +1855,7 @@ Settings:Input({
 })
 
 local KillSoundEnabled = false
-local SelectedKillSound = "Onichaaan"
+local SelectedKillSound = "ES HACKER"
 local KillSoundVolume = 1
 -- Estas variables se declaran antes de PlayKillSound para que el detector
 -- de kills y los controles de la interfaz compartan el mismo estado.
@@ -1889,7 +1889,11 @@ local function GetKillSoundIdByName(soundName)
     for _, s in ipairs(KillSounds) do
         if s.Name == soundName then return s.Id end
     end
-    return KillSounds[1].Id
+    -- Respaldo seguro: no seleccionar el sonido secreto por defecto.
+    for _, s in ipairs(KillSounds) do
+        if s.Name == "ES HACKER" then return s.Id end
+    end
+    return ""
 end
 
 local function PlayKillSound()
@@ -1989,13 +1993,47 @@ Sonidos:Input({
     end
 })
 
+-- El sonido LESLY permanece oculto hasta introducir el codigo secreto.
+local leslySoundUnlocked = false
+
+Sonidos:Input({
+    Title = "CODIGO SECRETO",
+    Value = "",
+    Placeholder = "Introduce el codigo secreto",
+    Callback = function(text)
+        local secret = string.lower((tostring(text or ""):gsub("^%s*(.-)%s*$", "%1")))
+        if secret == "lesly" and not leslySoundUnlocked then
+            leslySoundUnlocked = true
+            local unlockedValues = {}
+            for _, sound in ipairs(KillSounds) do
+                table.insert(unlockedValues, sound.Name)
+            end
+            Sonidos:Dropdown({
+                Title = "SONIDOS PREDETERMINADOS + LESLY",
+                Values = unlockedValues,
+                Value = "LESLY",
+                Callback = function(selected)
+                    if leslySoundUnlocked then
+                        SelectedKillSound = selected
+                        UseCustomKillSoundId = false
+                    end
+                end
+            })
+        end
+    end
+})
+
 local KillSoundDropdownValues = {}
-for _, s in ipairs(KillSounds) do table.insert(KillSoundDropdownValues, s.Name) end
+for _, s in ipairs(KillSounds) do
+    if s.Name ~= "LESLY" then
+        table.insert(KillSoundDropdownValues, s.Name)
+    end
+end
 
 Sonidos:Dropdown({
     Title = "SONIDOS PREDETERMINADOS",
     Values = KillSoundDropdownValues,
-    Value = KillSounds[1].Name,
+    Value = "ES HACKER",
     Callback = function(selected)
         SelectedKillSound = selected
         UseCustomKillSoundId = false
