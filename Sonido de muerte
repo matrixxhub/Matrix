@@ -1,0 +1,257 @@
+MUERTE PERSONALIZADA
+Módulo independiente para un juego propio en Roblox Studio
+===========================================================
+
+IMPORTANTE
+----------
+Este módulo es para una experiencia que tú creas o administras en Roblox Studio.
+No modifica Matrixhub ni se conecta a Duelos. El juego debe registrar la baja desde
+el servidor para que el sonido se reproduzca de forma fiable.
+
+ESTRUCTURA
+----------
+1. En ReplicatedStorage crea un RemoteEvent llamado:
+   CustomKillSoundEvent
+
+2. En ServerScriptService crea un Script llamado:
+   CustomKillSoundServer
+
+3. En StarterPlayer > StarterPlayerScripts crea un LocalScript llamado:
+   CustomKillSoundClient
+
+4. En el sistema de combate de TU juego, cuando un jugador consiga una baja,
+   el servidor debe llamar:
+   CustomKillSoundEvent:FireClient(jugadorQueConsiguioLaBaja)
+
+   Si tu sistema usa la etiqueta estándar "creator" en el Humanoid del jugador
+   derrotado, el Script de servidor de abajo puede detectar esa etiqueta.
+
+------------------------------------------------------------
+SCRIPT 1: ServerScriptService > CustomKillSoundServer
+------------------------------------------------------------
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local killSoundEvent = ReplicatedStorage:WaitForChild("CustomKillSoundEvent")
+
+local function watchCharacter(victimPlayer, character)
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if not humanoid then
+        return
+    end
+
+    humanoid.Died:Connect(function()
+        local creatorTag = humanoid:FindFirstChild("creator")
+
+        if creatorTag and creatorTag:IsA("ObjectValue") then
+            local killer = creatorTag.Value
+
+            if killer and killer:IsA("Player") and killer ~= victimPlayer then
+                killSoundEvent:FireClient(killer)
+            end
+        end
+    end)
+end
+
+local function watchPlayer(player)
+    player.CharacterAdded:Connect(function(character)
+        watchCharacter(player, character)
+    end)
+
+    if player.Character then
+        task.spawn(watchCharacter, player, player.Character)
+    end
+end
+
+Players.PlayerAdded:Connect(watchPlayer)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    watchPlayer(player)
+end
+
+
+------------------------------------------------------------
+SCRIPT 2: StarterPlayerScripts > CustomKillSoundClient
+------------------------------------------------------------
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+local killSoundEvent = ReplicatedStorage:WaitForChild("CustomKillSoundEvent")
+
+-- Configuración inicial
+local enabled = false
+local audioId = ""
+local volume = 1
+
+local sound = Instance.new("Sound")
+sound.Name = "CustomKillSound"
+sound.Volume = volume
+sound.Looped = false
+sound.Parent = SoundService
+
+local function cleanAudioId(value)
+    -- Acepta tanto un ID simple como una dirección rbxassetid://
+    local digits = tostring(value):match("%d+")
+    return digits
+end
+
+local function playCustomSound()
+    if not enabled then
+        return
+    end
+
+    local id = cleanAudioId(audioId)
+    if not id then
+        return
+    end
+
+    sound:Stop()
+    sound.SoundId = "rbxassetid://" .. id
+    sound.Volume = math.clamp(volume, 0, 10)
+    sound:Play()
+end
+
+-- Interfaz sencilla
+local gui = Instance.new("ScreenGui")
+gui.Name = "CustomKillSoundGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Name = "Main"
+frame.Size = UDim2.fromOffset(270, 210)
+frame.Position = UDim2.new(0, 20, 0.5, -105)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
+
+local function makeLabel(text, y, height)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 0, height or 25)
+    label.Position = UDim2.fromOffset(10, y)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 15
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+    return label
+end
+
+local function makeButton(text, y)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -20, 0, 30)
+    button.Position = UDim2.fromOffset(10, y)
+    button.BackgroundColor3 = Color3.fromRGB(0, 130, 80)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 14
+    button.Font = Enum.Font.GothamBold
+    button.Text = text
+    button.Parent = frame
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = button
+
+    return button
+end
+
+makeLabel("MUERTE PERSONALIZADA", 8, 24)
+
+local idBox = Instance.new("TextBox")
+idBox.Size = UDim2.new(1, -20, 0, 30)
+idBox.Position = UDim2.fromOffset(10, 38)
+idBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+idBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+idBox.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+idBox.PlaceholderText = "Pega aquí el ID del audio"
+idBox.Text = ""
+idBox.ClearTextOnFocus = false
+idBox.TextSize = 13
+idBox.Font = Enum.Font.Gotham
+idBox.Parent = frame
+
+local idCorner = Instance.new("UICorner")
+idCorner.CornerRadius = UDim.new(0, 6)
+idCorner.Parent = idBox
+
+idBox.FocusLost:Connect(function()
+    audioId = idBox.Text
+end)
+
+local toggleButton = makeButton("ACTIVAR: NO", 76)
+toggleButton.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    toggleButton.Text = enabled and "ACTIVAR: SÍ" or "ACTIVAR: NO"
+    toggleButton.BackgroundColor3 = enabled
+        and Color3.fromRGB(0, 150, 80)
+        or Color3.fromRGB(100, 55, 55)
+end)
+
+local testButton = makeButton("PROBAR SONIDO", 112)
+testButton.MouseButton1Click:Connect(function()
+    audioId = idBox.Text
+    if cleanAudioId(audioId) then
+        local wasEnabled = enabled
+        enabled = true
+        playCustomSound()
+        enabled = wasEnabled
+    end
+end)
+
+makeLabel("VOLUMEN: 1.0", 148, 20)
+local volumeBox = Instance.new("TextBox")
+volumeBox.Size = UDim2.new(1, -20, 0, 28)
+volumeBox.Position = UDim2.fromOffset(10, 174)
+volumeBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+volumeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+volumeBox.Text = "1"
+volumeBox.TextSize = 13
+volumeBox.Font = Enum.Font.Gotham
+volumeBox.ClearTextOnFocus = false
+volumeBox.Parent = frame
+
+local volumeLabel = frame:FindFirstChildOfClass("TextLabel")
+volumeBox.FocusLost:Connect(function()
+    local newVolume = tonumber(volumeBox.Text)
+    if newVolume then
+        volume = math.clamp(newVolume, 0, 10)
+        sound.Volume = volume
+        volumeBox.Text = tostring(volume)
+        for _, child in ipairs(frame:GetChildren()) do
+            if child:IsA("TextLabel") and child.Text:match("^VOLUMEN:") then
+                child.Text = "VOLUMEN: " .. string.format("%.1f", volume)
+            end
+        end
+    else
+        volumeBox.Text = tostring(volume)
+    end
+end)
+
+killSoundEvent.OnClientEvent:Connect(playCustomSound)
+
+
+------------------------------------------------------------
+NOTAS Y SOLUCIÓN DE PROBLEMAS
+------------------------------------------------------------
+
+- El detector de servidor depende de que tu sistema de combate coloque un ObjectValue
+  llamado "creator" dentro del Humanoid derrotado, y que su Value sea el Player atacante.
+- Si tu juego no utiliza esa etiqueta, llama a
+  CustomKillSoundEvent:FireClient(jugadorQueConsiguioLaBaja)
+  directamente desde el código de servidor que confirma la eliminación.
+- El audio debe existir en Roblox, estar permitido para tu experiencia y ser accesible
+  por ella. Un ID privado o sin permisos puede no reproducirse.
+- El botón PROBAR SONIDO prueba el audio en tu cliente; no confirma que el ID tenga
+  permisos correctos en el juego publicado.
+- El volumen acepta valores entre 0 y 10.
+- Este módulo es independiente: no cambia ni reemplaza otros sonidos de tu juego.
