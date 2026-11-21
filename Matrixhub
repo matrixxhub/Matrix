@@ -1,4 +1,4 @@
--- MATRIXHUB | KEY SYSTEM
+-- MATRIXHUB // ACCESS PROTOCOL
 -- Nota: las keys estan dentro del cliente; esto es un bloqueo basico, no una
 -- autenticacion segura contra alguien que pueda inspeccionar o modificar el script.
 local MATRIXHUB_KEYS = {
@@ -46,8 +46,8 @@ local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
 title.Position = UDim2.fromOffset(12, 12)
 title.Size = UDim2.new(1, -24, 0, 30)
-title.Font = Enum.Font.GothamBold
-title.Text = "MATRIXHUB | KEY SYSTEM"
+title.Font = Enum.Font.Code
+title.Text = "MATRIXHUB // ACCESS PROTOCOL"
 title.TextColor3 = Color3.fromRGB(80, 255, 150)
 title.TextSize = 17
 title.Parent = frame
@@ -56,7 +56,7 @@ local info = Instance.new("TextLabel")
 info.BackgroundTransparency = 1
 info.Position = UDim2.fromOffset(15, 43)
 info.Size = UDim2.new(1, -30, 0, 30)
-info.Font = Enum.Font.GothamBold
+info.Font = Enum.Font.Code
 info.Text = "KEYS PROMOCIONADAS POR EL CREADOR: SANOX"
 info.TextColor3 = Color3.fromRGB(220, 220, 220)
 info.TextSize = 11
@@ -69,8 +69,8 @@ keyBox.Size = UDim2.new(1, -36, 0, 38)
 keyBox.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
 keyBox.BorderSizePixel = 0
 keyBox.ClearTextOnFocus = false
-keyBox.Font = Enum.Font.Gotham
-keyBox.PlaceholderText = "MATRIX-XXXX-XXXX"
+keyBox.Font = Enum.Font.Code
+keyBox.PlaceholderText = "ENTER ACCESS TOKEN"
 keyBox.Text = ""
 keyBox.TextColor3 = Color3.new(1, 1, 1)
 keyBox.PlaceholderColor3 = Color3.fromRGB(130, 150, 140)
@@ -87,8 +87,8 @@ submit.Position = UDim2.fromOffset(18, 130)
 submit.Size = UDim2.new(1, -36, 0, 34)
 submit.BackgroundColor3 = Color3.fromRGB(0, 145, 65)
 submit.BorderSizePixel = 0
-submit.Font = Enum.Font.GothamBold
-submit.Text = "VERIFICAR KEY"
+submit.Font = Enum.Font.Code
+submit.Text = "AUTHENTICATE"
 submit.TextColor3 = Color3.new(1, 1, 1)
 submit.TextSize = 13
 submit.Parent = frame
@@ -101,8 +101,8 @@ local status = Instance.new("TextLabel")
 status.BackgroundTransparency = 1
 status.Position = UDim2.fromOffset(12, 238)
 status.Size = UDim2.new(1, -24, 0, 25)
-status.Font = Enum.Font.Gotham
-status.Text = "Esperando key..."
+status.Font = Enum.Font.Code
+status.Text = "AWAITING AUTHENTICATION..."
 status.TextColor3 = Color3.fromRGB(190, 190, 190)
 status.TextSize = 11
 status.Parent = frame
@@ -114,8 +114,8 @@ discordButton.Position = UDim2.fromOffset(18, 174)
 discordButton.Size = UDim2.new(1, -36, 0, 38)
 discordButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
 discordButton.BorderSizePixel = 0
-discordButton.Font = Enum.Font.GothamBold
-discordButton.Text = "UNIRSE A MI DISCORD"
+discordButton.Font = Enum.Font.Code
+discordButton.Text = "COMMUNITY ACCESS"
 discordButton.TextColor3 = Color3.new(1, 1, 1)
 discordButton.TextSize = 13
 discordButton.Parent = frame
@@ -178,16 +178,17 @@ local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
-    Title = "MATRIXHUB | DUELS <font color='#39FF88'>[BETA]</font>",
-    Author = "BY MATT",
+    Title = "MATRIXHUB // NEXUS <font color='#39FF88'>[SYSTEM ONLINE]</font>",
+    Author = "MATRIX DIVISION",
+    Font = Enum.Font.Code,
     Folder = "MATRIXHUB",
     Acrylic = false,
     Transparent = false,
     NewElements = true,
     HideSearchBar = false,
     OpenButton = {
-        Title = "OPEN MATRIXHUB",
-        Icon = "swords",
+        Title = "ACCESS NEXUS",
+        Icon = "ghost",
         CornerRadius = UDim.new(0, 14),
         StrokeThickness = 1.1,
         Enabled = true,
@@ -199,6 +200,75 @@ MATRIXHUB_UI:CreateWindow({
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
 MATRIXHUB_UI:SetTheme("Emerald")
+
+-- MATRIX VISUAL LAYER: lluvia de caracteres decorativa, sin alterar funciones.
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local oldRain = playerGui:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
+    if oldRain then oldRain:Destroy() end
+
+    local rainGui = Instance.new("ScreenGui")
+    rainGui.Name = "MATRIXHUB_DIGITAL_LAYER"
+    rainGui.IgnoreGuiInset = true
+    rainGui.ResetOnSpawn = false
+    rainGui.DisplayOrder = 998
+    rainGui.Parent = playerGui
+
+    local glyphs = {"0","1","X","7","M","A","T","R","I","C","//","::"}
+    local columns = {}
+    local rng = Random.new()
+
+    for i = 1, 8 do
+        local label = Instance.new("TextLabel")
+        label.Name = "DataStream_" .. i
+        label.BackgroundTransparency = 1
+        label.BorderSizePixel = 0
+        label.Size = UDim2.new(0, 22, 0, 210)
+        label.Position = UDim2.new((i <= 4) and (0.012 + (i-1)*0.022) or (0.90 + (i-5)*0.022), 0, rng:NextNumber(-0.8, 0.2), 0)
+        label.Font = Enum.Font.Code
+        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(0, 210, 105)
+        label.TextTransparency = 0.58
+        label.TextWrapped = true
+        label.TextYAlignment = Enum.TextYAlignment.Top
+        label.Active = false
+        label.Selectable = false
+        label.ZIndex = 1
+        label.Parent = rainGui
+
+        local stream = {}
+        for n = 1, 15 do
+            stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
+        end
+        label.Text = table.concat(stream, "\n")
+        columns[#columns+1] = {Label = label, Speed = rng:NextNumber(0.12, 0.28), Offset = 0}
+    end
+
+    local elapsed = 0
+    local rainConnection
+    rainConnection = RunService.RenderStepped:Connect(function(dt)
+        if not rainGui.Parent then
+            if rainConnection then rainConnection:Disconnect() end
+            return
+        end
+        elapsed += dt
+        for _, column in ipairs(columns) do
+            column.Offset += dt * column.Speed
+            if column.Offset >= 1.15 then
+                column.Offset = -0.25
+                local stream = {}
+                for n = 1, 15 do
+                    stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
+                end
+                column.Label.Text = table.concat(stream, "\n")
+            end
+            column.Label.Position = UDim2.new(column.Label.Position.X.Scale, 0, column.Offset, 0)
+        end
+    end)
+end
 UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -207,25 +277,25 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end) 
 
-local Home = MATRIXHUB:Tab({ Title = "HOME", Icon = "house" })
-local Aimbot = MATRIXHUB:Tab({ Title = "AIMBOT", Icon = "crosshair" })
-local Visuales = MATRIXHUB:Tab({ Title = "VISUALES", Icon = "eye" })
-local Movimiento = MATRIXHUB:Tab({ Title = "MOVIMIENTO", Icon = "person-standing" })
-local Animaciones = MATRIXHUB:Tab({ Title = "ANIMACIONES", Icon = "footprints" })
-local AutoFarm = MATRIXHUB:Tab({ Title = "ALTO FARM", Icon = "coins" })
-local AutoKills = MATRIXHUB:Tab({ Title = "ALTO KILLS", Icon = "skull" })
+local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
+local Aimbot = MATRIXHUB:Tab({ Title = "TARGETING", Icon = "crosshair" })
+local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
+local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" })
+local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
+local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
+local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = 
-"SETTINGS", Icon = "settings" })
-Settings:Section({ Title = "SETTINGS", Icon = "settings" })
+"CONFIGURATION", Icon = "settings" })
+Settings:Section({ Title = "CONFIGURATION", Icon = "settings" })
 local reviewText = ""
 Settings:Input({
-    Title = "ESCRIBE TU COMENTARIO",
+    Title = "TRANSMIT FEEDBACK",
     Value = "",
     Placeholder = "Escribe aquí...",
     Callback = function(text) reviewText = text end
 })
 Settings:Button({
-    Title = "ENVIAR COMENTARIO",
+    Title = "SEND TRANSMISSION",
     Callback = function()
         local HttpService = game:GetService("HttpService")
         local webhookUrl = "PON_AQUI_TU_WEBHOOK_NUEVO"
@@ -235,7 +305,7 @@ Settings:Button({
     end
 })
 
-Settings:Section({ Title = "RENDIMIENTO", Icon = "zap" })
+Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
 -- Se guardan los valores originales para no activar efectos que ya estaban apagados.
@@ -757,7 +827,7 @@ do
 end
 
 Settings:Dropdown({
-    Title = "CAMBIAR TEMA",
+    Title = "INTERFACE THEME",
     Icon = "palette",
     Values = {"Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
     Value = "Emerald",
@@ -767,7 +837,7 @@ Settings:Dropdown({
 })
 
 Settings:Button({
-    Title = "REJOIN SERVIDOR",
+    Title = "RECONNECT SESSION",
     Icon = "refresh-cw",
     Callback = function()
         game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
@@ -775,7 +845,7 @@ Settings:Button({
 })
 
 Settings:Button({
-    Title = "SERVER HOP",
+    Title = "CHANGE INSTANCE",
     Icon = "server",
     Callback = function()
         local HttpService = game:GetService("HttpService")
@@ -1067,12 +1137,12 @@ local function getGameName()
 end
 local avatarThumb = "rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=420&h=420"
 local gameThumb = "rbxthumb://type=GameIcon&id="..game.GameId.."&w=512&h=512"
-Home:Section({ Title = "PERFIL", Icon = "user", Opened = true })
+Home:Section({ Title = "USER PROFILE", Icon = "user", Opened = true })
 Home:Paragraph({ Title = "Usuario: "..LP.DisplayName, Desc = "Usuario: @"..LP.Name.."\nID: "..LP.UserId.."\nEdad de la cuenta: "..LP.AccountAge.." días", Image = avatarThumb, ImageSize = 60 })
-Home:Section({ Title = "Sistema", Icon = "monitor", Opened = true })
+Home:Section({ Title = "ENVIRONMENT", Icon = "monitor", Opened = true })
 Home:Paragraph({ Title = "EXECUTOR", Desc = "Ejecutor actual: "..getExecutor() })
-Home:Section({ Title = "Información del Servidor", Icon = "server", Opened = true })
-Home:Paragraph({ Title = "Juego Actual", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
+Home:Section({ Title = "SESSION DATA", Icon = "server", Opened = true })
+Home:Paragraph({ Title = "ACTIVE EXPERIENCE", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
 Aimbot:Section({ Title = "AUTO SHOOT", Icon = "target" })
 Aimbot:Toggle({
     Title = "ALTO FIRE [AGRESIVO]",
@@ -1092,7 +1162,7 @@ Aimbot:Toggle({ Title = "SILENT AIM [FOV]", Value = false, Callback = function(v
 Aimbot:Toggle({ Title = "MOSTRAR FOV", Value = false, Callback = function(v) fovVisiblePreference = v end })
 Aimbot:Slider({ Title = "TAMAÑO DEL FOV", Value = { Min = 10, Max = 800, Default = 120 }, Callback = function(v) fovRadius = v end })
 Aimbot:Toggle({ Title = "AUTO SACAR ARMA", Value = false, Callback = function(v) autoSacarArmaEnabled = v end })
-Movimiento:Section({ Title = "MOVIMIENTO", Icon = "zap", Opened = true })
+Movimiento:Section({ Title = "MOBILITY", Icon = "zap", Opened = true })
 Movimiento:Toggle({
     Title = "INVISIBLE V6",
     Icon = "ghost",
@@ -1201,7 +1271,7 @@ Movimiento:Toggle({
             b.Position = pos
             b.Text = txt
             b.TextScaled = true
-            b.Font = Enum.Font.GothamBold
+            b.Font = Enum.Font.Code
             b.TextColor3 = Color3.new(1,1,1)
             b.BackgroundColor3 = Color3.fromRGB(0, 45, 22)
             b.AutoButtonColor = false
@@ -1475,7 +1545,7 @@ local function WatchServerDeath(char)
 end
 for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then if p.Character then WatchServerDeath(p.Character) end p.CharacterAdded:Connect(function(c) WatchServerDeath(c) end) end end
 Players.PlayerAdded:Connect(function(p) if p ~= LP then if p.Character then WatchServerDeath(p.Character) end p.CharacterAdded:Connect(function(c) WatchServerDeath(c) end) end end)
-Visuales:Section({ Title = "VISUALES", Icon = "eye", Opened = true })
+Visuales:Section({ Title = "VISUAL ENGINE", Icon = "eye", Opened = true })
 Visuales:Toggle({ Title = "ESP HIGHILGHT", Value = false, Callback = function(s) espEnabled = s if not s then for _, p in pairs(Players:GetPlayers()) do local h = espFolder:FindFirstChild(p.Name .. "MATRIXHUB") if h then h:Destroy() end activeESPs[p] = nil end end end })
 Visuales:Colorpicker({ Title = "COLOR DEL ESP", Default = Color3.fromRGB(255, 0, 0), Callback = function(c) espColor = c for _, v in pairs(activeESPs) do if v.Highlight then v.Highlight.FillColor = c end end end })
 task.spawn(function()
@@ -1665,19 +1735,7 @@ Animaciones:Button({
     end
 })
 
-local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
-
-Creditos:Section({ Title = "CRÉDITOS", Icon = "crown" })
-
-Creditos:Paragraph({
-    Title = "SANOX",
-    Desc = '<font color="#FFD700">[CREADOR]</font> \nDESARROLLADOR Y CREADOR DEL PROYECTO OPEN MATRIXHUB',
-})
-
-Creditos:Paragraph({
-    Title = "MATRIXHUB",
-    Desc = '<font color="#FFD700">[CREADOR]</font> \nDESARROLLADOR Y CREADOR DEL PROYECTO OPEN MATRIXHUB',
-})
+-- Seccion de creditos eliminada por rediseño de interfaz.
 
 Visuales:Space()
 Visuales:Divider()
@@ -1863,7 +1921,7 @@ local CustomKillSoundId = ""
 local UseCustomKillSoundId = false
 
 local KillSounds = {
-    { Name = "beso", Id = "122147831931781" },
+    { Name = "LESLY", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
