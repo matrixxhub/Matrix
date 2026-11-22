@@ -546,95 +546,9 @@ local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" })
 local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
-
 local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = 
 "CONFIGURATION", Icon = "settings" })
-
--- MATRIX HUB // AUTO FARM DE EVENTO (OPTIMIZADO)
--- Se registra dentro de una sección explícita para que WindUI no deje la pestaña vacía.
-local MatrixFarmEnv = (type(getgenv) == "function" and getgenv()) or _G
-local MatrixAutoEventFarmEnabled = false
-local MatrixAutoEventFarmRemote = nil
-local MatrixFarmReplicatedStorage = game:GetService("ReplicatedStorage")
-local MATRIX_FARM_SCAN_INTERVAL = 0.45
-local MATRIX_FARM_REMOTE_INTERVAL = 1.2
-
-MatrixFarmEnv.RoxHubAutoEventFarm = false
-
-local AutoFarmSection = AutoFarm:Section({
-    Title = "EVENT FARM",
-    Icon = "gift",
-    Opened = true,
-    Desc = "MATRIXHUB EVENT FARM | OPTIMIZADO"
-})
-
-AutoFarmSection:Toggle({
-    Title = "AUTO FARM HALLOWEEN",
-    Value = false,
-    Callback = function(enabled)
-        MatrixAutoEventFarmEnabled = enabled
-        MatrixFarmEnv.RoxHubAutoEventFarm = enabled
-        if not enabled then
-            MatrixAutoEventFarmRemote = nil
-        end
-    end
-})
-
-task.spawn(function()
-    local lastRemoteFire = 0
-    local nextRemoteLookup = 0
-
-    while task.wait(MATRIX_FARM_SCAN_INTERVAL) do
-        if not MatrixAutoEventFarmEnabled then
-            lastRemoteFire = 0
-            nextRemoteLookup = 0
-            continue
-        end
-
-        local now = os.clock()
-
-        -- Buscar el RemoteEvent como máximo una vez cada 3 segundos si aún no aparece.
-        if (not MatrixAutoEventFarmRemote or not MatrixAutoEventFarmRemote.Parent)
-            and now >= nextRemoteLookup then
-            nextRemoteLookup = now + 3
-            pcall(function()
-                local packages = MatrixFarmReplicatedStorage:FindFirstChild("Packages")
-                local networking = packages and packages:FindFirstChild("Networking")
-                MatrixAutoEventFarmRemote = networking
-                    and networking:FindFirstChild("RE/Events/CollectEventSpawnable")
-            end)
-        end
-
-        -- El servidor recibe una llamada cada 1.2 s, no 20 llamadas por segundo.
-        if MatrixAutoEventFarmRemote and now - lastRemoteFire >= MATRIX_FARM_REMOTE_INTERVAL then
-            pcall(function()
-                MatrixAutoEventFarmRemote:FireServer()
-            end)
-            lastRemoteFire = now
-        end
-
-        local character = LocalPlayer.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        local spawnables = workspace:FindFirstChild("SpawnablesClient")
-
-        if rootPart and spawnables then
-            for _, spawnable in ipairs(spawnables:GetChildren()) do
-                if not MatrixAutoEventFarmEnabled then
-                    break
-                end
-
-                local touchPart = spawnable:FindFirstChild("Touch")
-                if touchPart and touchPart:IsA("BasePart") then
-                    pcall(function()
-                        firetouchinterest(rootPart, touchPart, 0)
-                        firetouchinterest(rootPart, touchPart, 1)
-                    end)
-                end
-            end
-        end
-    end
-end)
 Settings:Section({ Title = "CONFIGURATION", Icon = "settings" })
 local reviewText = ""
 Settings:Input({
@@ -1551,6 +1465,7 @@ AutoKills:Toggle({
         autoShootEnabled = v
         autoShootAgresivoEnabled = v
         if v then task.spawn(LoopAtrasSolo) else getgenv().MatrixHubTargetPart = nil end
+        if refreshQuickButtons then refreshQuickButtons() end
     end
 })
 
@@ -1571,6 +1486,24 @@ Home:Section({ Title = "ENVIRONMENT", Icon = "monitor", Opened = true })
 Home:Paragraph({ Title = "EXECUTOR", Desc = "Ejecutor actual: "..getExecutor() })
 Home:Section({ Title = "SESSION DATA", Icon = "server", Opened = true })
 Home:Paragraph({ Title = "ACTIVE EXPERIENCE", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
+-- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
+local refreshQuickButtons
+local function setSilentAimQuick(enabled)
+    silentAimManualEnabled = enabled
+    if not enabled and not autoShootEnabled and not autoShootAgresivoEnabled then
+        getgenv().MatrixHubTargetPart = nil
+    end
+    if refreshQuickButtons then refreshQuickButtons() end
+end
+
+local function setAutoShootQuick(enabled)
+    autoShootEnabled = enabled
+    if not enabled and not autoShootAgresivoEnabled then
+        getgenv().MatrixHubTargetPart = nil
+    end
+    if refreshQuickButtons then refreshQuickButtons() end
+end
+
 Aimbot:Section({ Title = "AUTO SHOOT", Icon = "target" })
 Aimbot:Toggle({
     Title = "ALTO FIRE [AGRESIVO]",
@@ -1578,24 +1511,21 @@ Aimbot:Toggle({
     Callback = function(v)
         altoFireEnabled = v
         autoShootEnabled = v
+        if refreshQuickButtons then refreshQuickButtons() end
     end
 })
-Aimbot:Toggle({ Title = "AUTO SHOOT [NORMAL]", Value = false, Callback = function(v) autoShootEnabled = v if not v and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end end })
+Aimbot:Toggle({ Title = "AUTO SHOOT [NORMAL]", Value = false, Callback = setAutoShootQuick })
 Aimbot:Toggle({ Title = "AUTO SHOOT [AGRESIVO]", Value = false, Callback = function(v) autoShootAgresivoEnabled = v if not v and not autoShootEnabled then getgenv().MatrixHubTargetPart = nil end end })
 Aimbot:Dropdown({ Title = "TARGET PARTE", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) autoShootTargetPart = v end })
 Aimbot:Section({ Title = "SILENT AIM + FOV", Icon = "radar" })
-Aimbot:Toggle({ Title = "SILENT AIM", Value = false, Callback = function(v) silentAimManualEnabled = v if not v and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end end })
+Aimbot:Toggle({ Title = "SILENT AIM", Value = false, Callback = setSilentAimQuick })
 Aimbot:Dropdown({ Title = "SILENT TARGET", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) silentAimTargetPart = v end })
 Aimbot:Toggle({ Title = "SILENT AIM [FOV]", Value = false, Callback = function(v) silentAimFovEnabled = v if not v and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end end })
 Aimbot:Toggle({ Title = "MOSTRAR FOV", Value = false, Callback = function(v) fovVisiblePreference = v end })
 Aimbot:Slider({ Title = "TAMAÑO DEL FOV", Value = { Min = 10, Max = 800, Default = 120 }, Callback = function(v) fovRadius = v end })
 Aimbot:Toggle({ Title = "AUTO SACAR ARMA", Value = false, Callback = function(v) autoSacarArmaEnabled = v end })
 Movimiento:Section({ Title = "MOBILITY", Icon = "zap", Opened = true })
-Movimiento:Toggle({
-    Title = "INVISIBLE V6",
-    Icon = "ghost",
-    Default = false,
-    Callback = function(state)
+local function setInvisibleV6(state)
         local RunService = game:GetService("RunService")
         local lp = game:GetService("Players").LocalPlayer
         local DISTANCIA = 50
@@ -1647,8 +1577,138 @@ Movimiento:Toggle({
                 Hum.CameraOffset = oldCamOffset
             end
         end)
+end
+
+Movimiento:Toggle({
+    Title = "INVISIBLE V6",
+    Icon = "ghost",
+    Default = false,
+    Callback = function(state)
+        setInvisibleV6(state)
+        if refreshQuickButtons then refreshQuickButtons() end
     end
 })
+
+-- MATRIX HUB // QUICK FLOATING BUTTONS
+-- Comparten los mismos estados y funciones que los toggles originales.
+do
+    local UserInputService = game:GetService("UserInputService")
+    local quickButtons = {}
+    local quickGui = screenGui
+
+    local function makeQuickButton(id, label, order, getter, setter)
+        local button = Instance.new("TextButton")
+        button.Name = "Quick_" .. id
+        button.AnchorPoint = Vector2.new(1, 0)
+        button.Position = UDim2.new(1, -14, 0, 150 + ((order - 1) * 54))
+        button.Size = UDim2.fromOffset(126, 42)
+        button.BackgroundColor3 = Color3.fromRGB(15, 25, 22)
+        button.BackgroundTransparency = 0.08
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Text = label .. "  OFF"
+        button.TextColor3 = Color3.fromRGB(190, 210, 200)
+        button.TextSize = 12
+        button.Font = Enum.Font.Code
+        button.Visible = false
+        button.ZIndex = 50
+        button.Parent = quickGui
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = button
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 175, 95)
+        stroke.Thickness = 1.2
+        stroke.Transparency = 0.2
+        stroke.Parent = button
+
+        local dragging = false
+        local dragInput
+        local dragStart
+        local startPosition
+        button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPosition = button.Position
+                dragInput = input
+            end
+        end)
+        button.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input == dragInput then
+                local delta = input.Position - dragStart
+                button.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X,
+                    startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+
+        button.Activated:Connect(function()
+            setter(not getter())
+            refreshQuickButtons()
+        end)
+
+        quickButtons[id] = { Button = button, Getter = getter, Label = label }
+        return button
+    end
+
+    makeQuickButton("Fantasma", "FANTASMA", 1,
+        function() return _G.InvisActive == true end,
+        setInvisibleV6)
+    makeQuickButton("Silent", "SILENT", 2,
+        function() return silentAimManualEnabled end,
+        setSilentAimQuick)
+    makeQuickButton("AutoShoot", "AUTO SHOOT", 3,
+        function() return autoShootEnabled end,
+        setAutoShootQuick)
+
+    refreshQuickButtons = function()
+        for _, item in pairs(quickButtons) do
+            local active = item.Getter()
+            item.Button.Text = item.Label .. (active and "  ON" or "  OFF")
+            item.Button.BackgroundColor3 = active
+                and Color3.fromRGB(0, 95, 55)
+                or Color3.fromRGB(15, 25, 22)
+            item.Button.TextColor3 = active
+                and Color3.fromRGB(220, 255, 235)
+                or Color3.fromRGB(190, 210, 200)
+        end
+    end
+    refreshQuickButtons()
+
+    Settings:Section({ Title = "FLOATING QUICK BUTTONS", Icon = "mouse-pointer-2", Opened = true })
+    Settings:Toggle({
+        Title = "MOSTRAR FANTASMA",
+        Default = false,
+        Callback = function(enabled)
+            quickButtons.Fantasma.Button.Visible = enabled
+        end
+    })
+    Settings:Toggle({
+        Title = "MOSTRAR SILENT",
+        Default = false,
+        Callback = function(enabled)
+            quickButtons.Silent.Button.Visible = enabled
+        end
+    })
+    Settings:Toggle({
+        Title = "MOSTRAR AUTO SHOOT",
+        Default = false,
+        Callback = function(enabled)
+            quickButtons.AutoShoot.Button.Visible = enabled
+        end
+    })
+end
 
 Movimiento:Toggle({
     Title = "FLY SPEED V1",
