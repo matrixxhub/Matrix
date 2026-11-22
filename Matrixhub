@@ -158,7 +158,7 @@ title.Name = "Title"
 title.BackgroundTransparency = 1
 title.Position = UDim2.fromOffset(12, 24)
 title.Size = UDim2.new(1, -24, 0, 42)
-title.Font = Enum.Font.Code
+title.Font = Enum.Font.GothamBlack
 title.Text = "MATRIX-HUB"
 title.TextColor3 = Color3.fromRGB(207, 117, 255)
 title.TextSize = 29
@@ -169,7 +169,7 @@ local subtitle = Instance.new("TextLabel")
 subtitle.BackgroundTransparency = 1
 subtitle.Position = UDim2.fromOffset(15, 67)
 subtitle.Size = UDim2.new(1, -30, 0, 22)
-subtitle.Font = Enum.Font.Code
+subtitle.Font = Enum.Font.GothamMedium
 subtitle.Text = "// SYSTEM READY"
 subtitle.TextColor3 = Color3.fromRGB(194, 180, 255)
 subtitle.TextSize = 12
@@ -409,11 +409,23 @@ launchMatrixHub = function()
 local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 
+-- MATRIX THEME: controles apagados en gris y activos en verde.
+-- Solo cambia la apariencia; no modifica callbacks ni funciones.
+MATRIXHUB_UI:AddTheme({
+    Name = "Matrix",
+    Accent = Color3.fromRGB(0, 200, 90),       -- Estado activo
+    Background = Color3.fromRGB(13, 16, 18),
+    Outline = Color3.fromRGB(78, 88, 82),
+    Text = Color3.fromRGB(238, 242, 239),
+    Placeholder = Color3.fromRGB(150, 158, 153),
+    Button = Color3.fromRGB(105, 111, 108),    -- Estado inactivo
+    Icon = Color3.fromRGB(210, 218, 213),
+})
 local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
     Author = "SANOX",
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Folder = "MATRIXHUB",
     Acrylic = true, -- Efecto translucido tipo glassmorphism
     Transparent = false,
@@ -432,7 +444,90 @@ MATRIXHUB_UI:CreateWindow({
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
-MATRIXHUB_UI:SetTheme("Emerald")
+-- CONFIGURACION PERSISTENTE
+-- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
+-- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
+local MatrixHubHttpService = game:GetService("HttpService")
+local MATRIXHUB_CONFIG_PATH = "MATRIXHUB/MatrixHubConfig.json"
+local MATRIXHUB_CONFIG = {
+    Theme = "Matrix",
+    FPSBoost = false,
+    AntiLag = false,
+    StatusHud = false,
+    ButtonVisibility = {
+        Fantasma = false,
+        Silent = false,
+        AutoShoot = false
+    },
+    KillSoundEnabled = false,
+    SelectedKillSound = "BESO",
+    KillSoundVolume = 1,
+    CustomKillSoundId = "",
+    UseCustomKillSound = false
+}
+
+local function LoadMatrixHubConfig()
+    if type(readfile) ~= "function" then return end
+    local okRead, raw = pcall(readfile, MATRIXHUB_CONFIG_PATH)
+    if not okRead or type(raw) ~= "string" or raw == "" then return end
+
+    local okDecode, saved = pcall(function()
+        return MatrixHubHttpService:JSONDecode(raw)
+    end)
+    if not okDecode or type(saved) ~= "table" then return end
+
+    if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
+    if type(saved.FPSBoost) == "boolean" then MATRIXHUB_CONFIG.FPSBoost = saved.FPSBoost end
+    if type(saved.AntiLag) == "boolean" then MATRIXHUB_CONFIG.AntiLag = saved.AntiLag end
+    if type(saved.StatusHud) == "boolean" then MATRIXHUB_CONFIG.StatusHud = saved.StatusHud end
+    if type(saved.ButtonVisibility) == "table" then
+        for _, buttonId in ipairs({"Fantasma", "Silent", "AutoShoot"}) do
+            if type(saved.ButtonVisibility[buttonId]) == "boolean" then
+                MATRIXHUB_CONFIG.ButtonVisibility[buttonId] = saved.ButtonVisibility[buttonId]
+            end
+        end
+    end
+    if type(saved.KillSoundEnabled) == "boolean" then MATRIXHUB_CONFIG.KillSoundEnabled = saved.KillSoundEnabled end
+    if type(saved.SelectedKillSound) == "string" then MATRIXHUB_CONFIG.SelectedKillSound = saved.SelectedKillSound end
+    if type(saved.KillSoundVolume) == "number" then
+        MATRIXHUB_CONFIG.KillSoundVolume = math.clamp(saved.KillSoundVolume, 1, 3)
+    end
+    if type(saved.CustomKillSoundId) == "string" then
+        MATRIXHUB_CONFIG.CustomKillSoundId = saved.CustomKillSoundId:gsub("%D", "")
+    end
+    if type(saved.UseCustomKillSound) == "boolean" then
+        MATRIXHUB_CONFIG.UseCustomKillSound = saved.UseCustomKillSound
+    end
+end
+
+local function SaveMatrixHubConfig()
+    if type(writefile) ~= "function" then return false end
+    if type(makefolder) == "function" then
+        pcall(makefolder, "MATRIXHUB")
+    end
+    local okEncode, encoded = pcall(function()
+        return MatrixHubHttpService:JSONEncode(MATRIXHUB_CONFIG)
+    end)
+    if not okEncode then return false end
+    local okWrite = pcall(writefile, MATRIXHUB_CONFIG_PATH, encoded)
+    return okWrite
+end
+
+LoadMatrixHubConfig()
+
+local validThemes = {"Matrix", "Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"}
+local themeIsValid = false
+for _, themeName in ipairs(validThemes) do
+    if MATRIXHUB_CONFIG.Theme == themeName then
+        themeIsValid = true
+        break
+    end
+end
+if not themeIsValid then
+    MATRIXHUB_CONFIG.Theme = "Matrix"
+end
+
+MATRIXHUB_UI:SetTheme(MATRIXHUB_CONFIG.Theme)
 
 -- MATRIX-HUB DIGITAL RAIN: solo dentro de la ventana abierta y expandida.
 do
@@ -541,12 +636,18 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end) 
 
+-- PESTANAS PRINCIPALES: BOTONES queda en la zona media, no al final.
 local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
-local Aimbot = MATRIXHUB:Tab({ Title = "TARGETING", Icon = "crosshair" })
+local Cheats = MATRIXHUB:Tab({ Title = "CHEATS", Icon = "crosshair" })
 local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
+local Botones = MATRIXHUB:Tab({ Title = "BOTONES", Icon = "app-window" })
 local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" })
-local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
+local Animaciones = MATRIXHUB:Tab({ Title = "PERSONAJE", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
+local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
+local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
+local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
+local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
 do
@@ -610,18 +711,15 @@ do
     end)
 end
 
-local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
-local Settings = MATRIXHUB:Tab({ Title = 
-"CONFIGURATION", Icon = "settings" })
-Settings:Section({ Title = "CONFIGURATION", Icon = "settings" })
+Otros:Section({ Title = "UTILIDADES", Icon = "message-square" })
 local reviewText = ""
-Settings:Input({
+Otros:Input({
     Title = "TRANSMIT FEEDBACK",
     Value = "",
     Placeholder = "Escribe aquí...",
     Callback = function(text) reviewText = text end
 })
-Settings:Button({
+Otros:Button({
     Title = "SEND TRANSMISSION",
     Callback = function()
         local HttpService = game:GetService("HttpService")
@@ -632,6 +730,7 @@ Settings:Button({
     end
 })
 
+Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
@@ -639,8 +738,8 @@ Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 local Lighting = game:GetService("Lighting")
 local originalGlobalShadows = nil
 local graphicsCache = {}
-local fpsBoostEnabled = false
-local antiLagEnabled = false
+local fpsBoostEnabled = MATRIXHUB_CONFIG.FPSBoost == true
+local antiLagEnabled = MATRIXHUB_CONFIG.AntiLag == true
 local refreshVersion = 0
 
 local function isEffectObject(obj)
@@ -761,12 +860,18 @@ workspace.DescendantAdded:Connect(function(obj)
     end
 end)
 
+if fpsBoostEnabled or antiLagEnabled then
+    refreshGraphics()
+end
+
 Settings:Toggle({
     Title = "FPS BOOST",
     Icon = "flame",
-    Default = false,
+    Default = fpsBoostEnabled,
     Callback = function(enabled)
         fpsBoostEnabled = enabled
+        MATRIXHUB_CONFIG.FPSBoost = enabled
+        SaveMatrixHubConfig()
         refreshGraphics()
     end
 })
@@ -774,9 +879,11 @@ Settings:Toggle({
 Settings:Toggle({
     Title = "ANTI LAG",
     Icon = "wind",
-    Default = false,
+    Default = antiLagEnabled,
     Callback = function(enabled)
         antiLagEnabled = enabled
+        MATRIXHUB_CONFIG.AntiLag = enabled
+        SaveMatrixHubConfig()
         refreshGraphics()
     end
 })
@@ -809,8 +916,9 @@ Settings:Toggle({
     end
 })
 
+Cheats:Section({ Title = "MOVIMIENTO ESPECIAL", Icon = "activity", Opened = true })
 local stretchConn = nil
-Settings:Toggle({
+Cheats:Toggle({
     Title = "STRETCHED",
     Icon = "maximize",
     Default = false,
@@ -834,7 +942,7 @@ local telaFFConn = nil
 local telaFFOn = false
 local telaForce = 1.4
 
-Settings:Toggle({
+Cheats:Toggle({
     Title = "MOVIMIENTO TELA",
     Icon = "activity",
     Default = false,
@@ -864,7 +972,7 @@ Settings:Toggle({
     end
 })
 
-Settings:Slider({
+Cheats:Slider({
     Title = "FUERZA ZIGZAG",
     Icon = "move",
     Value = { Min = 0.2, Max = 3, Default = 1.4 },
@@ -876,7 +984,7 @@ local telaLejosConn = nil
 local telaLejosOn = false
 local lejosForce = 2.2
 
-Settings:Toggle({
+Cheats:Toggle({
     Title = "GOD MODE",
     Icon = "zap",
     Default = false,
@@ -908,7 +1016,7 @@ Settings:Toggle({
     end
 })
 
-Settings:Slider({
+Cheats:Slider({
     Title = "GOD MODE DISTANCIA",
     Icon = "move",
     Value = { Min = 0.5, Max = 4, Default = 2.2 },
@@ -920,7 +1028,7 @@ local spinConn = nil
 local spinOn = false
 local spinSpeed = 30
 
-Settings:Toggle({
+Cheats:Toggle({
     Title = "SPIN",
     Icon = "refresh-cw",
     Default = false,
@@ -943,7 +1051,7 @@ Settings:Toggle({
     end
 })
 
-Settings:Slider({
+Cheats:Slider({
     Title = "VELOCIDAD SPIN",
     Icon = "zap",
     Value = { Min = 5, Max = 100, Default = 30 },
@@ -1131,9 +1239,9 @@ do
         end)
     end
 
-    Settings:Section({ Title = "VOIN", Icon = "zap", Opened = true })
+    Cheats:Section({ Title = "VOIN", Icon = "zap", Opened = true })
 
-    Settings:Toggle({
+    Cheats:Toggle({
         Title = "VOIN WALK",
         Icon = "zap",
         Default = false,
@@ -1142,7 +1250,7 @@ do
         end
     })
 
-  Settings:Slider({
+  Cheats:Slider({
         Title = "RADIO",
         Icon = "circle",
         Value = { Min = 5, Max = 50, Default = 20 },
@@ -1156,10 +1264,12 @@ end
 Settings:Dropdown({
     Title = "INTERFACE THEME",
     Icon = "palette",
-    Values = {"Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
-    Value = "Emerald",
+    Values = {"Matrix", "Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
+    Value = MATRIXHUB_CONFIG.Theme,
     Callback = function(v)
         MATRIXHUB_UI:SetTheme(v)
+        MATRIXHUB_CONFIG.Theme = v
+        SaveMatrixHubConfig()
     end
 })
 
@@ -1177,7 +1287,7 @@ do
     hudGui.ResetOnSpawn = false
     hudGui.IgnoreGuiInset = true
     hudGui.DisplayOrder = 998
-    hudGui.Enabled = false
+    hudGui.Enabled = MATRIXHUB_CONFIG.StatusHud == true
     hudGui.Parent = playerGui
 
     local hud = Instance.new("Frame")
@@ -1205,7 +1315,7 @@ do
     info.BackgroundTransparency = 1
     info.Position = UDim2.fromOffset(9, 5)
     info.Size = UDim2.new(1, -18, 1, -10)
-    info.Font = Enum.Font.Code
+    info.Font = Enum.Font.GothamMedium
     info.TextSize = 12
     info.TextColor3 = Color3.fromRGB(115, 255, 170)
     info.TextXAlignment = Enum.TextXAlignment.Left
@@ -1235,14 +1345,16 @@ do
     Settings:Toggle({
         Title = "LIVE STATUS HUD",
         Icon = "activity",
-        Default = false,
+        Default = MATRIXHUB_CONFIG.StatusHud == true,
         Callback = function(enabled)
             hudGui.Enabled = enabled
+            MATRIXHUB_CONFIG.StatusHud = enabled
+            SaveMatrixHubConfig()
         end
     })
 end
 
-Settings:Button({
+Otros:Button({
     Title = "RECONNECT SESSION",
     Icon = "refresh-cw",
     Callback = function()
@@ -1250,7 +1362,7 @@ Settings:Button({
     end
 })
 
-Settings:Button({
+Otros:Button({
     Title = "CHANGE INSTANCE",
     Icon = "server",
     Callback = function()
@@ -1519,7 +1631,7 @@ local function LoopAtrasSolo()
         RunService.Heartbeat:Wait()
     end
 end
-AutoKills:Section({ Title = "AUTO KILLS", Icon = "skull" })
+AutoKills:Section({ Title = "AUTO KILL", Icon = "skull", Opened = true })
 AutoKills:Toggle({
     Title = "TELEKILL [SOLO ARMA]",
     Value = false,
@@ -1568,8 +1680,8 @@ local function setAutoShootQuick(enabled)
     if refreshQuickButtons then refreshQuickButtons() end
 end
 
-Aimbot:Section({ Title = "AUTO SHOOT", Icon = "target" })
-Aimbot:Toggle({
+Cheats:Section({ Title = "AUTO SHOOT", Icon = "target" })
+Cheats:Toggle({
     Title = "ALTO FIRE [AGRESIVO]",
     Value = false,
     Callback = function(v)
@@ -1578,16 +1690,16 @@ Aimbot:Toggle({
         if refreshQuickButtons then refreshQuickButtons() end
     end
 })
-Aimbot:Toggle({ Title = "AUTO SHOOT [NORMAL]", Value = false, Callback = setAutoShootQuick })
-Aimbot:Toggle({ Title = "AUTO SHOOT [AGRESIVO]", Value = false, Callback = function(v) autoShootAgresivoEnabled = v if not v and not autoShootEnabled then getgenv().MatrixHubTargetPart = nil end end })
-Aimbot:Dropdown({ Title = "TARGET PARTE", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) autoShootTargetPart = v end })
-Aimbot:Section({ Title = "SILENT AIM + FOV", Icon = "radar" })
-Aimbot:Toggle({ Title = "SILENT AIM", Value = false, Callback = setSilentAimQuick })
-Aimbot:Dropdown({ Title = "SILENT TARGET", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) silentAimTargetPart = v end })
-Aimbot:Toggle({ Title = "SILENT AIM [FOV]", Value = false, Callback = function(v) silentAimFovEnabled = v if not v and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end end })
-Aimbot:Toggle({ Title = "MOSTRAR FOV", Value = false, Callback = function(v) fovVisiblePreference = v end })
-Aimbot:Slider({ Title = "TAMAÑO DEL FOV", Value = { Min = 10, Max = 800, Default = 120 }, Callback = function(v) fovRadius = v end })
-Aimbot:Toggle({ Title = "AUTO SACAR ARMA", Value = false, Callback = function(v) autoSacarArmaEnabled = v end })
+Cheats:Toggle({ Title = "AUTO SHOOT [NORMAL]", Value = false, Callback = setAutoShootQuick })
+Cheats:Toggle({ Title = "AUTO SHOOT [AGRESIVO]", Value = false, Callback = function(v) autoShootAgresivoEnabled = v if not v and not autoShootEnabled then getgenv().MatrixHubTargetPart = nil end end })
+Cheats:Dropdown({ Title = "TARGET PARTE", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) autoShootTargetPart = v end })
+Cheats:Section({ Title = "SILENT AIM + FOV", Icon = "radar" })
+Cheats:Toggle({ Title = "SILENT AIM", Value = false, Callback = setSilentAimQuick })
+Cheats:Dropdown({ Title = "SILENT TARGET", Values = {"Cabeza","Torso","Cuerpo Completo"}, Value = "Cabeza", Callback = function(v) silentAimTargetPart = v end })
+Cheats:Toggle({ Title = "SILENT AIM [FOV]", Value = false, Callback = function(v) silentAimFovEnabled = v if not v and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end end })
+Cheats:Toggle({ Title = "MOSTRAR FOV", Value = false, Callback = function(v) fovVisiblePreference = v end })
+Cheats:Slider({ Title = "TAMAÑO DEL FOV", Value = { Min = 10, Max = 800, Default = 120 }, Callback = function(v) fovRadius = v end })
+Cheats:Toggle({ Title = "AUTO SACAR ARMA", Value = false, Callback = function(v) autoSacarArmaEnabled = v end })
 Movimiento:Section({ Title = "MOBILITY", Icon = "zap", Opened = true })
 local function setInvisibleV6(state)
         local RunService = game:GetService("RunService")
@@ -1666,9 +1778,7 @@ do
         button.AnchorPoint = Vector2.new(1, 0)
         button.Position = UDim2.new(1, -18, 0, 178 + ((order - 1) * 76))
         button.Size = UDim2.fromOffset(62, 62)
-        local inactiveColor = Color3.fromRGB(105, 111, 108)
-        local activeColor = Color3.fromRGB(0, 200, 90)
-        button.BackgroundColor3 = inactiveColor
+        button.BackgroundColor3 = accent
         button.BackgroundTransparency = 0
         button.BorderSizePixel = 0
         button.AutoButtonColor = false
@@ -1676,7 +1786,7 @@ do
         button.TextColor3 = Color3.fromRGB(245, 248, 255)
         button.TextSize = id == "Fantasma" and 31 or (id == "Silent" and 27 or 34)
         button.Font = Enum.Font.GothamBold
-        button.Visible = false
+        button.Visible = MATRIXHUB_CONFIG.ButtonVisibility[id] == true
         button.ZIndex = 60
         button.Parent = quickGui
 
@@ -1687,14 +1797,14 @@ do
         local gradient = Instance.new("UIGradient")
         gradient.Rotation = 135
         gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, inactiveColor:Lerp(Color3.new(1, 1, 1), 0.18)),
-            ColorSequenceKeypoint.new(1, inactiveColor:Lerp(Color3.new(0, 0, 0), 0.18))
+            ColorSequenceKeypoint.new(0, accent:Lerp(Color3.new(1, 1, 1), 0.28)),
+            ColorSequenceKeypoint.new(1, accent:Lerp(Color3.new(0, 0, 0), 0.28))
         })
         gradient.Parent = button
 
         local stroke = Instance.new("UIStroke")
         stroke.Name = "AccentRing"
-        stroke.Color = inactiveColor
+        stroke.Color = accent
         stroke.Thickness = 2
         stroke.Transparency = 0.22
         stroke.Parent = button
@@ -1708,7 +1818,7 @@ do
         shadow.AnchorPoint = Vector2.new(0.5, 0.5)
         shadow.Position = UDim2.fromScale(0.5, 0.5)
         shadow.Size = UDim2.new(1, 9, 1, 9)
-        shadow.BackgroundColor3 = inactiveColor
+        shadow.BackgroundColor3 = accent
         shadow.BackgroundTransparency = 0.88
         shadow.BorderSizePixel = 0
         shadow.ZIndex = 59
@@ -1774,8 +1884,7 @@ do
         quickButtons[id] = {
             Button = button,
             Getter = getter,
-            Accent = activeColor,
-            InactiveColor = inactiveColor,
+            Accent = accent,
             Glow = shadow,
             Stroke = stroke
         }
@@ -1797,50 +1906,55 @@ do
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
             local active = item.Getter()
-            local stateColor = active and item.Accent or item.InactiveColor
-            item.Button.BackgroundColor3 = stateColor
-            item.Stroke.Color = stateColor
-            item.Glow.BackgroundColor3 = stateColor
+            item.Button.BackgroundColor3 = item.Accent
             local gradient = item.Button:FindFirstChildOfClass("UIGradient")
             if gradient then
+                local light = active and 0.12 or 0.28
+                local dark = active and 0.12 or 0.28
                 gradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, stateColor:Lerp(Color3.new(1, 1, 1), 0.18)),
-                    ColorSequenceKeypoint.new(1, stateColor:Lerp(Color3.new(0, 0, 0), 0.18))
+                    ColorSequenceKeypoint.new(0, item.Accent:Lerp(Color3.new(1, 1, 1), light)),
+                    ColorSequenceKeypoint.new(1, item.Accent:Lerp(Color3.new(0, 0, 0), dark))
                 })
             end
-            item.Stroke.Transparency = active and 0 or 0.18
+            item.Stroke.Transparency = active and 0 or 0.08
             item.Stroke.Thickness = active and 3.2 or 2.5
-            item.Glow.BackgroundTransparency = active and 0.58 or 0.88
+            item.Glow.BackgroundTransparency = active and 0.58 or 0.72
             item.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end
 
     refreshQuickButtons()
 
-    -- Esta sección queda debajo de las opciones de cheats de TARGETING.
-    Aimbot:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
-    Aimbot:Toggle({
+    -- Controles de visibilidad agrupados en la pestaña BOTONES.
+    Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
+    Botones:Toggle({
         Title = "MOSTRAR FANTASMA",
         Icon = "ghost",
-        Default = false,
+        Default = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
         Callback = function(enabled)
             quickButtons.Fantasma.Button.Visible = enabled
+            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled
+            SaveMatrixHubConfig()
         end
     })
-    Aimbot:Toggle({
+    Botones:Toggle({
         Title = "MOSTRAR SILENT",
         Icon = "crosshair",
-        Default = false,
+        Default = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
         Callback = function(enabled)
             quickButtons.Silent.Button.Visible = enabled
+            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled
+            SaveMatrixHubConfig()
         end
     })
-    Aimbot:Toggle({
+    Botones:Toggle({
         Title = "MOSTRAR AUTO SHOOT",
         Icon = "target",
-        Default = false,
+        Default = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
         Callback = function(enabled)
             quickButtons.AutoShoot.Button.Visible = enabled
+            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled
+            SaveMatrixHubConfig()
         end
     })
 end
@@ -2360,10 +2474,7 @@ Animaciones:Button({
 
 -- Seccion de creditos eliminada por rediseño de interfaz.
 
-Visuales:Space()
-Visuales:Divider()
-Visuales:Space()
-Visuales:Section({ Title = "HITBOX ESPANDER", Icon = "solar:box-bold" })
+AutoKills:Section({ Title = "HITBOX EXPANDER", Icon = "box" })
 
 local hitboxEnabled = false
 local hitboxInvisible = false
@@ -2380,7 +2491,7 @@ local function limpiarHitboxes()
     end
 end
 
-Visuales:Toggle({
+AutoKills:Toggle({
     Title = "HITBOX [VISIBLE]",
     Value = false,
     Callback = function(Value)
@@ -2389,20 +2500,20 @@ Visuales:Toggle({
     end
 })
 
-Visuales:Toggle({
+AutoKills:Toggle({
     Title = "HITBOX [INVISIBLE]",
     Value = false,
     Callback = function(Value) hitboxInvisible = Value end
 })
 
-Visuales:Slider({
+AutoKills:Slider({
     Title = "TAMAÑO",
     Step = 0.5,
     Value = { Min = 1.0, Max = 18.0, Default = 3.5 },
     Callback = function(v) hitboxSize = v end
 })
 
-Visuales:Colorpicker({
+AutoKills:Colorpicker({
     Title = "COLOR DE LA HITBOX",
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c) hitboxColor = c end
@@ -2462,7 +2573,7 @@ task.spawn(function()
     end
 end)
  
-Settings:Section({ Title = "MODO STREAMER", Icon = "user-x" })
+Otros:Section({ Title = "MODO STREAMER", Icon = "user-x" })
 
 local spoofNameText = "MATRIXHUB"
 local isWorkspaceLooping = false
@@ -2561,7 +2672,7 @@ local function watchNameRoot(root)
     end)
 end
 
-Settings:Toggle({
+Otros:Toggle({
     Title = "OCULTAR NOMBRE",
     Default = false,
     Callback = function(state)
@@ -2591,7 +2702,7 @@ Settings:Toggle({
     end
 })
 
-Settings:Input({
+Otros:Input({
     Title = "NOMBRE FALSO",
     Placeholder = "XXX-XXXX-XXX",
     Value = "MATRIXHUB",
@@ -2614,15 +2725,16 @@ Settings:Input({
     end
 })
 
-local KillSoundEnabled = false
-local SelectedKillSound = "BESO"
-local KillSoundVolume = 1
+local KillSoundEnabled = MATRIXHUB_CONFIG.KillSoundEnabled == true
+local SelectedKillSound = MATRIXHUB_CONFIG.SelectedKillSound or "BESO"
+local KillSoundVolume = math.clamp(tonumber(MATRIXHUB_CONFIG.KillSoundVolume) or 1, 1, 3)
 -- Estas variables se declaran antes de PlayKillSound para que el detector
 -- de kills y los controles de la interfaz compartan el mismo estado.
-local CustomKillSoundId = ""
-local UseCustomKillSoundId = false
+local CustomKillSoundId = tostring(MATRIXHUB_CONFIG.CustomKillSoundId or ""):gsub("%D", "")
+local UseCustomKillSoundId = MATRIXHUB_CONFIG.UseCustomKillSound == true and CustomKillSoundId ~= ""
 
 local KillSounds = {
+    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
@@ -2638,9 +2750,21 @@ local KillSounds = {
 
 }
 
+local savedSoundExists = false
+for _, soundOption in ipairs(KillSounds) do
+    if soundOption.Name == SelectedKillSound then
+        savedSoundExists = true
+        break
+    end
+end
+if not savedSoundExists then
+    SelectedKillSound = KillSounds[1].Name
+    MATRIXHUB_CONFIG.SelectedKillSound = SelectedKillSound
+end
+
 local KillSoundPlayer = Instance.new("Sound")
 KillSoundPlayer.Name = "MATRIXHUB_KillSound"
-KillSoundPlayer.Volume = 1
+KillSoundPlayer.Volume = KillSoundVolume
 KillSoundPlayer.Looped = false
 KillSoundPlayer.Parent = game:GetService("SoundService")
 
@@ -2725,26 +2849,30 @@ end
 SetupKillSoundDetector()
 
 -- SECCION INDEPENDIENTE: SONIDOS
-local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
 Sonidos:Section({ Title = "SONIDO DE MUERTE", Icon = "music", Opened = true })
 
 Sonidos:Toggle({
     Title = "ACTIVAR SONIDO DE MUERTE",
-    Value = false,
+    Value = KillSoundEnabled,
     Callback = function(v)
         KillSoundEnabled = v
+        MATRIXHUB_CONFIG.KillSoundEnabled = v
+        SaveMatrixHubConfig()
         if not v then KillSoundPlayer:Stop() end
     end
 })
 
 Sonidos:Input({
     Title = "ID PERSONALIZADO DEL SONIDO",
-    Value = "",
+    Value = CustomKillSoundId,
     Placeholder = "Ejemplo: 1234567890",
     Callback = function(text)
         local digits = tostring(text or ""):gsub("%D", "")
         CustomKillSoundId = digits
         UseCustomKillSoundId = digits ~= ""
+        MATRIXHUB_CONFIG.CustomKillSoundId = digits
+        MATRIXHUB_CONFIG.UseCustomKillSound = digits ~= ""
+        SaveMatrixHubConfig()
     end
 })
 
@@ -2754,19 +2882,24 @@ for _, s in ipairs(KillSounds) do table.insert(KillSoundDropdownValues, s.Name) 
 Sonidos:Dropdown({
     Title = "SONIDOS PREDETERMINADOS",
     Values = KillSoundDropdownValues,
-    Value = KillSounds[1].Name,
+    Value = SelectedKillSound,
     Callback = function(selected)
         SelectedKillSound = selected
         UseCustomKillSoundId = false
+        MATRIXHUB_CONFIG.SelectedKillSound = selected
+        MATRIXHUB_CONFIG.UseCustomKillSound = false
+        SaveMatrixHubConfig()
     end
 })
 
 Sonidos:Slider({
     Title = "VOLUMEN SONIDO",
-    Value = { Min = 1, Max = 3, Default = 1 },
+    Value = { Min = 1, Max = 3, Default = KillSoundVolume },
     Callback = function(v)
         KillSoundVolume = v
         KillSoundPlayer.Volume = v
+        MATRIXHUB_CONFIG.KillSoundVolume = v
+        SaveMatrixHubConfig()
     end
 })
 
