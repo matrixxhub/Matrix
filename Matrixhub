@@ -35,7 +35,8 @@ backgroundImage.Name = "MatrixBackgroundImage"
 backgroundImage.BackgroundTransparency = 1
 backgroundImage.Size = UDim2.fromScale(1, 1)
 backgroundImage.Position = UDim2.fromScale(0, 0)
-if MATRIX_BACKGROUND_IMAGE ~= "" then
+backgroundImage.Visible = MATRIX_BACKGROUND_IMAGE ~= ""
+if backgroundImage.Visible then
     backgroundImage.Image = MATRIX_BACKGROUND_IMAGE
 end
 backgroundImage.ScaleType = Enum.ScaleType.Crop
@@ -116,7 +117,6 @@ shadowCorner.CornerRadius = UDim.new(0, 19)
 shadowCorner.Parent = panelShadow
 local shadowConstraint = Instance.new("UISizeConstraint")
 shadowConstraint.MaxSize = Vector2.new(398, 278)
-shadowConstraint.MinSize = Vector2.new(288, 278)
 shadowConstraint.Parent = panelShadow
 
 local panel = Instance.new("Frame")
@@ -132,7 +132,6 @@ panel.Parent = background
 
 local panelConstraint = Instance.new("UISizeConstraint")
 panelConstraint.MaxSize = Vector2.new(390, 270)
-panelConstraint.MinSize = Vector2.new(280, 270)
 panelConstraint.Parent = panel
 
 local panelCorner = Instance.new("UICorner")
@@ -228,23 +227,39 @@ local function decorateButton(button, colorA, colorB)
     scale.Parent = button
 
     local hoverTween = TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.035})
-    local normalTween = TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    local normalTween = TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1})
     local pressTween = TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.975})
 
+    local function isPointerInput(input)
+        return input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+    end
+
     button.MouseEnter:Connect(function()
-        if button.Active then hoverTween:Play() end
+        if button.Active and button.Visible then
+            normalTween:Cancel()
+            hoverTween:Play()
+        end
     end)
     button.MouseLeave:Connect(function()
+        hoverTween:Cancel()
+        pressTween:Cancel()
         normalTween:Play()
     end)
     button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if isPointerInput(input) and button.Active and button.Visible then
+            hoverTween:Cancel()
             pressTween:Play()
         end
     end)
     button.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if button.Active then hoverTween:Play() else normalTween:Play() end
+        if isPointerInput(input) then
+            pressTween:Cancel()
+            if button.Active and button.Visible then
+                hoverTween:Play()
+            else
+                normalTween:Play()
+            end
         end
     end)
 end
@@ -328,7 +343,7 @@ startButton.Activated:Connect(function()
     progress.Size = UDim2.new(1, -30, 0, 42)
     progress.Font = Enum.Font.Code
     progress.Text = "0%"
-    progress.TextColor3 = Color3.fromRGB(80, 255, 150)
+    progress.TextColor3 = Color3.fromRGB(207, 117, 255)
     progress.TextSize = 24
     progress.ZIndex = 7
     progress.Parent = panel
@@ -337,7 +352,7 @@ startButton.Activated:Connect(function()
     barBack.Name = "ProgressBackground"
     barBack.Position = UDim2.new(0, 22, 0, 158)
     barBack.Size = UDim2.new(1, -44, 0, 7)
-    barBack.BackgroundColor3 = Color3.fromRGB(20, 45, 30)
+    barBack.BackgroundColor3 = Color3.fromRGB(24, 16, 54)
     barBack.BorderSizePixel = 0
     barBack.ZIndex = 7
     barBack.Parent = panel
@@ -346,11 +361,14 @@ startButton.Activated:Connect(function()
     local bar = Instance.new("Frame")
     bar.Name = "ProgressBar"
     bar.Size = UDim2.new(0, 0, 1, 0)
-    bar.BackgroundColor3 = Color3.fromRGB(0, 230, 105)
+    bar.BackgroundColor3 = Color3.fromRGB(127, 72, 245)
     bar.BorderSizePixel = 0
     bar.ZIndex = 8
     bar.Parent = barBack
     Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+    local barGradient = Instance.new("UIGradient")
+    barGradient.Color = ColorSequence.new(Color3.fromRGB(205, 125, 255), Color3.fromRGB(86, 55, 205))
+    barGradient.Parent = bar
 
     discordButton.Visible = false
     status.Text = "INITIALIZING COMPONENTS..."
