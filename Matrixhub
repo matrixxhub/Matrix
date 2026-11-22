@@ -408,6 +408,19 @@ end)
 launchMatrixHub = function()
 local _version = "1.6.66"
 local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+
+-- MATRIX THEME: controles apagados en gris y activos en verde.
+-- Solo cambia la apariencia; no modifica callbacks ni funciones.
+MATRIXHUB_UI:AddTheme({
+    Name = "Matrix",
+    Accent = Color3.fromRGB(0, 200, 90),       -- Estado activo
+    Background = Color3.fromRGB(13, 16, 18),
+    Outline = Color3.fromRGB(78, 88, 82),
+    Text = Color3.fromRGB(238, 242, 239),
+    Placeholder = Color3.fromRGB(150, 158, 153),
+    Button = Color3.fromRGB(105, 111, 108),    -- Estado inactivo
+    Icon = Color3.fromRGB(210, 218, 213),
+})
 local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
@@ -431,7 +444,7 @@ MATRIXHUB_UI:CreateWindow({
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
-MATRIXHUB_UI:SetTheme("Emerald")
+MATRIXHUB_UI:SetTheme("Matrix")
 
 -- MATRIX-HUB DIGITAL RAIN: solo dentro de la ventana abierta y expandida.
 do
@@ -1155,8 +1168,8 @@ end
 Settings:Dropdown({
     Title = "INTERFACE THEME",
     Icon = "palette",
-    Values = {"Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
-    Value = "Emerald",
+    Values = {"Matrix", "Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
+    Value = "Matrix",
     Callback = function(v)
         MATRIXHUB_UI:SetTheme(v)
     end
