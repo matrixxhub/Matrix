@@ -2623,7 +2623,6 @@ local CustomKillSoundId = ""
 local UseCustomKillSoundId = false
 
 local KillSounds = {
-    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
