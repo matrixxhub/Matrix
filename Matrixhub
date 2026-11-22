@@ -2186,60 +2186,127 @@ Settings:Section({ Title = "MODO STREAMER", Icon = "user-x" })
 local spoofNameText = "MATRIXHUB"
 local isWorkspaceLooping = false
 
-local function safeReplace(str, find, replace)
-    local safeFind = find:gsub("[%-%^%$%(%)%%%.%[%]%*%+%?]", "%%%1")
-    return (str:gsub(safeFind, replace))
+-- Seguimiento por eventos: evita recorrer todo el juego cada segundo.
+local nameRootConnections = {}
+local nameTextConnections = {}
+local trackedNameLabels = {}
+local modifiedNameLabels = setmetatable({}, { __mode = "k" })
+
+local function safeReplace(str, findText, replaceText)
+    if type(str) ~= "string" or type(findText) ~= "string" or findText == "" then
+        return str
+    end
+
+    local safeFind = findText:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+    -- Usar función de reemplazo para que '%' escrito por el usuario sea literal.
+    return (str:gsub(safeFind, function()
+        return replaceText
+    end))
 end
 
 local function processText(v, myName, myDisp)
+    if not v or not v.Parent then return end
+    if not (v:IsA("TextLabel") or v:IsA("TextBox") or v:IsA("TextButton")) then return end
+
     local parentGui = v:FindFirstAncestorWhichIsA("ScreenGui")
-    if parentGui and (string.find(parentGui.Name, "WindUI") or string.find(parentGui.Name, "MATRIXHUB")) then return end
-    
-    if v:IsA("TextLabel") or v:IsA("TextBox") or v:IsA("TextButton") then
-        local txt = v.Text
-        local hasName = false
-        
-        if txt and txt ~= "" then
-            if string.find(txt, myName, 1, true) or string.find(txt, myDisp, 1, true) then
-                hasName = true
-            end
-        end
-        
-        if hasName then
-            v.RichText = true
-            local newText = safeReplace(v.Text, myName, spoofNameText)
-            newText = safeReplace(newText, myDisp, spoofNameText)
+    if parentGui and (string.find(parentGui.Name, "WindUI", 1, true)
+        or string.find(parentGui.Name, "MATRIXHUB", 1, true)) then
+        return
+    end
+
+    local txt = v.Text
+    if not txt or txt == "" then return end
+
+    local hasName = (myName ~= "" and string.find(txt, myName, 1, true) ~= nil)
+        or (myDisp ~= "" and string.find(txt, myDisp, 1, true) ~= nil)
+
+    if hasName then
+        v.RichText = true
+        local newText = safeReplace(txt, myName, spoofNameText)
+        newText = safeReplace(newText, myDisp, spoofNameText)
+
+        if newText ~= txt then
+            modifiedNameLabels[v] = true
             v.Text = newText
         end
     end
+end
+
+local function disconnectNameWatcher()
+    for _, connection in ipairs(nameRootConnections) do
+        if connection then connection:Disconnect() end
+    end
+    for _, connection in ipairs(nameTextConnections) do
+        if connection then connection:Disconnect() end
+    end
+
+    table.clear(nameRootConnections)
+    table.clear(nameTextConnections)
+    table.clear(trackedNameLabels)
+end
+
+local function attachNameTextObject(v)
+    if not isWorkspaceLooping or trackedNameLabels[v] then return end
+    if not (v:IsA("TextLabel") or v:IsA("TextBox") or v:IsA("TextButton")) then return end
+
+    trackedNameLabels[v] = true
+
+    local connection = v:GetPropertyChangedSignal("Text"):Connect(function()
+        if isWorkspaceLooping then
+            pcall(processText, v, player.Name, player.DisplayName)
+        end
+    end)
+    table.insert(nameTextConnections, connection)
+
+    pcall(processText, v, player.Name, player.DisplayName)
+end
+
+local function watchNameRoot(root)
+    if not root or not isWorkspaceLooping then return end
+
+    table.insert(nameRootConnections, root.DescendantAdded:Connect(attachNameTextObject))
+
+    -- Una sola inspección inicial, dividida en bloques para no congelar la interfaz.
+    task.spawn(function()
+        local descendants = root:GetDescendants()
+        for index, descendant in ipairs(descendants) do
+            if not isWorkspaceLooping then return end
+            attachNameTextObject(descendant)
+
+            if index % 150 == 0 then
+                task.wait()
+            end
+        end
+    end)
 end
 
 Settings:Toggle({
     Title = "OCULTAR NOMBRE",
     Default = false,
     Callback = function(state)
+        if state == isWorkspaceLooping then return end
         isWorkspaceLooping = state
-        if state then
-            task.spawn(function()
-                while isWorkspaceLooping do
-                    task.wait(1)
-                    pcall(function()
-                        local myName = player.Name
-                        local myDisp = player.DisplayName
-                        for _, gui in ipairs(game:GetDescendants()) do
-                            if gui:IsA("TextLabel") or gui:IsA("TextBox") or gui:IsA("TextButton") then
-                                local txt = gui.Text
-                                if txt and txt ~= "" then
-                                    if string.find(txt, myName, 1, true) or string.find(txt, myDisp, 1, true) then
-                                        processText(gui, myName, myDisp)
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                end
-            end)
+
+        if not state then
+            disconnectNameWatcher()
+            return
         end
+
+        -- Solo se revisan los contenedores donde normalmente aparecen interfaces
+        -- y etiquetas sobre personajes, no todos los servicios del juego.
+        watchNameRoot(workspace)
+
+        local playerGui = player:FindFirstChildOfClass("PlayerGui")
+        if playerGui then
+            watchNameRoot(playerGui)
+        end
+
+        -- También cubre el caso en que PlayerGui aparezca después de activar la opción.
+        table.insert(nameRootConnections, player.ChildAdded:Connect(function(child)
+            if isWorkspaceLooping and child:IsA("PlayerGui") then
+                watchNameRoot(child)
+            end
+        end))
     end
 })
 
@@ -2248,8 +2315,20 @@ Settings:Input({
     Placeholder = "XXX-XXXX-XXX",
     Value = "MATRIXHUB",
     Callback = function(text)
-        if text ~= "" then
+        if text ~= "" and text ~= spoofNameText then
+            local previousName = spoofNameText
             spoofNameText = text
+
+            -- Actualiza solo los textos que esta función ya había modificado.
+            for label in pairs(modifiedNameLabels) do
+                if label and label.Parent then
+                    pcall(function()
+                        label.Text = safeReplace(label.Text, previousName, spoofNameText)
+                    end)
+                else
+                    modifiedNameLabels[label] = nil
+                end
+            end
         end
     end
 })
