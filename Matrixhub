@@ -1589,120 +1589,182 @@ Movimiento:Toggle({
     end
 })
 
--- MATRIX HUB // QUICK FLOATING BUTTONS
--- Comparten los mismos estados y funciones que los toggles originales.
+-- MATRIX HUB // BOTONES FLOTANTES
+-- Botones circulares estilo HUD, conectados a las funciones originales.
 do
     local UserInputService = game:GetService("UserInputService")
     local quickButtons = {}
     local quickGui = screenGui
 
-    local function makeQuickButton(id, label, order, getter, setter)
+    local function makeQuickButton(id, iconText, order, accent, getter, setter)
         local button = Instance.new("TextButton")
         button.Name = "Quick_" .. id
         button.AnchorPoint = Vector2.new(1, 0)
-        button.Position = UDim2.new(1, -14, 0, 150 + ((order - 1) * 54))
-        button.Size = UDim2.fromOffset(126, 42)
-        button.BackgroundColor3 = Color3.fromRGB(15, 25, 22)
+        button.Position = UDim2.new(1, -18, 0, 178 + ((order - 1) * 76))
+        button.Size = UDim2.fromOffset(62, 62)
+        button.BackgroundColor3 = Color3.fromRGB(10, 13, 22)
         button.BackgroundTransparency = 0.08
         button.BorderSizePixel = 0
         button.AutoButtonColor = false
-        button.Text = label .. "  OFF"
-        button.TextColor3 = Color3.fromRGB(190, 210, 200)
-        button.TextSize = 12
-        button.Font = Enum.Font.Code
+        button.Text = iconText
+        button.TextColor3 = Color3.fromRGB(245, 248, 255)
+        button.TextSize = id == "Fantasma" and 31 or 34
+        button.Font = Enum.Font.GothamBold
         button.Visible = false
-        button.ZIndex = 50
+        button.ZIndex = 60
         button.Parent = quickGui
 
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 10)
+        corner.CornerRadius = UDim.new(1, 0)
         corner.Parent = button
+
+        local gradient = Instance.new("UIGradient")
+        gradient.Rotation = 135
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 42, 58)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(7, 9, 17))
+        })
+        gradient.Parent = button
+
         local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(0, 175, 95)
-        stroke.Thickness = 1.2
-        stroke.Transparency = 0.2
+        stroke.Name = "AccentRing"
+        stroke.Color = accent
+        stroke.Thickness = 2
+        stroke.Transparency = 0.22
         stroke.Parent = button
+
+        local scale = Instance.new("UIScale")
+        scale.Scale = 1
+        scale.Parent = button
+
+        local shadow = Instance.new("Frame")
+        shadow.Name = "Glow"
+        shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+        shadow.Position = UDim2.fromScale(0.5, 0.5)
+        shadow.Size = UDim2.new(1, 9, 1, 9)
+        shadow.BackgroundColor3 = accent
+        shadow.BackgroundTransparency = 0.88
+        shadow.BorderSizePixel = 0
+        shadow.ZIndex = 59
+        shadow.Parent = button
+        local shadowCorner = Instance.new("UICorner")
+        shadowCorner.CornerRadius = UDim.new(1, 0)
+        shadowCorner.Parent = shadow
 
         local dragging = false
         local dragInput
         local dragStart
         local startPosition
+        local moved = false
+
         button.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
+                moved = false
                 dragStart = input.Position
                 startPosition = button.Position
                 dragInput = input
             end
         end)
+
         button.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch then
                 dragInput = input
             end
         end)
-        UserInputService.InputChanged:Connect(function(input)
+
+        local dragConnection
+        dragConnection = UserInputService.InputChanged:Connect(function(input)
             if dragging and input == dragInput then
                 local delta = input.Position - dragStart
-                button.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X,
-                    startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+                if math.abs(delta.X) + math.abs(delta.Y) > 7 then
+                    moved = true
+                end
+                button.Position = UDim2.new(
+                    startPosition.X.Scale, startPosition.X.Offset + delta.X,
+                    startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+                )
             end
         end)
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+
+        button.InputEnded:Connect(function(input)
+            if input == dragInput or input.UserInputType == Enum.UserInputType.Touch
+                or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = false
             end
         end)
 
         button.Activated:Connect(function()
+            if moved then
+                moved = false
+                return
+            end
             setter(not getter())
             refreshQuickButtons()
         end)
 
-        quickButtons[id] = { Button = button, Getter = getter, Label = label }
+        quickButtons[id] = {
+            Button = button,
+            Getter = getter,
+            Accent = accent,
+            Glow = shadow,
+            Stroke = stroke
+        }
         return button
     end
 
-    makeQuickButton("Fantasma", "FANTASMA", 1,
+    makeQuickButton("Fantasma", "👻", 1, Color3.fromRGB(174, 105, 255),
         function() return _G.InvisActive == true end,
         setInvisibleV6)
-    makeQuickButton("Silent", "SILENT", 2,
-        function() return silentAimManualEnabled end,
+
+    makeQuickButton("Silent", "⌖", 2, Color3.fromRGB(75, 170, 255),
+        function() return silentAimManualEnabled == true end,
         setSilentAimQuick)
-    makeQuickButton("AutoShoot", "AUTO SHOOT", 3,
-        function() return autoShootEnabled end,
+
+    makeQuickButton("AutoShoot", "◎", 3, Color3.fromRGB(85, 235, 130),
+        function() return autoShootEnabled == true end,
         setAutoShootQuick)
 
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
             local active = item.Getter()
-            item.Button.Text = item.Label .. (active and "  ON" or "  OFF")
             item.Button.BackgroundColor3 = active
-                and Color3.fromRGB(0, 95, 55)
-                or Color3.fromRGB(15, 25, 22)
+                and Color3.fromRGB(18, 38, 34)
+                or Color3.fromRGB(10, 13, 22)
+            item.Stroke.Transparency = active and 0 or 0.22
+            item.Stroke.Thickness = active and 2.7 or 2
+            item.Glow.BackgroundTransparency = active and 0.76 or 0.88
             item.Button.TextColor3 = active
-                and Color3.fromRGB(220, 255, 235)
-                or Color3.fromRGB(190, 210, 200)
+                and item.Accent
+                or Color3.fromRGB(245, 248, 255)
         end
     end
+
     refreshQuickButtons()
 
-    Settings:Section({ Title = "FLOATING QUICK BUTTONS", Icon = "mouse-pointer-2", Opened = true })
-    Settings:Toggle({
+    -- Esta sección queda debajo de las opciones de cheats de TARGETING.
+    Aimbot:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
+    Aimbot:Toggle({
         Title = "MOSTRAR FANTASMA",
+        Icon = "ghost",
         Default = false,
         Callback = function(enabled)
             quickButtons.Fantasma.Button.Visible = enabled
         end
     })
-    Settings:Toggle({
+    Aimbot:Toggle({
         Title = "MOSTRAR SILENT",
+        Icon = "crosshair",
         Default = false,
         Callback = function(enabled)
             quickButtons.Silent.Button.Visible = enabled
         end
     })
-    Settings:Toggle({
+    Aimbot:Toggle({
         Title = "MOSTRAR AUTO SHOOT",
+        Icon = "target",
         Default = false,
         Callback = function(enabled)
             quickButtons.AutoShoot.Button.Visible = enabled
