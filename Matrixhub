@@ -547,15 +547,29 @@ local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" 
 local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 
--- MATRIX HUB // AUTO FARM DE EVENTO
--- Integración del sistema de recolección de eventos de Random.
+local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
+local Settings = MATRIXHUB:Tab({ Title = 
+"CONFIGURATION", Icon = "settings" })
+
+-- MATRIX HUB // AUTO FARM DE EVENTO (OPTIMIZADO)
+-- Se registra dentro de una sección explícita para que WindUI no deje la pestaña vacía.
 local MatrixFarmEnv = (type(getgenv) == "function" and getgenv()) or _G
 local MatrixAutoEventFarmEnabled = false
 local MatrixAutoEventFarmRemote = nil
 local MatrixFarmReplicatedStorage = game:GetService("ReplicatedStorage")
+local MATRIX_FARM_SCAN_INTERVAL = 0.45
+local MATRIX_FARM_REMOTE_INTERVAL = 1.2
 
-AutoFarm:Section({ Title = "EVENT FARM", Icon = "gift" })
-AutoFarm:Toggle({
+MatrixFarmEnv.RoxHubAutoEventFarm = false
+
+local AutoFarmSection = AutoFarm:Section({
+    Title = "EVENT FARM",
+    Icon = "gift",
+    Opened = true,
+    Desc = "MATRIXHUB EVENT FARM | OPTIMIZADO"
+})
+
+AutoFarmSection:Toggle({
     Title = "AUTO FARM HALLOWEEN",
     Value = false,
     Callback = function(enabled)
@@ -568,27 +582,36 @@ AutoFarm:Toggle({
 })
 
 task.spawn(function()
-    while task.wait(0.05) do
+    local lastRemoteFire = 0
+    local nextRemoteLookup = 0
+
+    while task.wait(MATRIX_FARM_SCAN_INTERVAL) do
         if not MatrixAutoEventFarmEnabled then
+            lastRemoteFire = 0
+            nextRemoteLookup = 0
             continue
         end
 
-        -- Resolver el RemoteEvent una sola vez; volver a buscarlo si desaparece.
-        pcall(function()
-            if not MatrixAutoEventFarmRemote or not MatrixAutoEventFarmRemote.Parent then
+        local now = os.clock()
+
+        -- Buscar el RemoteEvent como máximo una vez cada 3 segundos si aún no aparece.
+        if (not MatrixAutoEventFarmRemote or not MatrixAutoEventFarmRemote.Parent)
+            and now >= nextRemoteLookup then
+            nextRemoteLookup = now + 3
+            pcall(function()
                 local packages = MatrixFarmReplicatedStorage:FindFirstChild("Packages")
                 local networking = packages and packages:FindFirstChild("Networking")
                 MatrixAutoEventFarmRemote = networking
                     and networking:FindFirstChild("RE/Events/CollectEventSpawnable")
-            end
+            end)
+        end
 
-            if MatrixAutoEventFarmRemote then
+        -- El servidor recibe una llamada cada 1.2 s, no 20 llamadas por segundo.
+        if MatrixAutoEventFarmRemote and now - lastRemoteFire >= MATRIX_FARM_REMOTE_INTERVAL then
+            pcall(function()
                 MatrixAutoEventFarmRemote:FireServer()
-            end
-        end)
-
-        if not MatrixAutoEventFarmEnabled then
-            continue
+            end)
+            lastRemoteFire = now
         end
 
         local character = LocalPlayer.Character
@@ -602,7 +625,7 @@ task.spawn(function()
                 end
 
                 local touchPart = spawnable:FindFirstChild("Touch")
-                if touchPart then
+                if touchPart and touchPart:IsA("BasePart") then
                     pcall(function()
                         firetouchinterest(rootPart, touchPart, 0)
                         firetouchinterest(rootPart, touchPart, 1)
@@ -612,10 +635,6 @@ task.spawn(function()
         end
     end
 end)
-
-local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
-local Settings = MATRIXHUB:Tab({ Title = 
-"CONFIGURATION", Icon = "settings" })
 Settings:Section({ Title = "CONFIGURATION", Icon = "settings" })
 local reviewText = ""
 Settings:Input({
