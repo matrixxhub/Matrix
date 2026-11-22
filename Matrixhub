@@ -546,6 +546,73 @@ local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" })
 local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
+
+-- MATRIX HUB // AUTO FARM DE EVENTO
+-- Integración del sistema de recolección de eventos de Random.
+local MatrixFarmEnv = (type(getgenv) == "function" and getgenv()) or _G
+local MatrixAutoEventFarmEnabled = false
+local MatrixAutoEventFarmRemote = nil
+local MatrixFarmReplicatedStorage = game:GetService("ReplicatedStorage")
+
+AutoFarm:Section({ Title = "EVENT FARM", Icon = "gift" })
+AutoFarm:Toggle({
+    Title = "AUTO FARM HALLOWEEN",
+    Value = false,
+    Callback = function(enabled)
+        MatrixAutoEventFarmEnabled = enabled
+        MatrixFarmEnv.RoxHubAutoEventFarm = enabled
+        if not enabled then
+            MatrixAutoEventFarmRemote = nil
+        end
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.05) do
+        if not MatrixAutoEventFarmEnabled then
+            continue
+        end
+
+        -- Resolver el RemoteEvent una sola vez; volver a buscarlo si desaparece.
+        pcall(function()
+            if not MatrixAutoEventFarmRemote or not MatrixAutoEventFarmRemote.Parent then
+                local packages = MatrixFarmReplicatedStorage:FindFirstChild("Packages")
+                local networking = packages and packages:FindFirstChild("Networking")
+                MatrixAutoEventFarmRemote = networking
+                    and networking:FindFirstChild("RE/Events/CollectEventSpawnable")
+            end
+
+            if MatrixAutoEventFarmRemote then
+                MatrixAutoEventFarmRemote:FireServer()
+            end
+        end)
+
+        if not MatrixAutoEventFarmEnabled then
+            continue
+        end
+
+        local character = LocalPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local spawnables = workspace:FindFirstChild("SpawnablesClient")
+
+        if rootPart and spawnables then
+            for _, spawnable in ipairs(spawnables:GetChildren()) do
+                if not MatrixAutoEventFarmEnabled then
+                    break
+                end
+
+                local touchPart = spawnable:FindFirstChild("Touch")
+                if touchPart then
+                    pcall(function()
+                        firetouchinterest(rootPart, touchPart, 0)
+                        firetouchinterest(rootPart, touchPart, 1)
+                    end)
+                end
+            end
+        end
+    end
+end)
+
 local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = 
 "CONFIGURATION", Icon = "settings" })
@@ -2342,6 +2409,7 @@ local CustomKillSoundId = ""
 local UseCustomKillSoundId = false
 
 local KillSounds = {
+    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
