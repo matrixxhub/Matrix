@@ -1665,8 +1665,8 @@ do
         button.AnchorPoint = Vector2.new(1, 0)
         button.Position = UDim2.new(1, -18, 0, 178 + ((order - 1) * 76))
         button.Size = UDim2.fromOffset(62, 62)
-        button.BackgroundColor3 = Color3.fromRGB(10, 13, 22)
-        button.BackgroundTransparency = 0.08
+        button.BackgroundColor3 = accent
+        button.BackgroundTransparency = 0
         button.BorderSizePixel = 0
         button.AutoButtonColor = false
         button.Text = iconText
@@ -1684,8 +1684,8 @@ do
         local gradient = Instance.new("UIGradient")
         gradient.Rotation = 135
         gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 42, 58)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(7, 9, 17))
+            ColorSequenceKeypoint.new(0, accent:Lerp(Color3.new(1, 1, 1), 0.28)),
+            ColorSequenceKeypoint.new(1, accent:Lerp(Color3.new(0, 0, 0), 0.28))
         })
         gradient.Parent = button
 
@@ -1793,15 +1793,20 @@ do
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
             local active = item.Getter()
-            item.Button.BackgroundColor3 = active
-                and Color3.fromRGB(18, 38, 34)
-                or Color3.fromRGB(10, 13, 22)
-            item.Stroke.Transparency = active and 0 or 0.22
-            item.Stroke.Thickness = active and 2.7 or 2
-            item.Glow.BackgroundTransparency = active and 0.76 or 0.88
-            item.Button.TextColor3 = active
-                and item.Accent
-                or Color3.fromRGB(245, 248, 255)
+            item.Button.BackgroundColor3 = item.Accent
+            local gradient = item.Button:FindFirstChildOfClass("UIGradient")
+            if gradient then
+                local light = active and 0.12 or 0.28
+                local dark = active and 0.12 or 0.28
+                gradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, item.Accent:Lerp(Color3.new(1, 1, 1), light)),
+                    ColorSequenceKeypoint.new(1, item.Accent:Lerp(Color3.new(0, 0, 0), dark))
+                })
+            end
+            item.Stroke.Transparency = active and 0 or 0.08
+            item.Stroke.Thickness = active and 3.2 or 2.5
+            item.Glow.BackgroundTransparency = active and 0.58 or 0.72
+            item.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end
 
