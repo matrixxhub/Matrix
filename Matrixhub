@@ -546,6 +546,69 @@ local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Movimiento = MATRIXHUB:Tab({ Title = "MOBILITY", Icon = "person-standing" })
 local Animaciones = MATRIXHUB:Tab({ Title = "AVATAR LAB", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
+-- AUTOMATION // AUTO FARM HALLOWEEN
+-- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
+do
+    local env = (type(getgenv) == "function" and getgenv()) or _G
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local farmRemote
+    local lastRemoteCall = 0
+
+    env.RoxHubAutoEventFarm = false
+
+    AutoFarm:Section({ Title = "EVENTO", Icon = "gift", Opened = true })
+    AutoFarm:Toggle({
+        Title = "AUTO FARM HALLOWEEN",
+        Icon = "coins",
+        Value = false,
+        Callback = function(enabled)
+            env.RoxHubAutoEventFarm = enabled == true
+        end
+    })
+
+    task.spawn(function()
+        while task.wait(0.2) do
+            if env.RoxHubAutoEventFarm then
+                local ok, err = pcall(function()
+                    if not farmRemote or not farmRemote.Parent then
+                        local packages = ReplicatedStorage:FindFirstChild("Packages")
+                        local networking = packages and packages:FindFirstChild("Networking")
+                        farmRemote = networking and networking:FindFirstChild("RE/Events/CollectEventSpawnable")
+                    end
+
+                    if farmRemote and os.clock() - lastRemoteCall >= 0.35 then
+                        farmRemote:FireServer()
+                        lastRemoteCall = os.clock()
+                    end
+
+                    local character = LocalPlayer.Character
+                    local root = character and character:FindFirstChild("HumanoidRootPart")
+                    local spawnables = workspace:FindFirstChild("SpawnablesClient")
+                    if root and spawnables and type(firetouchinterest) == "function" then
+                        for _, object in ipairs(spawnables:GetChildren()) do
+                            if not env.RoxHubAutoEventFarm then break end
+                            local touchPart = object:FindFirstChild("Touch")
+                            if touchPart and touchPart:IsA("BasePart") then
+                                pcall(function()
+                                    firetouchinterest(root, touchPart, 0)
+                                    firetouchinterest(root, touchPart, 1)
+                                end)
+                                task.wait(0.025)
+                            end
+                        end
+                    end
+                end)
+
+                if not ok then
+                    -- Si el evento no existe en esta experiencia, se vuelve a buscar
+                    -- en el siguiente ciclo sin detener Matrix Hub.
+                    farmRemote = nil
+                end
+            end
+        end
+    end)
+end
+
 local AutoKills = MATRIXHUB:Tab({ Title = "COMBAT SYSTEMS", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = 
 "CONFIGURATION", Icon = "settings" })
@@ -1608,7 +1671,7 @@ do
         button.AutoButtonColor = false
         button.Text = iconText
         button.TextColor3 = Color3.fromRGB(245, 248, 255)
-        button.TextSize = id == "Fantasma" and 31 or 34
+        button.TextSize = id == "Fantasma" and 31 or (id == "Silent" and 27 or 34)
         button.Font = Enum.Font.GothamBold
         button.Visible = false
         button.ZIndex = 60
@@ -1719,7 +1782,7 @@ do
         function() return _G.InvisActive == true end,
         setInvisibleV6)
 
-    makeQuickButton("Silent", "⌖", 2, Color3.fromRGB(75, 170, 255),
+    makeQuickButton("Silent", "S", 2, Color3.fromRGB(75, 170, 255),
         function() return silentAimManualEnabled == true end,
         setSilentAimQuick)
 
