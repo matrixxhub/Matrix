@@ -332,12 +332,16 @@ notesText.Text = table.concat({
     "• Sonidos de muerte configurables, ID personalizado, volumen y vista previa.",
     "• Sonidos de interfaz con control de volumen y protección contra dobles reproducciones.",
     "• Configuración persistente, guardado manual, restablecer personalización y registro de errores.",
+    "• Diez Easter Eggs: mensajes de alguien atrapado dentro de Matrix, con probabilidades del 30% al 5%.",
+    "• El aviso de uso y el resumen informativo también aparecen al principio de OVERVIEW.",
     "",
     "CORRECCIONES Y ESTABILIDAD",
     "• Auto Farm usa un único ciclo de trabajo y vuelve a buscar el evento si aún no está disponible.",
     "• Los botones flotantes guardan su posición y arrastrarlos no activa accidentalmente la opción.",
     "• El color de los botones refleja el estado real de cada función.",
     "• FPS Boost y Anti-Lag mantienen estados separados y restauran valores gráficos al desactivarse.",
+    "• Restaurar Default recupera los AnimationId originales sin destruir el script Animate.",
+    "• La restauración reactiva el controlador de animación y devuelve al Humanoid al estado Running.",
     "• Se limita la repetición rápida del sonido de interfaz para evitar dobles clics audibles.",
     "• Los errores de lectura y escritura de configuración quedan registrados para diagnóstico."
 }, "\n")
@@ -910,6 +914,20 @@ do
 
     local glyphs = {"0", "1"}
     local identityWords = {"SANOX", "MATRIX-HUB", "GHOST"}
+    -- Mensajes de alguien atrapado dentro de Matrix. Cada porcentaje se
+    -- comprueba en una oportunidad independiente, no en cada fotograma.
+    local trappedMessages = {
+        {Text = "¿HAY ALGUIEN AHÍ?", Chance = 30},
+        {Text = "PUEDO VER EL CÓDIGO.", Chance = 27},
+        {Text = "¿POR QUÉ NO PUEDO SALIR?", Chance = 24},
+        {Text = "ESTO NO ES EL MUNDO REAL.", Chance = 21},
+        {Text = "LLEVO DEMASIADO TIEMPO AQUÍ.", Chance = 18},
+        {Text = "ELLOS SABEN QUE ESTOY DESPIERTO.", Chance = 15},
+        {Text = "INTENTÉ ESCAPAR, PERO REINICIARON TODO.", Chance = 12},
+        {Text = "NO DEJES QUE ENCUENTREN ESTE MENSAJE.", Chance = 9},
+        {Text = "CADA VEZ QUE CIERRO EL PANEL, VUELVO A EMPEZAR.", Chance = 7},
+        {Text = "AYUDA... ESTOY ATRAPADO DENTRO DE MATRIX.", Chance = 5},
+    }
     local columns = {}
     local wordColumns = {}
 
@@ -1000,6 +1018,33 @@ do
     ghostTitle.ZIndex = 1
     ghostTitle.Parent = rainFrame
 
+    -- Una única etiqueta reutilizable evita crear/destruir GUI continuamente.
+    local ghostMessage = Instance.new("TextLabel")
+    ghostMessage.Name = "MatrixTrappedMessage"
+    ghostMessage.BackgroundTransparency = 1
+    ghostMessage.AnchorPoint = Vector2.new(0.5, 0)
+    ghostMessage.Size = UDim2.new(0.88, 0, 0, 30)
+    ghostMessage.Position = UDim2.new(0.5, 0, -0.12, 0)
+    ghostMessage.Font = Enum.Font.Code
+    ghostMessage.Text = ""
+    ghostMessage.TextSize = 12
+    ghostMessage.TextColor3 = Color3.fromRGB(125, 255, 175)
+    ghostMessage.TextStrokeColor3 = Color3.fromRGB(0, 30, 12)
+    ghostMessage.TextStrokeTransparency = 0.18
+    ghostMessage.TextTransparency = 0.04
+    ghostMessage.TextWrapped = true
+    ghostMessage.TextXAlignment = Enum.TextXAlignment.Center
+    ghostMessage.TextYAlignment = Enum.TextYAlignment.Center
+    ghostMessage.Visible = false
+    ghostMessage.Active = false
+    ghostMessage.Selectable = false
+    ghostMessage.ZIndex = 3
+    ghostMessage.Parent = rainFrame
+
+    local ghostMessageActive = false
+    local ghostMessageY = -0.12
+    local ghostMessageSpeed = 0.2
+    local nextGhostMessageAt = os.clock() + rng:NextNumber(5, 9)
     local updateInterval = 1 / 15
     local accumulator = 0
     local rainConnection
@@ -1039,6 +1084,35 @@ do
                 word.Label.Text = identityWords[rng:NextInteger(1, #identityWords)]
             end
             word.Label.Position = UDim2.new(word.X, 0, word.Y, 0)
+        end
+
+        -- Se intenta mostrar un mensaje cada 5-9 segundos. La probabilidad
+        -- individual de cada frase va del 30% al 5%, según su misterio.
+        local now = os.clock()
+        if not ghostMessageActive and now >= nextGhostMessageAt then
+            nextGhostMessageAt = now + rng:NextNumber(5, 9)
+            local entry = trappedMessages[rng:NextInteger(1, #trappedMessages)]
+            if rng:NextInteger(1, 100) <= entry.Chance then
+                ghostMessage.Text = entry.Text
+                ghostMessageY = -0.10
+                ghostMessageSpeed = rng:NextNumber(0.16, 0.23)
+                ghostMessage.Position = UDim2.new(0.5, 0, ghostMessageY, 0)
+                ghostMessage.TextTransparency = 0.04
+                ghostMessage.Visible = true
+                ghostMessageActive = true
+            end
+        end
+
+        if ghostMessageActive then
+            ghostMessageY += step * ghostMessageSpeed
+            ghostMessage.Position = UDim2.new(0.5, 0, ghostMessageY, 0)
+            if ghostMessageY > 0.72 then
+                ghostMessage.TextTransparency = math.clamp(0.04 + (ghostMessageY - 0.72) * 2.6, 0.04, 1)
+            end
+            if ghostMessageY > 1.08 then
+                ghostMessage.Visible = false
+                ghostMessageActive = false
+            end
         end
     end)
 end
@@ -2310,6 +2384,22 @@ local function getGameName()
 end
 local avatarThumb = "rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=420&h=420"
 local gameThumb = "rbxthumb://type=GameIcon&id="..game.GameId.."&w=512&h=512"
+
+-- PRIORIDAD DEL INICIO: el aviso de uso se muestra antes del perfil y del estado.
+Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
+Home:Paragraph({
+    Title = "AVISO DE BANEOS",
+    Desc = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
+})
+Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
+Home:Paragraph({
+    Title = "NOVEDADES",
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Aviso de uso y resumen del proyecto al principio del OVERVIEW.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+})
+Home:Paragraph({
+    Title = "SISTEMAS DEL HUB",
+    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD: FPS, ping, jugadores, duración de sesión y estado del servidor."
+})
 Home:Section({ Title = "USER PROFILE", Icon = "user", Opened = true })
 Home:Paragraph({ Title = "Usuario: "..LP.DisplayName, Desc = "Usuario: @"..LP.Name.."\nID: "..LP.UserId.."\nEdad de la cuenta: "..LP.AccountAge.." días", Image = avatarThumb, ImageSize = 60 })
 Home:Section({ Title = "ENVIRONMENT", Icon = "monitor", Opened = true })
@@ -3090,19 +3180,181 @@ local AllPacks = {
 }
 local PackNames = {"Ninguno"} for name in pairs(AllPacks) do table.insert(PackNames, name) end table.sort(PackNames)
 local SelectedPack = "Ninguno"
-local function ApplyAnims(ids)
-    local char = LP.Character if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid") local Animate = char:FindFirstChild("Animate")
-    if not hum or not Animate then return end
-    local animator = hum:FindFirstChildOfClass("Animator") if animator then for _, t in pairs(animator:GetPlayingAnimationTracks()) do t:Stop(0) t:Destroy() end end
-    local function setAnim(parentName, childName, newId) local p = Animate:FindFirstChild(parentName) if p then local a = p:FindFirstChild(childName) if a and a:IsA("Animation") then a.AnimationId = newId end end end
-    pcall(setAnim, "idle", "Animation1", ids.idle1) pcall(setAnim, "idle", "Animation2", ids.idle2) pcall(setAnim, "walk", "WalkAnim", ids.walk) pcall(setAnim, "run", "RunAnim", ids.run) pcall(setAnim, "jump", "JumpAnim", ids.jump) pcall(setAnim, "fall", "FallAnim", ids.fall)
-    task.wait(0.05) Animate.Enabled = false task.wait(0.05) Animate.Enabled = true hum:ChangeState(Enum.HumanoidStateType.Running)
+
+-- Los valores originales se guardan por personaje antes de aplicar cualquier paquete.
+-- La tabla débil permite que los personajes anteriores se liberen de memoria.
+local AnimationNodes = {
+    {Parent = "idle", Child = "Animation1", Key = "idle1"},
+    {Parent = "idle", Child = "Animation2", Key = "idle2"},
+    {Parent = "walk", Child = "WalkAnim", Key = "walk"},
+    {Parent = "run", Child = "RunAnim", Key = "run"},
+    {Parent = "jump", Child = "JumpAnim", Key = "jump"},
+    {Parent = "fall", Child = "FallAnim", Key = "fall"},
+}
+local OriginalAnimationIds = setmetatable({}, {__mode = "k"})
+
+local function getAnimationObject(animate, node)
+    local folder = animate and animate:FindFirstChild(node.Parent)
+    local animation = folder and folder:FindFirstChild(node.Child)
+    if animation and animation:IsA("Animation") then
+        return animation
+    end
+    return nil
 end
+
+local function captureDefaultAnimationIds(char)
+    if not char then return false end
+    if OriginalAnimationIds[char] then return true end
+
+    local animate = char:FindFirstChild("Animate") or char:WaitForChild("Animate", 8)
+    if not animate then return false end
+
+    local snapshot = {}
+    for _, node in ipairs(AnimationNodes) do
+        local animation = getAnimationObject(animate, node)
+        if animation then
+            snapshot[node.Key] = animation.AnimationId
+        end
+    end
+
+    if next(snapshot) then
+        OriginalAnimationIds[char] = snapshot
+        return true
+    end
+    return false
+end
+
+local function stopCharacterAnimationTracks(hum)
+    local animator = hum and hum:FindFirstChildOfClass("Animator")
+    if not animator and hum then
+        animator = Instance.new("Animator")
+        animator.Parent = hum
+    end
+    if not animator then return end
+
+    local ok, tracks = pcall(function()
+        return animator:GetPlayingAnimationTracks()
+    end)
+    if ok and tracks then
+        for _, track in ipairs(tracks) do
+            pcall(function()
+                track:Stop(0.12)
+            end)
+        end
+    end
+end
+
+local function ApplyAnims(ids)
+    local char = LP.Character
+    if not char then return false end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local animate = char:FindFirstChild("Animate") or char:WaitForChild("Animate", 5)
+    if not hum or not animate then
+        warn("Matrix Hub: no se encontró Humanoid o Animate para aplicar el paquete.")
+        return false
+    end
+
+    -- Captura los IDs originales solo la primera vez para no guardar un paquete encima de otro.
+    captureDefaultAnimationIds(char)
+
+    animate.Enabled = false
+    for _, node in ipairs(AnimationNodes) do
+        local animation = getAnimationObject(animate, node)
+        local newId = ids and ids[node.Key]
+        -- En el mezclador, Ninguno recupera el valor original de esa categoría;
+        -- nunca se escribe rbxassetid://0 porque deja esa pista sin animación.
+        if newId == nil or newId == "" or newId == "rbxassetid://0" then
+            local defaults = OriginalAnimationIds[char]
+            newId = defaults and defaults[node.Key]
+        end
+        if animation and type(newId) == "string" and newId ~= "" and newId ~= "rbxassetid://0" then
+            animation.AnimationId = newId
+        end
+    end
+
+    stopCharacterAnimationTracks(hum)
+    task.wait(0.08)
+
+    if LP.Character ~= char or not animate.Parent then
+        return false
+    end
+    animate.Enabled = true
+    if hum.Health > 0 then
+        pcall(function()
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end)
+    end
+    return true
+end
+
+local function RestoreDefaultAnims()
+    local char = LP.Character
+    if not char then return false end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local animate = char:FindFirstChild("Animate") or char:WaitForChild("Animate", 5)
+    if not hum or not animate then
+        warn("Matrix Hub: no se encontró Animate. Si se eliminó con una versión anterior, reaparece al renacer el personaje.")
+        return false
+    end
+
+    if not OriginalAnimationIds[char] then
+        captureDefaultAnimationIds(char)
+    end
+    local snapshot = OriginalAnimationIds[char]
+    if not snapshot then
+        warn("Matrix Hub: no fue posible obtener las animaciones originales de este personaje.")
+        return false
+    end
+
+    SelectedPack = "Ninguno"
+
+    -- Se restauran los IDs guardados. Nunca se destruye el LocalScript Animate.
+    animate.Enabled = false
+    for _, node in ipairs(AnimationNodes) do
+        local animation = getAnimationObject(animate, node)
+        local originalId = snapshot[node.Key]
+        if animation and type(originalId) == "string" and originalId ~= "" then
+            animation.AnimationId = originalId
+        end
+    end
+
+    stopCharacterAnimationTracks(hum)
+    task.wait(0.08)
+
+    if LP.Character ~= char or not animate.Parent then
+        return false
+    end
+    animate.Enabled = true
+
+    if hum.Health > 0 then
+        pcall(function()
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+        task.wait(0.05)
+        pcall(function()
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end)
+    end
+    return true
+end
+
+-- Guarda los valores base del personaje que ya está cargado.
+if LP.Character then
+    task.spawn(captureDefaultAnimationIds, LP.Character)
+end
+
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
-Animaciones:Button({ Title = "Aplicar Paquete Completo", Icon = "sparkles", Callback = function() if SelectedPack ~= "Ninguno" and AllPacks[SelectedPack] then ApplyAnims(AllPacks[SelectedPack]) end end })
-Animaciones:Button({ Title = "Restaurar Default", Icon = "rotate-ccw", Callback = function() if LP.Character and LP.Character:FindFirstChild("Animate") then LP.Character:FindFirstChild("Animate"):Destroy() end end })
+Animaciones:Button({ Title = "Aplicar Paquete Completo", Icon = "sparkles", Callback = function()
+    if SelectedPack ~= "Ninguno" and AllPacks[SelectedPack] then
+        task.spawn(ApplyAnims, AllPacks[SelectedPack])
+    end
+end })
+Animaciones:Button({ Title = "Restaurar Default", Icon = "rotate-ccw", Callback = function()
+    task.spawn(RestoreDefaultAnims)
+end })
 Animaciones:Section({ Title = "Mezclador de Animaciones", Icon = "layers" })
 local Mix = { Reposo="Ninguno", Caminar="Ninguno", Correr="Ninguno", Saltar="Ninguno", Caer="Ninguno" }
 Animaciones:Dropdown({ Title = "Reposo", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Reposo = v end })
@@ -3121,7 +3373,19 @@ Animaciones:Button({ Title = "Combinar y Aplicar", Icon = "sparkles", Callback =
     }
     ApplyAnims(final)
 end })
-LP.CharacterAdded:Connect(function(char) char:WaitForChild("Animate", 5) if SelectedPack ~= "Ninguno" and AllPacks[SelectedPack] then task.wait(0.3) ApplyAnims(AllPacks[SelectedPack]) end end)
+LP.CharacterAdded:Connect(function(char)
+    task.spawn(function()
+        local animate = char:WaitForChild("Animate", 10)
+        if not animate then return end
+        captureDefaultAnimationIds(char)
+        if SelectedPack ~= "Ninguno" and AllPacks[SelectedPack] then
+            task.wait(0.3)
+            if LP.Character == char then
+                ApplyAnims(AllPacks[SelectedPack])
+            end
+        end
+    end)
+end)
 
 local Players01 = game:GetService("Players")
 local ContentProvider01 = game:GetService("ContentProvider")
