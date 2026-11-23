@@ -565,9 +565,9 @@ local MATRIXHUB_CONFIG = {
     AccentIntensity = 1,
     PanelTransparency = 0.12,
     GlowEnabled = true,
-    UIAudioEnabled = false,
+    UIAudioEnabled = true,
     UIAudioVolume = 0.35,
-    UISounds = { Click = "", Toggle = "", Notice = "" },
+    UISounds = { Click = "95322478201746", Toggle = "95322478201746", Notice = "95322478201746" },
     KillSoundEnabled = false,
     SelectedKillSound = "ES HACKER",
     KillSoundVolume = 1,
@@ -738,8 +738,10 @@ local function SaveMatrixHubConfig(force)
 end
 
 LoadMatrixHubConfig()
+-- Un único sonido fijo para todos los controles de la interfaz.
+MATRIXHUB_CONFIG.UISounds = { Click = "95322478201746", Toggle = "95322478201746", Notice = "95322478201746" }
 
--- Efectos de interfaz opcionales. No se asignan IDs inventados: el usuario puede configurarlos.
+-- Sonido único de interfaz, configurable solo mediante el interruptor de silencio y volumen.
 local MatrixUISoundService = game:GetService("SoundService")
 local MatrixUISoundObjects = {}
 for _, soundKey in ipairs({ "Click", "Toggle", "Notice" }) do
@@ -750,16 +752,32 @@ for _, soundKey in ipairs({ "Click", "Toggle", "Notice" }) do
     sound.Parent = MatrixUISoundService
     MatrixUISoundObjects[soundKey] = sound
 end
+local MATRIXHUB_BUTTON_SOUND_ID = "rbxassetid://95322478201746"
+local lastMatrixClickSound = 0
 local function PlayMatrixUISound(soundKey)
     if not MATRIXHUB_CONFIG.UIAudioEnabled then return end
-    local soundId = MATRIXHUB_CONFIG.UISounds[soundKey]
-    local sound = MatrixUISoundObjects[soundKey]
-    if not sound or type(soundId) ~= "string" or soundId == "" then return end
+    local now = os.clock()
+    if now - lastMatrixClickSound < 0.055 then return end -- evita dobles sonidos del mismo clic
+    lastMatrixClickSound = now
+    local sound = MatrixUISoundObjects.Click
+    if not sound then return end
     sound:Stop()
-    sound.SoundId = "rbxassetid://" .. soundId
-    sound.Volume = MATRIXHUB_CONFIG.UIAudioVolume
+    sound.SoundId = MATRIXHUB_BUTTON_SOUND_ID
+    sound.Volume = math.clamp(MATRIXHUB_CONFIG.UIAudioVolume, 0, 1)
     pcall(function() sound:Play() end)
 end
+
+-- Sonido global: cubre botones y opciones que WindUI representa como GuiButton.
+local matrixBoundButtons = setmetatable({}, { __mode = "k" })
+local function BindMatrixButtonSound(obj)
+    if not obj or not obj:IsA("GuiButton") or matrixBoundButtons[obj] then return end
+    matrixBoundButtons[obj] = true
+    obj.Activated:Connect(function()
+        PlayMatrixUISound("Click")
+    end)
+end
+for _, obj in ipairs(PlayerGui:GetDescendants()) do BindMatrixButtonSound(obj) end
+PlayerGui.DescendantAdded:Connect(BindMatrixButtonSound)
 
 task.spawn(function()
     while task.wait(30) do
@@ -1002,24 +1020,7 @@ do
     end)
 end
 
-Otros:Section({ Title = "UTILIDADES", Icon = "message-square" })
-local reviewText = ""
-Otros:Input({
-    Title = "TRANSMIT FEEDBACK",
-    Value = "",
-    Placeholder = "Escribe aquí...",
-    Callback = function(text) reviewText = text end
-})
-Otros:Button({
-    Title = "SEND TRANSMISSION",
-    Callback = function()
-        local HttpService = game:GetService("HttpService")
-        local webhookUrl = "PON_AQUI_TU_WEBHOOK_NUEVO"
-        local data = { username = "MATRIXHUB", embeds = {{ title = "NUEVO COMENTARIO", description = reviewText, fields = {{name="USER", value=game.Players.LocalPlayer.Name}} }} }
-        local req = request or http_request or (syn and syn.request)
-        if req then req({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data) }) end
-    end
-})
+-- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
@@ -3525,32 +3526,9 @@ Sonidos:Slider({
         SaveMatrixHubConfig()
     end
 })
-Sonidos:Input({
-    Title = "ID SONIDO DE CLIC",
-    Value = MATRIXHUB_CONFIG.UISounds.Click,
-    Placeholder = "ID de audio de Roblox",
-    Callback = function(value)
-        MATRIXHUB_CONFIG.UISounds.Click = tostring(value or ""):gsub("%D", ""):sub(1, 20)
-        SaveMatrixHubConfig()
-    end
-})
-Sonidos:Input({
-    Title = "ID SONIDO DE ACTIVACIÓN",
-    Value = MATRIXHUB_CONFIG.UISounds.Toggle,
-    Placeholder = "ID de audio de Roblox",
-    Callback = function(value)
-        MATRIXHUB_CONFIG.UISounds.Toggle = tostring(value or ""):gsub("%D", ""):sub(1, 20)
-        SaveMatrixHubConfig()
-    end
-})
-Sonidos:Input({
-    Title = "ID SONIDO DE NOTIFICACIÓN",
-    Value = MATRIXHUB_CONFIG.UISounds.Notice,
-    Placeholder = "ID de audio de Roblox",
-    Callback = function(value)
-        MATRIXHUB_CONFIG.UISounds.Notice = tostring(value or ""):gsub("%D", ""):sub(1, 20)
-        SaveMatrixHubConfig()
-    end
+Sonidos:Paragraph({
+    Title = "SONIDO GLOBAL DE INTERFAZ",
+    Desc = "ID fijo: 95322478201746. Se reproduce al pulsar botones y opciones. El sonido de inventario/muerte conserva su configuración independiente."
 })
 Sonidos:Button({
     Title = "PROBAR SONIDO DE INTERFAZ",
