@@ -541,7 +541,7 @@ MATRIXHUB_UI:CreateWindow({
     },
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
-MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
+MATRIXHUB:SetSize(UDim2.fromOffset(660, 520))
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -560,7 +560,7 @@ local MATRIXHUB_CONFIG = {
         Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
         AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 }
     },
-    UIScale = 1,
+    UIScale = 1.08,
     AnimationSpeed = 1,
     AccentIntensity = 1,
     PanelTransparency = 0.12,
@@ -621,7 +621,7 @@ local function LoadMatrixHubConfig()
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
     for key, limits in pairs({
-        UIScale = { 0.75, 1.25 },
+        UIScale = { 0.75, 1.35 },
         AnimationSpeed = { 0.5, 1.75 },
         AccentIntensity = { 0.35, 1 },
         PanelTransparency = { 0, 0.45 },
@@ -799,19 +799,20 @@ end
 
 MATRIXHUB_UI:SetTheme(MATRIXHUB_CONFIG.Theme)
 
--- MATRIX-HUB DIGITAL RAIN: solo dentro de la ventana abierta y expandida.
+-- MATRIX-HUB DIGITAL RAIN: mismo lenguaje visual que la pantalla de inicio.
+-- Lluvia verde con profundidad y palabras de identidad detrás de los controles.
 do
     local RunService = game:GetService("RunService")
-
-    local oldRain = MATRIXHUB.UIElements.Main:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
-    if oldRain then oldRain:Destroy() end
-
+    local rng = Random.new()
     local mainWindow = MATRIXHUB.UIElements.Main
-    mainWindow.ClipsDescendants = true
+
+    local oldRain = mainWindow:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
+    if oldRain then oldRain:Destroy() end
 
     local rainFrame = Instance.new("Frame")
     rainFrame.Name = "MATRIXHUB_DIGITAL_LAYER"
-    rainFrame.BackgroundTransparency = 1
+    rainFrame.BackgroundColor3 = Color3.fromRGB(2, 12, 8)
+    rainFrame.BackgroundTransparency = 0.90
     rainFrame.BorderSizePixel = 0
     rainFrame.Position = UDim2.fromScale(0, 0)
     rainFrame.Size = UDim2.fromScale(1, 1)
@@ -821,49 +822,108 @@ do
     rainFrame.ZIndex = 0
     rainFrame.Parent = mainWindow
 
-    local glyphs = {"0", "1", "X", "7", "M", "A", "T", "R", "I", "C"}
-    local columns = {}
-    local rng = Random.new()
+    local tint = Instance.new("Frame")
+    tint.Name = "MatrixGreenTint"
+    tint.Size = UDim2.fromScale(1, 1)
+    tint.BackgroundColor3 = Color3.fromRGB(0, 28, 15)
+    tint.BackgroundTransparency = 0.82
+    tint.BorderSizePixel = 0
+    tint.ZIndex = 0
+    tint.Parent = rainFrame
 
-    local function randomStream()
-        local stream = table.create(10)
-        for n = 1, 10 do
+    local glyphs = {"0", "1"}
+    local identityWords = {"SANOX", "MATRIX-HUB", "GHOST"}
+    local columns = {}
+    local wordColumns = {}
+
+    local function randomStream(count)
+        local stream = table.create(count)
+        for n = 1, count do
             stream[n] = glyphs[rng:NextInteger(1, #glyphs)]
         end
-        return table.concat(stream, "\\n")
+        return table.concat(stream, "\n")
     end
 
-    -- Seis columnas dentro de los bordes de la ventana.
-    local xPositions = {0.025, 0.065, 0.105, 0.865, 0.905, 0.945}
-    for i, x in ipairs(xPositions) do
+    -- Nueve columnas repartidas por todo el panel, como en la pantalla inicial.
+    for i = 1, 9 do
+        local depth = rng:NextNumber(0.65, 1.25)
+        local x = (i - 1) / 8
         local label = Instance.new("TextLabel")
-        label.Name = "DataStream_" .. i
+        label.Name = "MatrixRainColumn_" .. i
         label.BackgroundTransparency = 1
         label.BorderSizePixel = 0
-        label.Size = UDim2.new(0, 18, 0, 145)
-        local initialY = rng:NextNumber(-0.9, 0.15)
+        label.Size = UDim2.new(0, 24 * depth, 0, 165 * depth)
+        local initialY = rng:NextNumber(-1, 0.1)
         label.Position = UDim2.new(x, 0, initialY, 0)
         label.Font = Enum.Font.Code
-        label.TextSize = 12
-        label.TextColor3 = Color3.fromRGB(0, 210, 105)
-        label.TextTransparency = 0.68
-        label.TextWrapped = true
+        label.TextSize = math.floor(14 * depth)
+        label.TextColor3 = Color3.fromRGB(0, 220, 112)
+        label.TextTransparency = 0.35 + (1.25 - depth) * 0.25
+        label.TextStrokeColor3 = Color3.fromRGB(0, 24, 12)
+        label.TextStrokeTransparency = 0.48
         label.TextYAlignment = Enum.TextYAlignment.Top
+        label.TextWrapped = true
+        label.Text = randomStream(10)
+        label.Rotation = rng:NextNumber(-2, 2)
         label.Active = false
         label.Selectable = false
         label.ZIndex = 1
-        label.Text = randomStream()
         label.Parent = rainFrame
 
         columns[#columns + 1] = {
-            Label = label,
-            X = x,
-            Y = initialY,
-            Speed = rng:NextNumber(0.12, 0.24)
+            Label = label, X = x, Y = initialY,
+            Speed = rng:NextNumber(0.12, 0.26) * depth,
+            Depth = depth
         }
     end
 
-    local updateInterval = 1 / 12.5
+    -- Identidad escrita entre las columnas, con distintas profundidades.
+    for i = 1, 5 do
+        local depth = rng:NextNumber(0.7, 1.15)
+        local word = Instance.new("TextLabel")
+        word.Name = "MatrixIdentity_" .. i
+        word.BackgroundTransparency = 1
+        word.BorderSizePixel = 0
+        word.Size = UDim2.fromOffset(145 * depth, 24 * depth)
+        local x = rng:NextNumber(0.04, 0.78)
+        local initialY = rng:NextNumber(-1, 0)
+        word.Position = UDim2.new(x, 0, initialY, 0)
+        word.Font = Enum.Font.GothamBlack
+        word.Text = identityWords[((i - 1) % #identityWords) + 1]
+        word.TextSize = math.floor(12 * depth)
+        word.TextColor3 = Color3.fromRGB(130, 255, 190)
+        word.TextTransparency = 0.3
+        word.TextStrokeColor3 = Color3.fromRGB(0, 30, 16)
+        word.TextStrokeTransparency = 0.35
+        word.Rotation = rng:NextNumber(-4, 4)
+        word.Active = false
+        word.Selectable = false
+        word.ZIndex = 1
+        word.Parent = rainFrame
+
+        wordColumns[#wordColumns + 1] = {
+            Label = word, X = x, Y = initialY,
+            Speed = rng:NextNumber(0.08, 0.16) * depth,
+            Depth = depth
+        }
+    end
+
+    -- Texto fantasma del fondo, discreto para no tapar los controles.
+    local ghostTitle = Instance.new("TextLabel")
+    ghostTitle.Name = "MatrixHubBackgroundTitle"
+    ghostTitle.BackgroundTransparency = 1
+    ghostTitle.Size = UDim2.new(1, 0, 0, 32)
+    ghostTitle.Position = UDim2.new(0, 0, 0.48, 0)
+    ghostTitle.Font = Enum.Font.GothamBlack
+    ghostTitle.Text = "M A T R I X   H U B"
+    ghostTitle.TextSize = 21
+    ghostTitle.TextColor3 = Color3.fromRGB(80, 255, 150)
+    ghostTitle.TextTransparency = 0.86
+    ghostTitle.TextStrokeTransparency = 0.8
+    ghostTitle.ZIndex = 1
+    ghostTitle.Parent = rainFrame
+
+    local updateInterval = 1 / 15
     local accumulator = 0
     local rainConnection
     rainConnection = RunService.Heartbeat:Connect(function(dt)
@@ -872,11 +932,9 @@ do
             return
         end
 
-        -- La cascada solo se muestra cuando el menú está abierto y en tamaño grande.
         local expanded = mainWindow.Visible
             and mainWindow.AbsoluteSize.X >= 300
             and mainWindow.AbsoluteSize.Y >= 250
-
         rainFrame.Visible = expanded
         if not expanded then
             accumulator = 0
@@ -890,11 +948,20 @@ do
 
         for _, column in ipairs(columns) do
             column.Y += step * column.Speed
-            if column.Y >= 1.05 then
-                column.Y = -0.22
-                column.Label.Text = randomStream()
+            if column.Y >= 1.08 then
+                column.Y = -0.30
+                column.Label.Text = randomStream(10)
             end
             column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
+        end
+
+        for _, word in ipairs(wordColumns) do
+            word.Y += step * word.Speed
+            if word.Y >= 1.08 then
+                word.Y = -0.12
+                word.Label.Text = identityWords[rng:NextInteger(1, #identityWords)]
+            end
+            word.Label.Position = UDim2.new(word.X, 0, word.Y, 0)
         end
     end)
 end
@@ -1761,9 +1828,9 @@ do
     Settings:Slider({
         Title = "TAMAÑO DE INTERFAZ",
         Icon = "scaling",
-        Value = { Min = 0.75, Max = 1.25, Default = MATRIXHUB_CONFIG.UIScale },
+        Value = { Min = 0.75, Max = 1.35, Default = MATRIXHUB_CONFIG.UIScale },
         Callback = function(value)
-            MATRIXHUB_CONFIG.UIScale = math.clamp(value, 0.75, 1.25)
+            MATRIXHUB_CONFIG.UIScale = math.clamp(value, 0.75, 1.35)
             mainScale.Scale = MATRIXHUB_CONFIG.UIScale
             SaveMatrixHubConfig()
             PlayMatrixUISound("Toggle")
@@ -3537,6 +3604,14 @@ Sonidos:Button({
         PlayMatrixUISound("Click")
     end
 })
+
+-- EASTER EGG // aparece al azar en el 30% de las ejecuciones.
+if Random.new():NextNumber() <= 0.30 then
+    Sonidos:Paragraph({
+        Title = "CRÉDITOS EMOCIONALES",
+        Desc = "Lesly"
+    })
+end
 
 Movimiento:Section({ Title = "ANTI DELTAS", Icon = "rocket", Opened = true })
 
