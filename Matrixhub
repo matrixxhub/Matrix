@@ -525,8 +525,8 @@ MATRIXHUB_UI:CreateWindow({
     Author = "SANOX",
     Font = Enum.Font.Gotham,
     Folder = "MATRIXHUB",
-    Acrylic = true, -- Efecto translucido tipo glassmorphism
-    Transparent = false,
+    Acrylic = true, -- Cristal/acrílico translúcido
+    Transparent = true,
     NewElements = true,
     HideSearchBar = false,
     OpenButton = {
@@ -541,7 +541,7 @@ MATRIXHUB_UI:CreateWindow({
     },
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
-MATRIXHUB:SetSize(UDim2.fromOffset(660, 520))
+MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -563,7 +563,7 @@ local MATRIXHUB_CONFIG = {
     UIScale = 1.08,
     AnimationSpeed = 1,
     AccentIntensity = 1,
-    PanelTransparency = 0.12,
+    PanelTransparency = 0.24,
     GlowEnabled = true,
     UIAudioEnabled = true,
     UIAudioVolume = 0.35,
@@ -800,11 +800,17 @@ end
 MATRIXHUB_UI:SetTheme(MATRIXHUB_CONFIG.Theme)
 
 -- MATRIX-HUB DIGITAL RAIN: mismo lenguaje visual que la pantalla de inicio.
--- Lluvia verde con profundidad y palabras de identidad detrás de los controles.
+-- Lluvia verde dentro del menú principal, detrás de CHEATS y las demás pestañas.
 do
     local RunService = game:GetService("RunService")
     local rng = Random.new()
     local mainWindow = MATRIXHUB.UIElements.Main
+
+    pcall(function()
+        mainWindow.BackgroundColor3 = Color3.fromRGB(8, 15, 20)
+        mainWindow.BackgroundTransparency = 0.24
+        mainWindow.ClipsDescendants = true
+    end)
 
     local oldRain = mainWindow:FindFirstChild("MATRIXHUB_DIGITAL_LAYER")
     if oldRain then oldRain:Destroy() end
@@ -812,23 +818,23 @@ do
     local rainFrame = Instance.new("Frame")
     rainFrame.Name = "MATRIXHUB_DIGITAL_LAYER"
     rainFrame.BackgroundColor3 = Color3.fromRGB(2, 12, 8)
-    rainFrame.BackgroundTransparency = 0.90
+    rainFrame.BackgroundTransparency = 1
     rainFrame.BorderSizePixel = 0
     rainFrame.Position = UDim2.fromScale(0, 0)
     rainFrame.Size = UDim2.fromScale(1, 1)
     rainFrame.ClipsDescendants = true
     rainFrame.Active = false
     rainFrame.Selectable = false
-    rainFrame.ZIndex = 0
+    rainFrame.ZIndex = 1
     rainFrame.Parent = mainWindow
 
     local tint = Instance.new("Frame")
     tint.Name = "MatrixGreenTint"
     tint.Size = UDim2.fromScale(1, 1)
     tint.BackgroundColor3 = Color3.fromRGB(0, 28, 15)
-    tint.BackgroundTransparency = 0.82
+    tint.BackgroundTransparency = 1
     tint.BorderSizePixel = 0
-    tint.ZIndex = 0
+    tint.ZIndex = 1
     tint.Parent = rainFrame
 
     local glyphs = {"0", "1"}
@@ -858,7 +864,7 @@ do
         label.Font = Enum.Font.Code
         label.TextSize = math.floor(14 * depth)
         label.TextColor3 = Color3.fromRGB(0, 220, 112)
-        label.TextTransparency = 0.35 + (1.25 - depth) * 0.25
+        label.TextTransparency = 0.58 + (1.25 - depth) * 0.18
         label.TextStrokeColor3 = Color3.fromRGB(0, 24, 12)
         label.TextStrokeTransparency = 0.48
         label.TextYAlignment = Enum.TextYAlignment.Top
@@ -892,7 +898,7 @@ do
         word.Text = identityWords[((i - 1) % #identityWords) + 1]
         word.TextSize = math.floor(12 * depth)
         word.TextColor3 = Color3.fromRGB(130, 255, 190)
-        word.TextTransparency = 0.3
+        word.TextTransparency = 0.62
         word.TextStrokeColor3 = Color3.fromRGB(0, 30, 16)
         word.TextStrokeTransparency = 0.35
         word.Rotation = rng:NextNumber(-4, 4)
@@ -918,7 +924,7 @@ do
     ghostTitle.Text = "M A T R I X   H U B"
     ghostTitle.TextSize = 21
     ghostTitle.TextColor3 = Color3.fromRGB(80, 255, 150)
-    ghostTitle.TextTransparency = 0.86
+    ghostTitle.TextTransparency = 0.91
     ghostTitle.TextStrokeTransparency = 0.8
     ghostTitle.ZIndex = 1
     ghostTitle.Parent = rainFrame
