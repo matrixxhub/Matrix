@@ -1929,13 +1929,18 @@ do
     local quickButtons = {}
     local quickGui = screenGui
 
+    -- Estado visual unificado: gris apagado y verde encendido.
+    local QUICK_INACTIVE = Color3.fromRGB(92, 99, 96)
+    local QUICK_ACTIVE = Color3.fromRGB(0, 200, 90)
+    local QUICK_TWEEN_INFO = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
     local function makeQuickButton(id, iconText, order, accent, getter, setter)
         local button = Instance.new("TextButton")
         button.Name = "Quick_" .. id
         button.AnchorPoint = Vector2.new(1, 0)
         button.Position = UDim2.new(1, -18, 0, 178 + ((order - 1) * 76))
         button.Size = UDim2.fromOffset(62, 62)
-        button.BackgroundColor3 = accent
+        button.BackgroundColor3 = QUICK_INACTIVE
         button.BackgroundTransparency = 0
         button.BorderSizePixel = 0
         button.AutoButtonColor = false
@@ -1954,14 +1959,14 @@ do
         local gradient = Instance.new("UIGradient")
         gradient.Rotation = 135
         gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, accent:Lerp(Color3.new(1, 1, 1), 0.28)),
-            ColorSequenceKeypoint.new(1, accent:Lerp(Color3.new(0, 0, 0), 0.28))
+            ColorSequenceKeypoint.new(0, QUICK_INACTIVE:Lerp(Color3.new(1, 1, 1), 0.18)),
+            ColorSequenceKeypoint.new(1, QUICK_INACTIVE:Lerp(Color3.new(0, 0, 0), 0.20))
         })
         gradient.Parent = button
 
         local stroke = Instance.new("UIStroke")
         stroke.Name = "AccentRing"
-        stroke.Color = accent
+        stroke.Color = QUICK_INACTIVE
         stroke.Thickness = 2
         stroke.Transparency = 0.22
         stroke.Parent = button
@@ -1975,7 +1980,7 @@ do
         shadow.AnchorPoint = Vector2.new(0.5, 0.5)
         shadow.Position = UDim2.fromScale(0.5, 0.5)
         shadow.Size = UDim2.new(1, 9, 1, 9)
-        shadow.BackgroundColor3 = accent
+        shadow.BackgroundColor3 = QUICK_INACTIVE
         shadow.BackgroundTransparency = 0.88
         shadow.BorderSizePixel = 0
         shadow.ZIndex = 59
@@ -2043,7 +2048,9 @@ do
             Getter = getter,
             Accent = accent,
             Glow = shadow,
-            Stroke = stroke
+            Stroke = stroke,
+            Gradient = gradient,
+            ColorTween = nil
         }
         return button
     end
@@ -2062,20 +2069,27 @@ do
 
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
-            local active = item.Getter()
-            item.Button.BackgroundColor3 = item.Accent
-            local gradient = item.Button:FindFirstChildOfClass("UIGradient")
-            if gradient then
-                local light = active and 0.12 or 0.28
-                local dark = active and 0.12 or 0.28
-                gradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, item.Accent:Lerp(Color3.new(1, 1, 1), light)),
-                    ColorSequenceKeypoint.new(1, item.Accent:Lerp(Color3.new(0, 0, 0), dark))
-                })
-            end
-            item.Stroke.Transparency = active and 0 or 0.08
-            item.Stroke.Thickness = active and 3.2 or 2.5
-            item.Glow.BackgroundTransparency = active and 0.58 or 0.72
+            local active = item.Getter() == true
+            local targetColor = active and QUICK_ACTIVE or QUICK_INACTIVE
+            local light = active and 0.22 or 0.16
+            local dark = active and 0.24 or 0.22
+
+            -- Transicion breve para que el cambio de estado no sea brusco.
+            if item.ColorTween then item.ColorTween:Cancel() end
+            item.ColorTween = TweenService:Create(item.Button, QUICK_TWEEN_INFO, {
+                BackgroundColor3 = targetColor
+            })
+            item.ColorTween:Play()
+
+            item.Gradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, targetColor:Lerp(Color3.new(1, 1, 1), light)),
+                ColorSequenceKeypoint.new(1, targetColor:Lerp(Color3.new(0, 0, 0), dark))
+            })
+            item.Stroke.Color = targetColor
+            item.Stroke.Transparency = active and 0 or 0.12
+            item.Stroke.Thickness = active and 3.2 or 2.2
+            item.Glow.BackgroundColor3 = targetColor
+            item.Glow.BackgroundTransparency = active and 0.58 or 0.82
             item.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end
@@ -2891,6 +2905,7 @@ local CustomKillSoundId = tostring(MATRIXHUB_CONFIG.CustomKillSoundId or ""):gsu
 local UseCustomKillSoundId = MATRIXHUB_CONFIG.UseCustomKillSound == true and CustomKillSoundId ~= ""
 
 local KillSounds = {
+    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
@@ -3021,7 +3036,7 @@ Sonidos:Toggle({
 Sonidos:Input({
     Title = "ID PERSONALIZADO DEL SONIDO",
     Value = CustomKillSoundId,
-    Placeholder = "Ejemplo: 67676767",
+    Placeholder = "Ejemplo: 1234567890",
     Callback = function(text)
         local digits = tostring(text or ""):gsub("%D", "")
         CustomKillSoundId = digits
@@ -3050,7 +3065,7 @@ Sonidos:Dropdown({
 
 Sonidos:Slider({
     Title = "VOLUMEN SONIDO",
-    Value = { Min = 1, Max = 10, Default = KillSoundVolume },
+    Value = { Min = 1, Max = 3, Default = KillSoundVolume },
     Callback = function(v)
         KillSoundVolume = v
         KillSoundPlayer.Volume = v
