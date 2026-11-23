@@ -598,7 +598,7 @@ local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
     Author = "SANOX",
-    Font = Enum.Font.Gotham,
+    Font = Enum.Font.PermanentMarker,
     Folder = "MATRIXHUB",
     Acrylic = true, -- Cristal/acrílico translúcido
     Transparent = true,
@@ -1173,6 +1173,232 @@ local Animaciones = MATRIXHUB:Tab({ Title = "PERSONAJE", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
+
+-- MATRIX KEYBOARD DISPLAY // ventana flotante, movible y anclable.
+-- Solo muestra la actividad del teclado; no envía entradas al juego.
+do
+    local UIS = game:GetService("UserInputService")
+    local keyboardGui = Instance.new("ScreenGui")
+    keyboardGui.Name = "MATRIXHUB_KEYBOARD_DISPLAY"
+    keyboardGui.ResetOnSpawn = false
+    keyboardGui.IgnoreGuiInset = true
+    keyboardGui.DisplayOrder = 850
+    keyboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    keyboardGui.Enabled = false
+    keyboardGui.Parent = PlayerGui
+
+    local shell = Instance.new("Frame")
+    shell.Name = "KeyboardWindow"
+    shell.AnchorPoint = Vector2.new(0.5, 0.5)
+    shell.Position = UDim2.new(0.5, 0, 0.78, 0)
+    shell.Size = UDim2.fromOffset(330, 166)
+    shell.BackgroundColor3 = Color3.fromRGB(7, 12, 15)
+    shell.BackgroundTransparency = 0.12
+    shell.BorderSizePixel = 0
+    shell.Active = true
+    shell.Parent = keyboardGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 13)
+    corner.Parent = shell
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 220, 115)
+    stroke.Transparency = 0.12
+    stroke.Thickness = 1.5
+    stroke.Parent = shell
+
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "DragBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 27)
+    titleBar.BackgroundColor3 = Color3.fromRGB(0, 35, 23)
+    titleBar.BackgroundTransparency = 0.08
+    titleBar.BorderSizePixel = 0
+    titleBar.Active = true
+    titleBar.Parent = shell
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.Parent = titleBar
+
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.fromOffset(10, 0)
+    title.Size = UDim2.new(1, -104, 1, 0)
+    title.Font = Enum.Font.PermanentMarker
+    title.Text = "MATRIX // KEYBOARD"
+    title.TextColor3 = Color3.fromRGB(125, 255, 180)
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = titleBar
+
+    local pin = Instance.new("TextButton")
+    pin.Name = "AnchorButton"
+    pin.Size = UDim2.fromOffset(30, 21)
+    pin.Position = UDim2.new(1, -66, 0, 3)
+    pin.BackgroundColor3 = Color3.fromRGB(20, 65, 45)
+    pin.BorderSizePixel = 0
+    pin.Font = Enum.Font.GothamBold
+    pin.Text = "PIN"
+    pin.TextSize = 10
+    pin.TextColor3 = Color3.fromRGB(210, 255, 225)
+    pin.Parent = titleBar
+    Instance.new("UICorner", pin).CornerRadius = UDim.new(0, 6)
+
+    local close = Instance.new("TextButton")
+    close.Name = "HideButton"
+    close.Size = UDim2.fromOffset(22, 21)
+    close.Position = UDim2.new(1, -29, 0, 3)
+    close.BackgroundColor3 = Color3.fromRGB(75, 30, 35)
+    close.BorderSizePixel = 0
+    close.Font = Enum.Font.GothamBold
+    close.Text = "×"
+    close.TextSize = 16
+    close.TextColor3 = Color3.fromRGB(255, 225, 225)
+    close.Parent = titleBar
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
+
+    local keyArea = Instance.new("Frame")
+    keyArea.Name = "Keys"
+    keyArea.BackgroundTransparency = 1
+    keyArea.Position = UDim2.fromOffset(8, 34)
+    keyArea.Size = UDim2.new(1, -16, 1, -42)
+    keyArea.Parent = shell
+
+    local keyColors = {
+        Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 220, 190),
+        Color3.fromRGB(0, 170, 255), Color3.fromRGB(105, 90, 255),
+        Color3.fromRGB(210, 55, 255)
+    }
+    local keyButtons = {}
+    local keyRows = {
+        {{"ONE","1"},{"TWO","2"},{"THREE","3"},{"FOUR","4"},{"FIVE","5"}},
+        {{"TAB","TAB"},{"Q","Q"},{"W","W"},{"E","E"},{"R","R"},{"T","T"}},
+        {{"CAPS","CAPS"},{"A","A"},{"S","S"},{"D","D"},{"F","F"},{"G","G"}},
+        {{"SHIFT","SHIFT"},{"Z","Z"},{"X","X"},{"C","C"},{"V","V"}},
+        {{"CTRL","CTRL"},{"ALT","ALT"},{"SPACE","SPACE"}}
+    }
+    local rowWidths = {5, 6, 6, 5, 3}
+    local rowY = {0, 25, 50, 75, 100}
+    for rowIndex, row in ipairs(keyRows) do
+        local count = rowWidths[rowIndex]
+        local gap = 4
+        local totalWidth = 314
+        local keyWidth = rowIndex == 5 and 68 or (rowIndex == 1 and 45 or (totalWidth - (count - 1) * gap) / count)
+        local x = rowIndex == 1 and 36 or 0
+        if rowIndex == 4 then x = 18 end
+        if rowIndex == 5 then x = 0 end
+        for colIndex, entry in ipairs(row) do
+            local id, labelText = entry[1], entry[2]
+            local width = keyWidth
+            if rowIndex == 2 or rowIndex == 3 then width = 45 end
+            if rowIndex == 4 then width = 48 end
+            if rowIndex == 5 and id == "SPACE" then width = 160 end
+            local button = Instance.new("TextLabel")
+            button.Name = "Key_" .. id
+            button.Position = UDim2.fromOffset(x, rowY[rowIndex])
+            button.Size = UDim2.fromOffset(width, 21)
+            button.BackgroundColor3 = Color3.fromRGB(8, 17, 20)
+            button.BackgroundTransparency = 0.08
+            button.BorderSizePixel = 0
+            button.Font = Enum.Font.PermanentMarker
+            button.Text = labelText
+            button.TextColor3 = Color3.fromRGB(205, 235, 220)
+            button.TextSize = id == "SPACE" and 10 or 12
+            button.Parent = keyArea
+            local c = Instance.new("UICorner")
+            c.CornerRadius = UDim.new(0, 6)
+            c.Parent = button
+            local s = Instance.new("UIStroke")
+            s.Color = keyColors[math.clamp(colIndex, 1, #keyColors)]
+            s.Thickness = 1.2
+            s.Transparency = 0.12
+            s.Parent = button
+            keyButtons[id] = {Frame = button, Stroke = s, BaseColor = s.Color}
+            x += width + gap
+        end
+    end
+
+    local keyMap = {
+        [Enum.KeyCode.One]="1", [Enum.KeyCode.Two]="2", [Enum.KeyCode.Three]="3",
+        [Enum.KeyCode.Four]="4", [Enum.KeyCode.Five]="5",
+        [Enum.KeyCode.Tab]="TAB", [Enum.KeyCode.Q]="Q", [Enum.KeyCode.W]="W",
+        [Enum.KeyCode.E]="E", [Enum.KeyCode.R]="R", [Enum.KeyCode.T]="T",
+        [Enum.KeyCode.CapsLock]="CAPS", [Enum.KeyCode.A]="A", [Enum.KeyCode.S]="S",
+        [Enum.KeyCode.D]="D", [Enum.KeyCode.F]="F", [Enum.KeyCode.G]="G",
+        [Enum.KeyCode.LeftShift]="SHIFT", [Enum.KeyCode.RightShift]="SHIFT",
+        [Enum.KeyCode.Z]="Z", [Enum.KeyCode.X]="X", [Enum.KeyCode.C]="C",
+        [Enum.KeyCode.V]="V", [Enum.KeyCode.LeftControl]="CTRL",
+        [Enum.KeyCode.RightControl]="CTRL", [Enum.KeyCode.LeftAlt]="ALT",
+        [Enum.KeyCode.RightAlt]="ALT", [Enum.KeyCode.Space]="SPACE"
+    }
+    local function setKey(keyName, pressed)
+        local item = keyButtons[keyName]
+        if not item then return end
+        item.Frame.BackgroundColor3 = pressed and item.BaseColor or Color3.fromRGB(8, 17, 20)
+        item.Frame.BackgroundTransparency = pressed and 0 or 0.08
+        item.Stroke.Thickness = pressed and 2.5 or 1.2
+        item.Stroke.Transparency = pressed and 0 or 0.12
+        item.Frame.TextColor3 = pressed and Color3.new(1,1,1) or Color3.fromRGB(205,235,220)
+    end
+
+    local anchored = false
+    local dragging = false
+    local dragStart, startPosition
+    local dragInput
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        shell.Position = UDim2.new(
+            startPosition.X.Scale, startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+        )
+    end
+    titleBar.InputBegan:Connect(function(input)
+        if anchored then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPosition = shell.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    titleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.Touch) then
+            updateDrag(input)
+        end
+    end)
+
+    pin.Activated:Connect(function()
+        anchored = not anchored
+        pin.Text = anchored and "LOCK" or "PIN"
+        pin.BackgroundColor3 = anchored and Color3.fromRGB(95, 65, 20) or Color3.fromRGB(20, 65, 45)
+    end)
+    close.Activated:Connect(function() keyboardGui.Enabled = false end)
+
+    UIS.InputBegan:Connect(function(input)
+        if not keyboardGui.Enabled then return end
+        local keyName = keyMap[input.KeyCode]
+        if keyName then setKey(keyName, true) end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        local keyName = keyMap[input.KeyCode]
+        if keyName then setKey(keyName, false) end
+    end)
+
+    MATRIXHUB_KEYBOARD_SET_ENABLED = function(enabled)
+        keyboardGui.Enabled = enabled == true
+        if not keyboardGui.Enabled then
+            for keyName in pairs(keyButtons) do setKey(keyName, false) end
+        end
+    end
+    MATRIXHUB_KEYBOARD_SET_ENABLED(false)
+end
+
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
 -- AUTOMATION // AUTO FARM HALLOWEEN
@@ -1241,6 +1467,17 @@ end
 -- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
+Settings:Toggle({
+    Title = "KEYBOARD DISPLAY",
+    Icon = "keyboard",
+    Value = false,
+    Callback = function(enabled)
+        if MATRIXHUB_KEYBOARD_SET_ENABLED then
+            MATRIXHUB_KEYBOARD_SET_ENABLED(enabled)
+        end
+    end
+})
+
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
