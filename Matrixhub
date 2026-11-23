@@ -642,7 +642,7 @@ local MATRIXHUB_CONFIG = {
     GlowEnabled = true,
     UIAudioEnabled = true,
     UIAudioVolume = 0.35,
-    UISounds = { Click = "95322478201746", Toggle = "95322478201746", Notice = "95322478201746" },
+    UISounds = { Click = "136580485249742", Toggle = "136580485249742", Notice = "136580485249742" },
     KillSoundEnabled = false,
     SelectedKillSound = "ES HACKER",
     KillSoundVolume = 1,
@@ -813,8 +813,15 @@ local function SaveMatrixHubConfig(force)
 end
 
 LoadMatrixHubConfig()
+-- Menú fijo en su configuración predeterminada; se ignoran personalizaciones antiguas.
+MATRIXHUB_CONFIG.Theme = "Matrix"
+MATRIXHUB_CONFIG.UIScale = 1.08
+MATRIXHUB_CONFIG.AnimationSpeed = 1
+MATRIXHUB_CONFIG.AccentIntensity = 1
+MATRIXHUB_CONFIG.PanelTransparency = 0.24
+MATRIXHUB_CONFIG.GlowEnabled = true
 -- Un único sonido fijo para todos los controles de la interfaz.
-MATRIXHUB_CONFIG.UISounds = { Click = "95322478201746", Toggle = "95322478201746", Notice = "95322478201746" }
+MATRIXHUB_CONFIG.UISounds = { Click = "136580485249742", Toggle = "136580485249742", Notice = "136580485249742" }
 
 -- Sonido único de interfaz, configurable solo mediante el interruptor de silencio y volumen.
 local MatrixUISoundService = game:GetService("SoundService")
@@ -827,7 +834,7 @@ for _, soundKey in ipairs({ "Click", "Toggle", "Notice" }) do
     sound.Parent = MatrixUISoundService
     MatrixUISoundObjects[soundKey] = sound
 end
-local MATRIXHUB_BUTTON_SOUND_ID = "rbxassetid://95322478201746"
+local MATRIXHUB_BUTTON_SOUND_ID = "rbxassetid://136580485249742"
 local lastMatrixClickSound = 0
 local function PlayMatrixUISound(soundKey)
     if not MATRIXHUB_CONFIG.UIAudioEnabled then return end
@@ -1191,12 +1198,15 @@ do
     shell.Name = "KeyboardWindow"
     shell.AnchorPoint = Vector2.new(0.5, 0.5)
     shell.Position = UDim2.new(0.5, 0, 0.78, 0)
-    shell.Size = UDim2.fromOffset(330, 166)
+    shell.Size = UDim2.fromOffset(410, 185)
     shell.BackgroundColor3 = Color3.fromRGB(7, 12, 15)
     shell.BackgroundTransparency = 0.12
     shell.BorderSizePixel = 0
     shell.Active = true
     shell.Parent = keyboardGui
+    local keyboardScale = Instance.new("UIScale")
+    keyboardScale.Scale = 0.78
+    keyboardScale.Parent = shell
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 13)
@@ -1263,12 +1273,58 @@ do
     keyArea.Size = UDim2.new(1, -16, 1, -42)
     keyArea.Parent = shell
 
+    -- Ratón visual: el punto interior refleja el movimiento de la cámara.
+    local mousePanel = Instance.new("Frame")
+    mousePanel.Name = "MouseDisplay"
+    mousePanel.Position = UDim2.fromOffset(320, 37)
+    mousePanel.Size = UDim2.fromOffset(78, 137)
+    mousePanel.BackgroundColor3 = Color3.fromRGB(8, 13, 17)
+    mousePanel.BackgroundTransparency = 0.12
+    mousePanel.BorderSizePixel = 0
+    mousePanel.Parent = shell
+    Instance.new("UICorner", mousePanel).CornerRadius = UDim.new(0, 30)
+    local mouseStroke = Instance.new("UIStroke")
+    mouseStroke.Color = Color3.fromRGB(0, 220, 150)
+    mouseStroke.Thickness = 1.5
+    mouseStroke.Parent = mousePanel
+    local mouseOuter = Instance.new("Frame")
+    mouseOuter.Name = "CameraRing"
+    mouseOuter.AnchorPoint = Vector2.new(0.5, 0.5)
+    mouseOuter.Position = UDim2.fromScale(0.5, 0.48)
+    mouseOuter.Size = UDim2.fromOffset(48, 48)
+    mouseOuter.BackgroundTransparency = 1
+    mouseOuter.Parent = mousePanel
+    Instance.new("UICorner", mouseOuter).CornerRadius = UDim.new(1, 0)
+    local ringStroke = Instance.new("UIStroke")
+    ringStroke.Color = Color3.fromRGB(0, 235, 165)
+    ringStroke.Thickness = 2
+    ringStroke.Parent = mouseOuter
+    local mouseDot = Instance.new("Frame")
+    mouseDot.Name = "CameraDot"
+    mouseDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    mouseDot.Position = UDim2.fromScale(0.5, 0.5)
+    mouseDot.Size = UDim2.fromOffset(10, 10)
+    mouseDot.BackgroundColor3 = Color3.fromRGB(230, 255, 245)
+    mouseDot.BorderSizePixel = 0
+    mouseDot.Parent = mouseOuter
+    Instance.new("UICorner", mouseDot).CornerRadius = UDim.new(1, 0)
+    local mouseCaption = Instance.new("TextLabel")
+    mouseCaption.BackgroundTransparency = 1
+    mouseCaption.Position = UDim2.new(0, 0, 1, -23)
+    mouseCaption.Size = UDim2.new(1, 0, 0, 16)
+    mouseCaption.Font = Enum.Font.PermanentMarker
+    mouseCaption.Text = "MOUSE"
+    mouseCaption.TextSize = 11
+    mouseCaption.TextColor3 = Color3.fromRGB(145, 255, 205)
+    mouseCaption.Parent = mousePanel
+
     local keyColors = {
         Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 220, 190),
         Color3.fromRGB(0, 170, 255), Color3.fromRGB(105, 90, 255),
         Color3.fromRGB(210, 55, 255)
     }
     local keyButtons = {}
+    local keyboardAlpha = 0.18
     local keyRows = {
         {{"ONE","1"},{"TWO","2"},{"THREE","3"},{"FOUR","4"},{"FIVE","5"}},
         {{"TAB","TAB"},{"Q","Q"},{"W","W"},{"E","E"},{"R","R"},{"T","T"}},
@@ -1334,7 +1390,8 @@ do
         local item = keyButtons[keyName]
         if not item then return end
         item.Frame.BackgroundColor3 = pressed and item.BaseColor or Color3.fromRGB(8, 17, 20)
-        item.Frame.BackgroundTransparency = pressed and 0 or 0.08
+        item.Pressed = pressed
+        item.Frame.BackgroundTransparency = pressed and 0 or math.clamp(keyboardAlpha + 0.08, 0, 0.95)
         item.Stroke.Thickness = pressed and 2.5 or 1.2
         item.Stroke.Transparency = pressed and 0 or 0.12
         item.Frame.TextColor3 = pressed and Color3.new(1,1,1) or Color3.fromRGB(205,235,220)
@@ -1378,7 +1435,9 @@ do
         pin.Text = anchored and "LOCK" or "PIN"
         pin.BackgroundColor3 = anchored and Color3.fromRGB(95, 65, 20) or Color3.fromRGB(20, 65, 45)
     end)
-    close.Activated:Connect(function() keyboardGui.Enabled = false end)
+    close.Activated:Connect(function()
+        if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(false) else keyboardGui.Enabled = false end
+    end)
 
     UIS.InputBegan:Connect(function(input)
         if not keyboardGui.Enabled then return end
@@ -1390,17 +1449,83 @@ do
         if keyName then setKey(keyName, false) end
     end)
 
+    local RunService = game:GetService("RunService")
+    local lastCameraCFrame = workspace.CurrentCamera and workspace.CurrentCamera.CFrame
+    local cameraDotOffset = Vector2.zero
+    local movementConnection
+    movementConnection = RunService.RenderStepped:Connect(function()
+        if not keyboardGui.Enabled then return end
+        local character = game:GetService("Players").LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local camera = workspace.CurrentCamera
+        if humanoid and camera then
+            local move = humanoid.MoveDirection
+            local forward = camera.CFrame.LookVector
+            local right = camera.CFrame.RightVector
+            setKey("W", move:Dot(Vector3.new(forward.X, 0, forward.Z)) > 0.18)
+            setKey("S", move:Dot(Vector3.new(-forward.X, 0, -forward.Z)) > 0.18)
+            setKey("D", move:Dot(Vector3.new(right.X, 0, right.Z)) > 0.18)
+            setKey("A", move:Dot(Vector3.new(-right.X, 0, -right.Z)) > 0.18)
+            local state = humanoid:GetState()
+            local jumping = humanoid.Jump or state == Enum.HumanoidStateType.Jumping
+            setKey("SPACE", jumping)
+        end
+        if camera and lastCameraCFrame then
+            local delta = camera.CFrame:ToObjectSpace(lastCameraCFrame)
+            local yaw, pitch = delta:ToOrientation()
+            cameraDotOffset += Vector2.new(-yaw * 24, pitch * 24)
+            cameraDotOffset = Vector2.new(math.clamp(cameraDotOffset.X, -15, 15), math.clamp(cameraDotOffset.Y, -15, 15))
+            mouseDot.Position = UDim2.new(0.5, cameraDotOffset.X, 0.5, cameraDotOffset.Y)
+            cameraDotOffset *= 0.82
+        end
+        if camera then lastCameraCFrame = camera.CFrame end
+    end)
+
     MATRIXHUB_KEYBOARD_SET_ENABLED = function(enabled)
         keyboardGui.Enabled = enabled == true
         if not keyboardGui.Enabled then
             for keyName in pairs(keyButtons) do setKey(keyName, false) end
+            mouseDot.Position = UDim2.fromScale(0.5, 0.5)
         end
     end
+    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY = function(alpha)
+        alpha = math.clamp(tonumber(alpha) or 0.18, 0, 0.85)
+        keyboardAlpha = alpha
+        shell.BackgroundTransparency = alpha
+        titleBar.BackgroundTransparency = math.clamp(alpha + 0.08, 0, 0.95)
+        mousePanel.BackgroundTransparency = math.clamp(alpha + 0.08, 0, 0.95)
+        stroke.Transparency = math.clamp(alpha, 0, 0.9)
+        mouseStroke.Transparency = math.clamp(alpha, 0, 0.9)
+        for _, item in pairs(keyButtons) do
+            item.Frame.BackgroundTransparency = item.Pressed and 0 or math.clamp(alpha + 0.08, 0, 0.95)
+            item.Stroke.Transparency = math.clamp(alpha, 0, 0.9)
+        end
+    end
+    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(0.18)
     MATRIXHUB_KEYBOARD_SET_ENABLED(false)
 end
 
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
+
+Otros:Section({ Title = "KEYBOARD DISPLAY", Icon = "keyboard", Opened = true })
+Otros:Toggle({
+    Title = "ACTIVAR / DESACTIVAR TECLADO",
+    Icon = "keyboard",
+    Value = false,
+    Callback = function(enabled)
+        if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(enabled) end
+    end
+})
+Otros:Slider({
+    Title = "TRANSPARENCIA DEL TECLADO",
+    Icon = "layers",
+    Value = { Min = 0, Max = 0.85, Default = 0.18 },
+    Callback = function(value)
+        local alpha = math.clamp(value, 0, 0.85)
+        if MATRIXHUB_KEYBOARD_SET_TRANSPARENCY then MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(alpha) end
+    end
+})
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
 do
@@ -1467,17 +1592,6 @@ end
 -- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
-Settings:Toggle({
-    Title = "KEYBOARD DISPLAY",
-    Icon = "keyboard",
-    Value = false,
-    Callback = function(enabled)
-        if MATRIXHUB_KEYBOARD_SET_ENABLED then
-            MATRIXHUB_KEYBOARD_SET_ENABLED(enabled)
-        end
-    end
-})
-
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
@@ -2051,19 +2165,7 @@ do
     })
 end
 
-Settings:Dropdown({
-    Title = "INTERFACE THEME",
-    Icon = "palette",
-    Values = {"Matrix", "Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"},
-    Value = MATRIXHUB_CONFIG.Theme,
-    Callback = function(v)
-        MATRIXHUB_UI:SetTheme(v)
-        MATRIXHUB_CONFIG.Theme = v
-        if MATRIXHUB_MATRIX_LOGO_UPDATE then MATRIXHUB_MATRIX_LOGO_UPDATE(v) end
-        PlayMatrixUISound("Toggle")
-        SaveMatrixHubConfig()
-    end
-})
+-- El selector de temas se retiró: el menú usa Matrix predeterminado.
 
 -- MATRIX HUB // LIVE DASHBOARD + MATRIX SYSTEM
 -- Actualización agrupada cada medio segundo para mantener bajo el consumo.
@@ -2203,106 +2305,7 @@ do
         end
     end)
 
-    Settings:Section({ Title = "MATRIX PERSONALIZATION", Icon = "sliders-horizontal", Opened = true })
-    local mainWindow = MATRIXHUB.UIElements.Main
-    local mainScale = mainWindow:FindFirstChild("MATRIXHUB_UISCALE")
-    if not mainScale then
-        mainScale = Instance.new("UIScale")
-        mainScale.Name = "MATRIXHUB_UISCALE"
-        mainScale.Parent = mainWindow
-    end
-    mainScale.Scale = MATRIXHUB_CONFIG.UIScale
-
-    Settings:Slider({
-        Title = "TAMAÑO DE INTERFAZ",
-        Icon = "scaling",
-        Value = { Min = 0.75, Max = 1.35, Default = MATRIXHUB_CONFIG.UIScale },
-        Callback = function(value)
-            MATRIXHUB_CONFIG.UIScale = math.clamp(value, 0.75, 1.35)
-            mainScale.Scale = MATRIXHUB_CONFIG.UIScale
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Settings:Slider({
-        Title = "VELOCIDAD DE ANIMACIÓN",
-        Icon = "timer",
-        Value = { Min = 0.5, Max = 1.75, Default = MATRIXHUB_CONFIG.AnimationSpeed },
-        Callback = function(value)
-            MATRIXHUB_CONFIG.AnimationSpeed = math.clamp(value, 0.5, 1.75)
-            SaveMatrixHubConfig()
-        end
-    })
-    Settings:Slider({
-        Title = "INTENSIDAD MATRIX GREEN",
-        Icon = "sun",
-        Value = { Min = 0.35, Max = 1, Default = MATRIXHUB_CONFIG.AccentIntensity },
-        Callback = function(value)
-            MATRIXHUB_CONFIG.AccentIntensity = math.clamp(value, 0.35, 1)
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-        end
-    })
-    Settings:Slider({
-        Title = "TRANSPARENCIA DEL PANEL",
-        Icon = "layers",
-        Value = { Min = 0, Max = 0.45, Default = MATRIXHUB_CONFIG.PanelTransparency },
-        Callback = function(value)
-            MATRIXHUB_CONFIG.PanelTransparency = math.clamp(value, 0, 0.45)
-            hud.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency
-            pcall(function() mainWindow.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency end)
-            SaveMatrixHubConfig()
-        end
-    })
-    Settings:Toggle({
-        Title = "BRILLO DE BOTONES FLOTANTES",
-        Icon = "sparkles",
-        Value = MATRIXHUB_CONFIG.GlowEnabled,
-        Callback = function(enabled)
-            MATRIXHUB_CONFIG.GlowEnabled = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Settings:Button({
-        Title = "GUARDAR CONFIGURACIÓN AHORA",
-        Icon = "save",
-        Callback = function()
-            local saved = SaveMatrixHubConfig(true)
-            if saved then PlayMatrixUISound("Notice") end
-        end
-    })
-    Settings:Button({
-        Title = "RESTABLECER PERSONALIZACIÓN",
-        Icon = "rotate-ccw",
-        Callback = function()
-            MATRIXHUB_CONFIG.UIScale = 1
-            MATRIXHUB_CONFIG.AnimationSpeed = 1
-            MATRIXHUB_CONFIG.AccentIntensity = 1
-            MATRIXHUB_CONFIG.PanelTransparency = 0.12
-            MATRIXHUB_CONFIG.GlowEnabled = true
-            mainScale.Scale = 1
-            hud.BackgroundTransparency = 0.12
-            pcall(function() mainWindow.BackgroundTransparency = 0.12 end)
-            if refreshQuickButtons then refreshQuickButtons() end
-            if resetQuickButtonPositions then resetQuickButtonPositions() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Notice")
-        end
-    })
-    Settings:Button({
-        Title = "VER ERRORES DE CONFIGURACIÓN",
-        Icon = "clipboard-list",
-        Callback = function()
-            if #MATRIXHUB_ERROR_LOG == 0 then
-                print("[Matrix Hub] Sin errores registrados.")
-            else
-                for _, entry in ipairs(MATRIXHUB_ERROR_LOG) do warn("[Matrix Hub] " .. entry) end
-            end
-        end
-    })
-
+    -- Se retiraron los controles de personalización que no aplicaban correctamente.
     Settings:Toggle({
         Title = "LIVE STATUS HUD",
         Icon = "activity",
@@ -4173,7 +4176,7 @@ Sonidos:Slider({
 })
 Sonidos:Paragraph({
     Title = "SONIDO GLOBAL DE INTERFAZ",
-    Desc = "ID fijo: 95322478201746. Se reproduce al pulsar botones y opciones. El sonido de inventario/muerte conserva su configuración independiente."
+    Desc = "ID fijo: 136580485249742. Se reproduce al pulsar botones y opciones. El sonido de inventario/muerte conserva su configuración independiente."
 })
 Sonidos:Button({
     Title = "PROBAR SONIDO DE INTERFAZ",
