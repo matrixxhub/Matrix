@@ -199,24 +199,36 @@ windowTitle.TextXAlignment = Enum.TextXAlignment.Left
 windowTitle.ZIndex = 8
 windowTitle.Parent = titleBar
 
--- Controles decorativos, como una ventana antigua.
-local function titleControl(symbol, x)
-    local control = Instance.new("TextLabel")
-    control.Position = UDim2.new(1, x, 0, 4)
-    control.Size = UDim2.fromOffset(18, 18)
+-- Controles compactos: minimizar y maximizar quedan solo decorativos.
+-- La X es el único control activo y cancela el inicio/cierra la interfaz.
+local matrixStartupClosed = false
+local function titleControl(symbol, x, isClose)
+    local control = Instance.new(isClose and "TextButton" or "TextLabel")
+    control.Position = UDim2.new(1, x, 0, 5)
+    control.Size = UDim2.fromOffset(14, 14)
     control.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
     control.BorderColor3 = Color3.fromRGB(255, 255, 255)
     control.BorderSizePixel = 1
     control.Font = Enum.Font.ArialBold
     control.Text = symbol
     control.TextColor3 = Color3.fromRGB(0, 0, 0)
-    control.TextSize = 13
+    control.TextSize = 10
     control.ZIndex = 8
     control.Parent = titleBar
+    if isClose then
+        control.AutoButtonColor = false
+        control.Activated:Connect(function()
+            if matrixStartupClosed then return end
+            matrixStartupClosed = true
+            _G.MATRIXHUB_UNLOAD_REQUESTED = true
+            if startupGui and startupGui.Parent then startupGui:Destroy() end
+        end)
+    end
+    return control
 end
-titleControl("_", -61)
-titleControl("□", -40)
-titleControl("×", -19)
+titleControl("_", -52, false)
+titleControl("□", -35, false)
+titleControl("×", -18, true)
 
 local heading = Instance.new("TextLabel")
 heading.Name = "StartupHeading"
@@ -532,7 +544,7 @@ startButton.Activated:Connect(function()
     bar.Parent = barBack
 
     for value = 1, 100 do
-        if not startupGui.Parent then return end
+        if matrixStartupClosed or _G.MATRIXHUB_UNLOAD_REQUESTED or not startupGui.Parent then return end
         progressText.Text = tostring(value) .. "%"
         bar.Size = UDim2.new(value / 100, -4, 1, -4)
         if value < 30 then
@@ -573,7 +585,9 @@ startButton.Activated:Connect(function()
     if rainConnection then rainConnection:Disconnect() rainConnection = nil end
     if cameraConnection then cameraConnection:Disconnect() cameraConnection = nil end
     startupGui:Destroy()
-    if launchMatrixHub then task.spawn(launchMatrixHub) end
+    if launchMatrixHub and not matrixStartupClosed and not _G.MATRIXHUB_UNLOAD_REQUESTED then
+        task.spawn(launchMatrixHub)
+    end
 end)
 
 -- FIN DE LA PANTALLA DE INICIO
@@ -1197,7 +1211,7 @@ do
     local shell = Instance.new("Frame")
     shell.Name = "KeyboardWindow"
     shell.AnchorPoint = Vector2.new(0.5, 0.5)
-    shell.Position = UDim2.new(0.5, 0, 0.78, 0)
+    shell.Position = UDim2.new(0.5, 0, 0.70, 0)
     shell.Size = UDim2.fromOffset(410, 185)
     shell.BackgroundColor3 = Color3.fromRGB(7, 12, 15)
     shell.BackgroundTransparency = 0.12
@@ -1403,10 +1417,15 @@ do
     local dragInput
     local function updateDrag(input)
         local delta = input.Position - dragStart
-        shell.Position = UDim2.new(
-            startPosition.X.Scale, startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
-        )
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+        local size = shell.AbsoluteSize
+        local centerX = (startPosition.X.Scale * viewport.X) + startPosition.X.Offset + delta.X
+        local centerY = (startPosition.Y.Scale * viewport.Y) + startPosition.Y.Offset + delta.Y
+        local halfW, halfH = size.X * 0.5, size.Y * 0.5
+        centerX = math.clamp(centerX, halfW + 8, math.max(halfW + 8, viewport.X - halfW - 8))
+        centerY = math.clamp(centerY, halfH + 8, math.max(halfH + 8, viewport.Y - halfH - 8))
+        shell.Position = UDim2.fromOffset(centerX, centerY)
     end
     titleBar.InputBegan:Connect(function(input)
         if anchored then return end
@@ -2739,6 +2758,21 @@ do
     local quickButtons = {}
     local quickGui = screenGui
 
+    -- Mantiene los botones dentro del viewport, incluso al cargar posiciones antiguas.
+    local function clampQuickButton(button)
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+        local width = button.AbsoluteSize.X
+        local height = button.AbsoluteSize.Y
+        local p = button.Position
+        local x = p.X.Scale * viewport.X + p.X.Offset
+        local y = p.Y.Scale * viewport.Y + p.Y.Offset
+        -- Los botones usan AnchorPoint (1, 0): x representa su borde derecho.
+        x = math.clamp(x, width + 10, viewport.X - 10)
+        y = math.clamp(y, 10, math.max(10, viewport.Y - height - 10))
+        button.Position = UDim2.fromOffset(x, y)
+    end
+
     -- Estado visual unificado: gris apagado y verde encendido.
     local QUICK_INACTIVE = Color3.fromRGB(92, 99, 96)
     local QUICK_ACTIVE = Color3.fromRGB(0, 200, 90)
@@ -2762,6 +2796,9 @@ do
         button.Visible = MATRIXHUB_CONFIG.ButtonVisibility[id] == true
         button.ZIndex = 60
         button.Parent = quickGui
+        task.defer(function()
+            if button.Parent then clampQuickButton(button) end
+        end)
 
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(1, 0)
@@ -2850,6 +2887,7 @@ do
                     startPosition.X.Scale, startPosition.X.Offset + delta.X,
                     startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
                 )
+                clampQuickButton(button)
                 shadow.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 31, button.Position.Y.Scale, button.Position.Y.Offset + 31)
             end
         end)
@@ -2859,16 +2897,8 @@ do
                 or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = false
                 if moved then
-                    local camera = workspace.CurrentCamera
-                    local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+                    clampQuickButton(button)
                     local pos = button.Position
-                    local minX = -viewport.X + 8
-                    local maxX = -button.AbsoluteSize.X - 8
-                    local minY = 8
-                    local maxY = math.max(8, viewport.Y - button.AbsoluteSize.Y - 8)
-                    local xOffset = math.clamp(pos.X.Offset, minX, maxX)
-                    local yOffset = math.clamp(pos.Y.Offset, minY, maxY)
-                    button.Position = UDim2.new(pos.X.Scale, xOffset, pos.Y.Scale, yOffset)
                     shadow.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 31, button.Position.Y.Scale, button.Position.Y.Offset + 31)
                     MATRIXHUB_CONFIG.QuickButtonPositions[id] = {
                         XS = button.Position.X.Scale, XO = button.Position.X.Offset,
@@ -2929,6 +2959,18 @@ do
     makeQuickButton("AutoShoot", "◎", 3, Color3.fromRGB(85, 235, 130),
         function() return autoShootEnabled == true or autoShootAgresivoEnabled == true or altoFireEnabled == true end,
         setAutoShootQuick)
+
+    local viewportConnection
+    local function reClampQuickButtons()
+        for _, item in pairs(quickButtons) do
+            clampQuickButton(item.Button)
+            item.Glow.Position = UDim2.new(item.Button.Position.X.Scale, item.Button.Position.X.Offset - 31,
+                item.Button.Position.Y.Scale, item.Button.Position.Y.Offset + 31)
+        end
+    end
+    if workspace.CurrentCamera then
+        viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(reClampQuickButtons)
+    end
 
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
