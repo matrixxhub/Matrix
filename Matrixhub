@@ -547,71 +547,225 @@ MATRIXHUB:SetSize(UDim2.fromOffset(580, 460))
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
 local MatrixHubHttpService = game:GetService("HttpService")
 local MATRIXHUB_CONFIG_PATH = "MATRIXHUB/MatrixHubConfig.json"
+local MATRIXHUB_CONFIG_FALLBACK_PATH = "MatrixHubConfig.json"
 local MATRIXHUB_CONFIG = {
+    SchemaVersion = 2,
     Theme = "Matrix",
     FPSBoost = false,
     AntiLag = false,
     StatusHud = false,
-    ButtonVisibility = {
-        Fantasma = false,
-        Silent = false,
-        AutoShoot = false
+    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false },
+    QuickButtonPositions = {
+        Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
+        Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
+        AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 }
     },
+    UIScale = 1,
+    AnimationSpeed = 1,
+    AccentIntensity = 1,
+    PanelTransparency = 0.12,
+    GlowEnabled = true,
+    UIAudioEnabled = false,
+    UIAudioVolume = 0.35,
+    UISounds = { Click = "", Toggle = "", Notice = "" },
     KillSoundEnabled = false,
-    SelectedKillSound = "BESO",
+    SelectedKillSound = "ES HACKER",
     KillSoundVolume = 1,
     CustomKillSoundId = "",
     UseCustomKillSound = false
 }
 
+local MATRIXHUB_CONFIG_STATUS = "CONFIGURACIÓN PREDETERMINADA"
+local MATRIXHUB_ERROR_LOG = {}
+local function RecordMatrixHubError(source, message)
+    local entry = os.date("%H:%M:%S") .. " | " .. tostring(source) .. " | " .. tostring(message)
+    table.insert(MATRIXHUB_ERROR_LOG, entry)
+    while #MATRIXHUB_ERROR_LOG > 12 do table.remove(MATRIXHUB_ERROR_LOG, 1) end
+end
+local matrixConfigDirty = false
+local matrixSaveGeneration = 0
+
 local function LoadMatrixHubConfig()
-    if type(readfile) ~= "function" then return end
-    local okRead, raw = pcall(readfile, MATRIXHUB_CONFIG_PATH)
-    if not okRead or type(raw) ~= "string" or raw == "" then return end
+    if type(readfile) ~= "function" then
+        MATRIXHUB_CONFIG_STATUS = "LECTURA NO DISPONIBLE"
+        return false
+    end
+
+    local raw
+    for _, path in ipairs({ MATRIXHUB_CONFIG_PATH, MATRIXHUB_CONFIG_FALLBACK_PATH }) do
+        local okRead, result = pcall(readfile, path)
+        if okRead and type(result) == "string" and result ~= "" then
+            raw = result
+            break
+        end
+    end
+    if not raw then
+        MATRIXHUB_CONFIG_STATUS = "NUEVA CONFIGURACIÓN"
+        return false
+    end
 
     local okDecode, saved = pcall(function()
         return MatrixHubHttpService:JSONDecode(raw)
     end)
-    if not okDecode or type(saved) ~= "table" then return end
+    if not okDecode or type(saved) ~= "table" then
+        MATRIXHUB_CONFIG_STATUS = "ARCHIVO INVÁLIDO: SE USARÁN VALORES SEGUROS"
+        RecordMatrixHubError("CONFIG LOAD", "No se pudo interpretar el archivo JSON")
+        if type(writefile) == "function" then
+            pcall(writefile, "MATRIXHUB/MatrixHubConfig.invalid.json", raw)
+        end
+        return false
+    end
 
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
-    if type(saved.FPSBoost) == "boolean" then MATRIXHUB_CONFIG.FPSBoost = saved.FPSBoost end
-    if type(saved.AntiLag) == "boolean" then MATRIXHUB_CONFIG.AntiLag = saved.AntiLag end
-    if type(saved.StatusHud) == "boolean" then MATRIXHUB_CONFIG.StatusHud = saved.StatusHud end
+    for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
+        if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
+    end
+    for key, limits in pairs({
+        UIScale = { 0.75, 1.25 },
+        AnimationSpeed = { 0.5, 1.75 },
+        AccentIntensity = { 0.35, 1 },
+        PanelTransparency = { 0, 0.45 },
+        UIAudioVolume = { 0, 1 },
+        KillSoundVolume = { 1, 3 }
+    }) do
+        if type(saved[key]) == "number" then
+            MATRIXHUB_CONFIG[key] = math.clamp(saved[key], limits[1], limits[2])
+        end
+    end
     if type(saved.ButtonVisibility) == "table" then
-        for _, buttonId in ipairs({"Fantasma", "Silent", "AutoShoot"}) do
+        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot" }) do
             if type(saved.ButtonVisibility[buttonId]) == "boolean" then
                 MATRIXHUB_CONFIG.ButtonVisibility[buttonId] = saved.ButtonVisibility[buttonId]
             end
         end
     end
-    if type(saved.KillSoundEnabled) == "boolean" then MATRIXHUB_CONFIG.KillSoundEnabled = saved.KillSoundEnabled end
-    if type(saved.SelectedKillSound) == "string" then MATRIXHUB_CONFIG.SelectedKillSound = saved.SelectedKillSound end
-    if type(saved.KillSoundVolume) == "number" then
-        MATRIXHUB_CONFIG.KillSoundVolume = math.clamp(saved.KillSoundVolume, 1, 3)
+    if type(saved.QuickButtonPositions) == "table" then
+        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot" }) do
+            local pos = saved.QuickButtonPositions[buttonId]
+            if type(pos) == "table" then
+                local target = MATRIXHUB_CONFIG.QuickButtonPositions[buttonId]
+                for field, limits in pairs({
+                    XS = { 0, 1 }, XO = { -4000, 4000 },
+                    YS = { 0, 1 }, YO = { -4000, 4000 }
+                }) do
+                    if type(pos[field]) == "number" then
+                        target[field] = math.clamp(pos[field], limits[1], limits[2])
+                    end
+                end
+            end
+        end
+    end
+    if type(saved.UISounds) == "table" then
+        for _, key in ipairs({ "Click", "Toggle", "Notice" }) do
+            if type(saved.UISounds[key]) == "string" then
+                MATRIXHUB_CONFIG.UISounds[key] = saved.UISounds[key]:gsub("%D", ""):sub(1, 20)
+            end
+        end
     end
     if type(saved.CustomKillSoundId) == "string" then
-        MATRIXHUB_CONFIG.CustomKillSoundId = saved.CustomKillSoundId:gsub("%D", "")
+        MATRIXHUB_CONFIG.CustomKillSoundId = saved.CustomKillSoundId:gsub("%D", ""):sub(1, 20)
     end
     if type(saved.UseCustomKillSound) == "boolean" then
         MATRIXHUB_CONFIG.UseCustomKillSound = saved.UseCustomKillSound
     end
+    if type(saved.SelectedKillSound) == "string" then
+        MATRIXHUB_CONFIG.SelectedKillSound = saved.SelectedKillSound
+    end
+
+    MATRIXHUB_CONFIG_STATUS = "CONFIGURACIÓN CARGADA"
+    return true
 end
 
-local function SaveMatrixHubConfig()
-    if type(writefile) ~= "function" then return false end
-    if type(makefolder) == "function" then
-        pcall(makefolder, "MATRIXHUB")
+local function WriteMatrixHubConfig()
+    if type(writefile) ~= "function" then
+        MATRIXHUB_CONFIG_STATUS = "GUARDADO NO DISPONIBLE EN ESTE EJECUTOR"
+        return false, MATRIXHUB_CONFIG_STATUS
     end
+    if type(makefolder) == "function" then
+        local folderExists = false
+        if type(isfolder) == "function" then
+            local okFolder, exists = pcall(isfolder, "MATRIXHUB")
+            folderExists = okFolder and exists == true
+        end
+        if not folderExists then pcall(makefolder, "MATRIXHUB") end
+    end
+
     local okEncode, encoded = pcall(function()
+        MATRIXHUB_CONFIG.SchemaVersion = 2
         return MatrixHubHttpService:JSONEncode(MATRIXHUB_CONFIG)
     end)
-    if not okEncode then return false end
-    local okWrite = pcall(writefile, MATRIXHUB_CONFIG_PATH, encoded)
-    return okWrite
+    if not okEncode or type(encoded) ~= "string" then
+        MATRIXHUB_CONFIG_STATUS = "ERROR AL PREPARAR CONFIGURACIÓN"
+        return false, MATRIXHUB_CONFIG_STATUS
+    end
+
+    local lastError
+    for _, path in ipairs({ MATRIXHUB_CONFIG_PATH, MATRIXHUB_CONFIG_FALLBACK_PATH }) do
+        local okWrite, writeError = pcall(writefile, path, encoded)
+        if okWrite then
+            MATRIXHUB_CONFIG_STATUS = "CONFIGURACIÓN GUARDADA"
+            matrixConfigDirty = false
+            return true
+        end
+        lastError = writeError
+    end
+    MATRIXHUB_CONFIG_STATUS = "ERROR AL ESCRIBIR CONFIGURACIÓN"
+    return false, tostring(lastError or MATRIXHUB_CONFIG_STATUS)
+end
+
+local function SaveMatrixHubConfig(force)
+    matrixConfigDirty = true
+    matrixSaveGeneration += 1
+    local generation = matrixSaveGeneration
+    if force == true then
+        local ok, err = WriteMatrixHubConfig()
+        if not ok then
+            RecordMatrixHubError("CONFIG SAVE", err)
+            warn("[Matrix Hub] " .. tostring(err))
+        end
+        return ok
+    end
+
+    task.delay(0.65, function()
+        if generation ~= matrixSaveGeneration or not matrixConfigDirty then return end
+        local ok, err = WriteMatrixHubConfig()
+        if not ok then
+            RecordMatrixHubError("CONFIG SAVE", err)
+            warn("[Matrix Hub] " .. tostring(err))
+        end
+    end)
+    return true
 end
 
 LoadMatrixHubConfig()
+
+-- Efectos de interfaz opcionales. No se asignan IDs inventados: el usuario puede configurarlos.
+local MatrixUISoundService = game:GetService("SoundService")
+local MatrixUISoundObjects = {}
+for _, soundKey in ipairs({ "Click", "Toggle", "Notice" }) do
+    local sound = Instance.new("Sound")
+    sound.Name = "MATRIXHUB_UI_" .. soundKey
+    sound.Volume = MATRIXHUB_CONFIG.UIAudioVolume
+    sound.Looped = false
+    sound.Parent = MatrixUISoundService
+    MatrixUISoundObjects[soundKey] = sound
+end
+local function PlayMatrixUISound(soundKey)
+    if not MATRIXHUB_CONFIG.UIAudioEnabled then return end
+    local soundId = MATRIXHUB_CONFIG.UISounds[soundKey]
+    local sound = MatrixUISoundObjects[soundKey]
+    if not sound or type(soundId) ~= "string" or soundId == "" then return end
+    sound:Stop()
+    sound.SoundId = "rbxassetid://" .. soundId
+    sound.Volume = MATRIXHUB_CONFIG.UIAudioVolume
+    pcall(function() sound:Play() end)
+end
+
+task.spawn(function()
+    while task.wait(30) do
+        if matrixConfigDirty then SaveMatrixHubConfig(true) end
+    end
+end)
 
 local validThemes = {"Matrix", "Dark", "Light", "Midnight", "Red", "Rose", "Indigo", "Amber", "Violet", "Emerald"}
 local themeIsValid = false
@@ -1004,7 +1158,7 @@ end
 Settings:Toggle({
     Title = "FPS BOOST",
     Icon = "flame",
-    Default = fpsBoostEnabled,
+    Value = fpsBoostEnabled,
     Callback = function(enabled)
         fpsBoostEnabled = enabled
         MATRIXHUB_CONFIG.FPSBoost = enabled
@@ -1016,7 +1170,7 @@ Settings:Toggle({
 Settings:Toggle({
     Title = "ANTI LAG",
     Icon = "wind",
-    Default = antiLagEnabled,
+    Value = antiLagEnabled,
     Callback = function(enabled)
         antiLagEnabled = enabled
         MATRIXHUB_CONFIG.AntiLag = enabled
@@ -1029,7 +1183,7 @@ local antiAfkConn = nil
 Settings:Toggle({
     Title = "ANTI AFK",
     Icon = "clock",
-    Default = false,
+    Value = false,
     Callback = function(v)
         if v then
             if getconnections then
@@ -1065,6 +1219,7 @@ local silentAimManualEnabled = false
 local silentAimFovEnabled = false
 local silentAimTargetPart = "Cabeza"
 local refreshQuickButtons
+local resetQuickButtonPositions
 local setSilentAimQuick
 local setAutoShootQuick
 
@@ -1075,6 +1230,7 @@ Cheats:Dropdown({ Title = "SILENT TARGET", Values = {"Cabeza","Torso","Cuerpo Co
 Cheats:Toggle({ Title = "SILENT AIM [FOV]", Value = false, Callback = function(v)
     silentAimFovEnabled = v
     if not v and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().MatrixHubTargetPart = nil end
+    if refreshQuickButtons then refreshQuickButtons() end
 end })
 Cheats:Toggle({ Title = "MOSTRAR FOV", Value = false, Callback = function(v) fovVisiblePreference = v end })
 Cheats:Slider({ Title = "TAMAÑO DEL FOV", Value = { Min = 10, Max = 800, Default = 120 }, Callback = function(v) fovRadius = v end })
@@ -1084,6 +1240,7 @@ Cheats:Toggle({ Title = "AUTO SHOOT [NORMAL]", Value = false, Callback = functio
 Cheats:Toggle({ Title = "AUTO SHOOT [AGRESIVO]", Value = false, Callback = function(v)
     autoShootAgresivoEnabled = v
     if not v and not autoShootEnabled then getgenv().MatrixHubTargetPart = nil end
+    if refreshQuickButtons then refreshQuickButtons() end
 end })
 Cheats:Toggle({ Title = "ALTO FIRE [AGRESIVO]", Value = false, Callback = function(v)
     altoFireEnabled = v
@@ -1098,7 +1255,7 @@ local stretchConn = nil
 Cheats:Toggle({
     Title = "STRETCHED",
     Icon = "maximize",
-    Default = false,
+    Value = false,
     Callback = function(Value)
         local cam = workspace.CurrentCamera
         if Value then
@@ -1122,7 +1279,7 @@ local telaForce = 1.4
 Cheats:Toggle({
     Title = "MOVIMIENTO TELA",
     Icon = "activity",
-    Default = false,
+    Value = false,
     Callback = function(Value)
         telaFFOn = Value
         local LP = game.Players.LocalPlayer
@@ -1164,7 +1321,7 @@ local lejosForce = 2.2
 Cheats:Toggle({
     Title = "GOD MODE",
     Icon = "zap",
-    Default = false,
+    Value = false,
     Callback = function(Value)
         telaLejosOn = Value
         local LP = game.Players.LocalPlayer
@@ -1208,7 +1365,7 @@ local spinSpeed = 30
 Cheats:Toggle({
     Title = "SPIN",
     Icon = "refresh-cw",
-    Default = false,
+    Value = false,
     Callback = function(Value)
         spinOn = Value
         local LP = game.Players.LocalPlayer
@@ -1421,7 +1578,7 @@ do
     Cheats:Toggle({
         Title = "VOIN WALK",
         Icon = "zap",
-        Default = false,
+        Value = false,
         Callback = function(v)
             if v then StartUltraInstinct(ultraRadius) else ClearUltra() end
         end
@@ -1447,15 +1604,19 @@ Settings:Dropdown({
         MATRIXHUB_UI:SetTheme(v)
         MATRIXHUB_CONFIG.Theme = v
         if MATRIXHUB_MATRIX_LOGO_UPDATE then MATRIXHUB_MATRIX_LOGO_UPDATE(v) end
+        PlayMatrixUISound("Toggle")
         SaveMatrixHubConfig()
     end
 })
 
--- MATRIX HUB // MINI STATUS HUD (solo estetico, actualizacion ligera)
+-- MATRIX HUB // LIVE DASHBOARD + MATRIX SYSTEM
+-- Actualización agrupada cada medio segundo para mantener bajo el consumo.
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
+    local StatsService = game:GetService("Stats")
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local sessionStartedAt = os.clock()
 
     local oldHud = playerGui:FindFirstChild("MATRIXHUB_STATUS_HUD")
     if oldHud then oldHud:Destroy() end
@@ -1472,64 +1633,234 @@ do
     hud.Name = "StatusPanel"
     hud.AnchorPoint = Vector2.new(1, 0)
     hud.Position = UDim2.new(1, -14, 0, 14)
-    hud.Size = UDim2.fromOffset(172, 54)
+    hud.Size = UDim2.fromOffset(252, 142)
     hud.BackgroundColor3 = Color3.fromRGB(3, 15, 10)
-    hud.BackgroundTransparency = 0.16
+    hud.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency
     hud.BorderSizePixel = 0
     hud.Parent = hudGui
+    Instance.new("UICorner", hud).CornerRadius = UDim.new(0, 12)
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 9)
-    corner.Parent = hud
+    local hudGradient = Instance.new("UIGradient")
+    hudGradient.Rotation = 25
+    hudGradient.Color = ColorSequence.new(Color3.fromRGB(5, 24, 15), Color3.fromRGB(3, 8, 7))
+    hudGradient.Parent = hud
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 210, 105)
-    stroke.Thickness = 1
-    stroke.Transparency = 0.2
-    stroke.Parent = hud
+    local hudStroke = Instance.new("UIStroke")
+    hudStroke.Color = Color3.fromRGB(0, 210, 105)
+    hudStroke.Thickness = 1.4
+    hudStroke.Transparency = 0.18
+    hudStroke.Parent = hud
+
+    local header = Instance.new("TextLabel")
+    header.Name = "Header"
+    header.BackgroundTransparency = 1
+    header.Position = UDim2.fromOffset(12, 8)
+    header.Size = UDim2.new(1, -24, 0, 21)
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 13
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.TextColor3 = Color3.fromRGB(110, 255, 170)
+    header.Text = "MATRIX // SYSTEM ONLINE"
+    header.Parent = hud
 
     local info = Instance.new("TextLabel")
     info.Name = "LiveInfo"
     info.BackgroundTransparency = 1
-    info.Position = UDim2.fromOffset(9, 5)
-    info.Size = UDim2.new(1, -18, 1, -10)
-    info.Font = Enum.Font.GothamMedium
-    info.TextSize = 12
-    info.TextColor3 = Color3.fromRGB(115, 255, 170)
+    info.Position = UDim2.fromOffset(12, 33)
+    info.Size = UDim2.new(1, -24, 1, -42)
+    info.Font = Enum.Font.Code
+    info.TextSize = 11
+    info.TextColor3 = Color3.fromRGB(205, 230, 215)
     info.TextXAlignment = Enum.TextXAlignment.Left
-    info.TextYAlignment = Enum.TextYAlignment.Center
-    info.Text = "MATRIX // ONLINE\\nFPS: --  |  --:--:--"
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.TextWrapped = true
+    info.Text = "FPS: --   PING: --\nPLAYERS: --\nSESSION: --\nSERVER: --\nPERFORMANCE: STARTING\nSAVE: " .. MATRIXHUB_CONFIG_STATUS
     info.Parent = hud
 
     local frames = 0
     local elapsed = 0
     local fps = 0
     local hudConnection
+    local function getPingMs()
+        local ok, value = pcall(function()
+            return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+        end)
+        if ok and type(value) == "number" then return math.floor(value + 0.5) end
+        local okText, textValue = pcall(function()
+            return StatsService.Network.ServerStatsItem["Data Ping"]:GetValueString()
+        end)
+        if okText and type(textValue) == "string" then
+            local number = tonumber(textValue:match("[%d%.]+"))
+            if number then return math.floor(number + 0.5) end
+        end
+        return nil
+    end
+    local function formatDuration(seconds)
+        seconds = math.max(0, math.floor(seconds))
+        local hours = math.floor(seconds / 3600)
+        local minutes = math.floor((seconds % 3600) / 60)
+        local secs = seconds % 60
+        return string.format("%02d:%02d:%02d", hours, minutes, secs)
+    end
+
+    local hudAccumulator = 0
     hudConnection = RunService.RenderStepped:Connect(function(dt)
         if not hudGui.Parent then
             if hudConnection then hudConnection:Disconnect() end
             return
         end
-        frames += 1
-        elapsed += dt
-        if elapsed >= 1 then
-            fps = math.floor(frames / elapsed + 0.5)
+        if not hudGui.Enabled then
             frames = 0
             elapsed = 0
-            info.Text = "MATRIX // ONLINE\\nFPS: " .. fps .. "  |  " .. os.date("%H:%M:%S")
+            hudAccumulator = 0
+            return
+        end
+        frames += 1
+        elapsed += dt
+        hudAccumulator += dt
+        if hudAccumulator < 0.5 then return end
+        local sampleTime = math.max(elapsed, 0.001)
+        fps = math.floor(frames / sampleTime + 0.5)
+        frames = 0
+        elapsed = 0
+        hudAccumulator = 0
+
+        local ping = getPingMs()
+        local playersNow = #Players:GetPlayers()
+        local maxPlayers = Players.MaxPlayers
+        local serverId = tostring(game.JobId or "local")
+        if #serverId > 8 then serverId = serverId:sub(1, 8) end
+        local pingText = ping and (tostring(ping) .. " ms") or "N/D"
+        local performance = fps < 25 and "LOW FPS" or (ping and ping > 180 and "HIGH PING" or "STABLE")
+        info.Text = string.format(
+            "FPS: %d   PING: %s\nPLAYERS: %d/%d\nSESSION: %s\nSERVER: %s\nPERFORMANCE: %s\nSAVE: %s\nERRORS: %d",
+            fps, pingText, playersNow, maxPlayers, formatDuration(os.clock() - sessionStartedAt), serverId, performance, MATRIXHUB_CONFIG_STATUS, #MATRIXHUB_ERROR_LOG
+        )
+        if performance ~= "STABLE" then
+            hudStroke.Color = Color3.fromRGB(255, 175, 65)
+            header.TextColor3 = Color3.fromRGB(255, 205, 125)
+        else
+            local intensity = MATRIXHUB_CONFIG.AccentIntensity
+            local accent = Color3.fromRGB(0, 200, 90):Lerp(Color3.fromRGB(0, 90, 40), 1 - intensity)
+            hudStroke.Color = accent
+            header.TextColor3 = Color3.fromRGB(110, 255, 170)
         end
     end)
+
+    Settings:Section({ Title = "MATRIX PERSONALIZATION", Icon = "sliders-horizontal", Opened = true })
+    local mainWindow = MATRIXHUB.UIElements.Main
+    local mainScale = mainWindow:FindFirstChild("MATRIXHUB_UISCALE")
+    if not mainScale then
+        mainScale = Instance.new("UIScale")
+        mainScale.Name = "MATRIXHUB_UISCALE"
+        mainScale.Parent = mainWindow
+    end
+    mainScale.Scale = MATRIXHUB_CONFIG.UIScale
+
+    Settings:Slider({
+        Title = "TAMAÑO DE INTERFAZ",
+        Icon = "scaling",
+        Value = { Min = 0.75, Max = 1.25, Default = MATRIXHUB_CONFIG.UIScale },
+        Callback = function(value)
+            MATRIXHUB_CONFIG.UIScale = math.clamp(value, 0.75, 1.25)
+            mainScale.Scale = MATRIXHUB_CONFIG.UIScale
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Settings:Slider({
+        Title = "VELOCIDAD DE ANIMACIÓN",
+        Icon = "timer",
+        Value = { Min = 0.5, Max = 1.75, Default = MATRIXHUB_CONFIG.AnimationSpeed },
+        Callback = function(value)
+            MATRIXHUB_CONFIG.AnimationSpeed = math.clamp(value, 0.5, 1.75)
+            SaveMatrixHubConfig()
+        end
+    })
+    Settings:Slider({
+        Title = "INTENSIDAD MATRIX GREEN",
+        Icon = "sun",
+        Value = { Min = 0.35, Max = 1, Default = MATRIXHUB_CONFIG.AccentIntensity },
+        Callback = function(value)
+            MATRIXHUB_CONFIG.AccentIntensity = math.clamp(value, 0.35, 1)
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+        end
+    })
+    Settings:Slider({
+        Title = "TRANSPARENCIA DEL PANEL",
+        Icon = "layers",
+        Value = { Min = 0, Max = 0.45, Default = MATRIXHUB_CONFIG.PanelTransparency },
+        Callback = function(value)
+            MATRIXHUB_CONFIG.PanelTransparency = math.clamp(value, 0, 0.45)
+            hud.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency
+            pcall(function() mainWindow.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency end)
+            SaveMatrixHubConfig()
+        end
+    })
+    Settings:Toggle({
+        Title = "BRILLO DE BOTONES FLOTANTES",
+        Icon = "sparkles",
+        Value = MATRIXHUB_CONFIG.GlowEnabled,
+        Callback = function(enabled)
+            MATRIXHUB_CONFIG.GlowEnabled = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Settings:Button({
+        Title = "GUARDAR CONFIGURACIÓN AHORA",
+        Icon = "save",
+        Callback = function()
+            local saved = SaveMatrixHubConfig(true)
+            if saved then PlayMatrixUISound("Notice") end
+        end
+    })
+    Settings:Button({
+        Title = "RESTABLECER PERSONALIZACIÓN",
+        Icon = "rotate-ccw",
+        Callback = function()
+            MATRIXHUB_CONFIG.UIScale = 1
+            MATRIXHUB_CONFIG.AnimationSpeed = 1
+            MATRIXHUB_CONFIG.AccentIntensity = 1
+            MATRIXHUB_CONFIG.PanelTransparency = 0.12
+            MATRIXHUB_CONFIG.GlowEnabled = true
+            mainScale.Scale = 1
+            hud.BackgroundTransparency = 0.12
+            pcall(function() mainWindow.BackgroundTransparency = 0.12 end)
+            if refreshQuickButtons then refreshQuickButtons() end
+            if resetQuickButtonPositions then resetQuickButtonPositions() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Notice")
+        end
+    })
+    Settings:Button({
+        Title = "VER ERRORES DE CONFIGURACIÓN",
+        Icon = "clipboard-list",
+        Callback = function()
+            if #MATRIXHUB_ERROR_LOG == 0 then
+                print("[Matrix Hub] Sin errores registrados.")
+            else
+                for _, entry in ipairs(MATRIXHUB_ERROR_LOG) do warn("[Matrix Hub] " .. entry) end
+            end
+        end
+    })
 
     Settings:Toggle({
         Title = "LIVE STATUS HUD",
         Icon = "activity",
-        Default = MATRIXHUB_CONFIG.StatusHud == true,
+        Value = MATRIXHUB_CONFIG.StatusHud == true,
         Callback = function(enabled)
-            hudGui.Enabled = enabled
-            MATRIXHUB_CONFIG.StatusHud = enabled
+            hudGui.Enabled = enabled == true
+            MATRIXHUB_CONFIG.StatusHud = enabled == true
             SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
         end
     })
+
+    MATRIXHUB_LIVE_HUD = hudGui
+    MATRIXHUB_LIVE_HUD_LABEL = info
 end
 
 Otros:Button({
@@ -1840,6 +2171,10 @@ Home:Section({ Title = "ENVIRONMENT", Icon = "monitor", Opened = true })
 Home:Paragraph({ Title = "EXECUTOR", Desc = "Ejecutor actual: "..getExecutor() })
 Home:Section({ Title = "SESSION DATA", Icon = "server", Opened = true })
 Home:Paragraph({ Title = "ACTIVE EXPERIENCE", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
+Home:Section({ Title = "MATRIX LIVE DASHBOARD", Icon = "activity", Opened = true })
+Home:Paragraph({ Title = "MONITOR EN TIEMPO REAL", Desc = "FPS, ping, jugadores, duración de sesión y estado del servidor aparecen en LIVE STATUS HUD." })
+Home:Section({ Title = "MATRIX SYSTEM", Icon = "cpu", Opened = true })
+Home:Paragraph({ Title = "ESTADO DEL SISTEMA", Desc = "Guardado automático con respaldo de ruta, monitor de rendimiento y preferencias visuales persistentes." })
 -- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
 setSilentAimQuick = function(enabled)
     silentAimManualEnabled = enabled
@@ -1915,7 +2250,7 @@ end
 Movimiento:Toggle({
     Title = "INVISIBLE V6",
     Icon = "ghost",
-    Default = false,
+    Value = false,
     Callback = function(state)
         setInvisibleV6(state)
         if refreshQuickButtons then refreshQuickButtons() end
@@ -1932,13 +2267,14 @@ do
     -- Estado visual unificado: gris apagado y verde encendido.
     local QUICK_INACTIVE = Color3.fromRGB(92, 99, 96)
     local QUICK_ACTIVE = Color3.fromRGB(0, 200, 90)
-    local QUICK_TWEEN_INFO = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
     local function makeQuickButton(id, iconText, order, accent, getter, setter)
         local button = Instance.new("TextButton")
         button.Name = "Quick_" .. id
         button.AnchorPoint = Vector2.new(1, 0)
-        button.Position = UDim2.new(1, -18, 0, 178 + ((order - 1) * 76))
+        local savedPosition = MATRIXHUB_CONFIG.QuickButtonPositions[id]
+            or { XS = 1, XO = -18, YS = 0, YO = 178 + ((order - 1) * 76) }
+        button.Position = UDim2.new(savedPosition.XS, savedPosition.XO, savedPosition.YS, savedPosition.YO)
         button.Size = UDim2.fromOffset(62, 62)
         button.BackgroundColor3 = QUICK_INACTIVE
         button.BackgroundTransparency = 0
@@ -1955,6 +2291,21 @@ do
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(1, 0)
         corner.Parent = button
+
+        local statusDot = Instance.new("Frame")
+        statusDot.Name = "StateIndicator"
+        statusDot.AnchorPoint = Vector2.new(0.5, 0.5)
+        statusDot.Position = UDim2.new(1, -9, 0, 9)
+        statusDot.Size = UDim2.fromOffset(10, 10)
+        statusDot.BackgroundColor3 = Color3.fromRGB(205, 212, 207)
+        statusDot.BorderSizePixel = 0
+        statusDot.ZIndex = button.ZIndex + 2
+        statusDot.Parent = button
+        Instance.new("UICorner", statusDot).CornerRadius = UDim.new(1, 0)
+        local dotStroke = Instance.new("UIStroke")
+        dotStroke.Color = Color3.fromRGB(15, 20, 17)
+        dotStroke.Thickness = 1
+        dotStroke.Parent = statusDot
 
         local gradient = Instance.new("UIGradient")
         gradient.Rotation = 135
@@ -1976,15 +2327,15 @@ do
         scale.Parent = button
 
         local shadow = Instance.new("Frame")
-        shadow.Name = "Glow"
+        shadow.Name = "Glow_" .. id
         shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-        shadow.Position = UDim2.fromScale(0.5, 0.5)
-        shadow.Size = UDim2.new(1, 9, 1, 9)
+        shadow.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 31, button.Position.Y.Scale, button.Position.Y.Offset + 31)
+        shadow.Size = UDim2.new(0, 72, 0, 72)
         shadow.BackgroundColor3 = QUICK_INACTIVE
-        shadow.BackgroundTransparency = 0.88
+        shadow.BackgroundTransparency = MATRIXHUB_CONFIG.GlowEnabled and 0.88 or 1
         shadow.BorderSizePixel = 0
-        shadow.ZIndex = 59
-        shadow.Parent = button
+        shadow.ZIndex = button.ZIndex - 1
+        shadow.Parent = quickGui
         local shadowCorner = Instance.new("UICorner")
         shadowCorner.CornerRadius = UDim.new(1, 0)
         shadowCorner.Parent = shadow
@@ -2024,6 +2375,7 @@ do
                     startPosition.X.Scale, startPosition.X.Offset + delta.X,
                     startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
                 )
+                shadow.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 31, button.Position.Y.Scale, button.Position.Y.Offset + 31)
             end
         end)
 
@@ -2031,7 +2383,34 @@ do
             if input == dragInput or input.UserInputType == Enum.UserInputType.Touch
                 or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = false
+                if moved then
+                    local camera = workspace.CurrentCamera
+                    local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+                    local pos = button.Position
+                    local minX = -viewport.X + 8
+                    local maxX = -button.AbsoluteSize.X - 8
+                    local minY = 8
+                    local maxY = math.max(8, viewport.Y - button.AbsoluteSize.Y - 8)
+                    local xOffset = math.clamp(pos.X.Offset, minX, maxX)
+                    local yOffset = math.clamp(pos.Y.Offset, minY, maxY)
+                    button.Position = UDim2.new(pos.X.Scale, xOffset, pos.Y.Scale, yOffset)
+                    shadow.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 31, button.Position.Y.Scale, button.Position.Y.Offset + 31)
+                    MATRIXHUB_CONFIG.QuickButtonPositions[id] = {
+                        XS = button.Position.X.Scale, XO = button.Position.X.Offset,
+                        YS = button.Position.Y.Scale, YO = button.Position.Y.Offset
+                    }
+                    SaveMatrixHubConfig()
+                end
             end
+        end)
+
+        button.MouseEnter:Connect(function()
+            if not dragging then
+                TweenService:Create(scale, TweenInfo.new(0.12 / math.max(MATRIXHUB_CONFIG.AnimationSpeed, 0.5), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.06 }):Play()
+            end
+        end)
+        button.MouseLeave:Connect(function()
+            TweenService:Create(scale, TweenInfo.new(0.14 / math.max(MATRIXHUB_CONFIG.AnimationSpeed, 0.5), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
         end)
 
         button.Activated:Connect(function()
@@ -2039,6 +2418,13 @@ do
                 moved = false
                 return
             end
+            PlayMatrixUISound("Toggle")
+            TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 0.92 }):Play()
+            task.delay(0.09, function()
+                if scale and scale.Parent then
+                    TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+                end
+            end)
             setter(not getter())
             refreshQuickButtons()
         end)
@@ -2050,6 +2436,8 @@ do
             Glow = shadow,
             Stroke = stroke,
             Gradient = gradient,
+            Scale = scale,
+            Indicator = statusDot,
             ColorTween = nil
         }
         return button
@@ -2060,23 +2448,26 @@ do
         setInvisibleV6)
 
     makeQuickButton("Silent", "S", 2, Color3.fromRGB(75, 170, 255),
-        function() return silentAimManualEnabled == true end,
+        function() return silentAimManualEnabled == true or silentAimFovEnabled == true end,
         setSilentAimQuick)
 
     makeQuickButton("AutoShoot", "◎", 3, Color3.fromRGB(85, 235, 130),
-        function() return autoShootEnabled == true end,
+        function() return autoShootEnabled == true or autoShootAgresivoEnabled == true or altoFireEnabled == true end,
         setAutoShootQuick)
 
     refreshQuickButtons = function()
         for _, item in pairs(quickButtons) do
             local active = item.Getter() == true
-            local targetColor = active and QUICK_ACTIVE or QUICK_INACTIVE
+            local intensity = math.clamp(MATRIXHUB_CONFIG.AccentIntensity or 1, 0.35, 1)
+            local activeColor = QUICK_ACTIVE:Lerp(Color3.fromRGB(0, 85, 40), 1 - intensity)
+            local targetColor = active and activeColor or QUICK_INACTIVE
             local light = active and 0.22 or 0.16
             local dark = active and 0.24 or 0.22
+            local duration = 0.18 / math.max(MATRIXHUB_CONFIG.AnimationSpeed or 1, 0.5)
 
             -- Transicion breve para que el cambio de estado no sea brusco.
             if item.ColorTween then item.ColorTween:Cancel() end
-            item.ColorTween = TweenService:Create(item.Button, QUICK_TWEEN_INFO, {
+            item.ColorTween = TweenService:Create(item.Button, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundColor3 = targetColor
             })
             item.ColorTween:Play()
@@ -2089,9 +2480,30 @@ do
             item.Stroke.Transparency = active and 0 or 0.12
             item.Stroke.Thickness = active and 3.2 or 2.2
             item.Glow.BackgroundColor3 = targetColor
-            item.Glow.BackgroundTransparency = active and 0.58 or 0.82
+            item.Glow.BackgroundTransparency = (MATRIXHUB_CONFIG.GlowEnabled == false) and 1 or (active and 0.58 or 0.82)
+            item.Glow.Visible = item.Button.Visible and MATRIXHUB_CONFIG.GlowEnabled ~= false
+            item.Indicator.BackgroundColor3 = active and Color3.fromRGB(155, 255, 190) or Color3.fromRGB(205, 212, 207)
             item.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+    end
+
+    resetQuickButtonPositions = function()
+        local defaults = {
+            Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
+            Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
+            AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 }
+        }
+        for id, item in pairs(quickButtons) do
+            local pos = defaults[id]
+            if pos then
+                item.Button.Position = UDim2.new(pos.XS, pos.XO, pos.YS, pos.YO)
+                item.Glow.Position = UDim2.new(item.Button.Position.X.Scale, item.Button.Position.X.Offset - 31, item.Button.Position.Y.Scale, item.Button.Position.Y.Offset + 31)
+                MATRIXHUB_CONFIG.QuickButtonPositions[id] = {
+                    XS = pos.XS, XO = pos.XO, YS = pos.YS, YO = pos.YO
+                }
+            end
+        end
+        SaveMatrixHubConfig()
     end
 
     refreshQuickButtons()
@@ -2101,38 +2513,44 @@ do
     Botones:Toggle({
         Title = "MOSTRAR FANTASMA",
         Icon = "ghost",
-        Default = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
         Callback = function(enabled)
-            quickButtons.Fantasma.Button.Visible = enabled
-            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled
+            quickButtons.Fantasma.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
             SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
         end
     })
     Botones:Toggle({
         Title = "MOSTRAR SILENT",
         Icon = "crosshair",
-        Default = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
         Callback = function(enabled)
-            quickButtons.Silent.Button.Visible = enabled
-            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled
+            quickButtons.Silent.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
             SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
         end
     })
     Botones:Toggle({
         Title = "MOSTRAR AUTO SHOOT",
         Icon = "target",
-        Default = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
         Callback = function(enabled)
-            quickButtons.AutoShoot.Button.Visible = enabled
-            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled
+            quickButtons.AutoShoot.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
             SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
         end
     })
 end
 
 Movimiento:Toggle({
     Title = "FLY SPEED V1",
-    Default = false,
+    Value = false,
     Callback = function(state)
         local Players = game:GetService("Players")
         local RunService = game:GetService("RunService")
@@ -2845,7 +3263,7 @@ end
 
 Otros:Toggle({
     Title = "OCULTAR NOMBRE",
-    Default = false,
+    Value = false,
     Callback = function(state)
         if state == isWorkspaceLooping then return end
         isWorkspaceLooping = state
@@ -2897,7 +3315,7 @@ Otros:Input({
 })
 
 local KillSoundEnabled = MATRIXHUB_CONFIG.KillSoundEnabled == true
-local SelectedKillSound = MATRIXHUB_CONFIG.SelectedKillSound or "BESO"
+local SelectedKillSound = MATRIXHUB_CONFIG.SelectedKillSound or "ES HACKER"
 local KillSoundVolume = math.clamp(tonumber(MATRIXHUB_CONFIG.KillSoundVolume) or 1, 1, 3)
 -- Estas variables se declaran antes de PlayKillSound para que el detector
 -- de kills y los controles de la interfaz compartan el mismo estado.
@@ -2928,8 +3346,9 @@ for _, soundOption in ipairs(KillSounds) do
     end
 end
 if not savedSoundExists then
-    SelectedKillSound = KillSounds[1].Name
+    SelectedKillSound = "ES HACKER"
     MATRIXHUB_CONFIG.SelectedKillSound = SelectedKillSound
+    SaveMatrixHubConfig()
 end
 
 local KillSoundPlayer = Instance.new("Sound")
@@ -3035,7 +3454,7 @@ Sonidos:Toggle({
 Sonidos:Input({
     Title = "ID PERSONALIZADO DEL SONIDO",
     Value = CustomKillSoundId,
-    Placeholder = "Ejemplo: 67676767",
+    Placeholder = "Ejemplo: 1234567890",
     Callback = function(text)
         local digits = tostring(text or ""):gsub("%D", "")
         CustomKillSoundId = digits
@@ -3064,7 +3483,7 @@ Sonidos:Dropdown({
 
 Sonidos:Slider({
     Title = "VOLUMEN SONIDO",
-    Value = { Min = 1, Max = 10, Default = KillSoundVolume },
+    Value = { Min = 1, Max = 3, Default = KillSoundVolume },
     Callback = function(v)
         KillSoundVolume = v
         KillSoundPlayer.Volume = v
@@ -3081,6 +3500,63 @@ Sonidos:Button({
         KillSoundEnabled = true
         PlayKillSound()
         KillSoundEnabled = wasEnabled
+    end
+})
+
+-- MATRIX AUDIO // efectos de interfaz independientes del sonido de muerte.
+Sonidos:Section({ Title = "MATRIX AUDIO // INTERFAZ", Icon = "volume-2", Opened = true })
+Sonidos:Toggle({
+    Title = "EFECTOS DE INTERFAZ",
+    Icon = "audio-lines",
+    Value = MATRIXHUB_CONFIG.UIAudioEnabled == true,
+    Callback = function(enabled)
+        MATRIXHUB_CONFIG.UIAudioEnabled = enabled == true
+        SaveMatrixHubConfig()
+        if enabled then PlayMatrixUISound("Notice") end
+    end
+})
+Sonidos:Slider({
+    Title = "VOLUMEN DE INTERFAZ",
+    Icon = "volume-1",
+    Value = { Min = 0, Max = 1, Default = MATRIXHUB_CONFIG.UIAudioVolume },
+    Callback = function(value)
+        MATRIXHUB_CONFIG.UIAudioVolume = math.clamp(value, 0, 1)
+        for _, sound in pairs(MatrixUISoundObjects) do sound.Volume = MATRIXHUB_CONFIG.UIAudioVolume end
+        SaveMatrixHubConfig()
+    end
+})
+Sonidos:Input({
+    Title = "ID SONIDO DE CLIC",
+    Value = MATRIXHUB_CONFIG.UISounds.Click,
+    Placeholder = "ID de audio de Roblox",
+    Callback = function(value)
+        MATRIXHUB_CONFIG.UISounds.Click = tostring(value or ""):gsub("%D", ""):sub(1, 20)
+        SaveMatrixHubConfig()
+    end
+})
+Sonidos:Input({
+    Title = "ID SONIDO DE ACTIVACIÓN",
+    Value = MATRIXHUB_CONFIG.UISounds.Toggle,
+    Placeholder = "ID de audio de Roblox",
+    Callback = function(value)
+        MATRIXHUB_CONFIG.UISounds.Toggle = tostring(value or ""):gsub("%D", ""):sub(1, 20)
+        SaveMatrixHubConfig()
+    end
+})
+Sonidos:Input({
+    Title = "ID SONIDO DE NOTIFICACIÓN",
+    Value = MATRIXHUB_CONFIG.UISounds.Notice,
+    Placeholder = "ID de audio de Roblox",
+    Callback = function(value)
+        MATRIXHUB_CONFIG.UISounds.Notice = tostring(value or ""):gsub("%D", ""):sub(1, 20)
+        SaveMatrixHubConfig()
+    end
+})
+Sonidos:Button({
+    Title = "PROBAR SONIDO DE INTERFAZ",
+    Icon = "play",
+    Callback = function()
+        PlayMatrixUISound("Click")
     end
 })
 
@@ -3215,7 +3691,7 @@ end
 Movimiento:Toggle({
     Title = "FLY ALTURA",
     Icon = "rocket",
-    Default = false,
+    Value = false,
     Callback = function(state)
         if state then MATRIXHUB_StartFly() else MATRIXHUB_StopFly() end
     end
@@ -3238,7 +3714,7 @@ Movimiento:Slider({
 Movimiento:Toggle({
     Title = "SPEED CFRAME",
     Icon = "zap",
-    Default = false,
+    Value = false,
     Callback = function(state)
         MATRIXHUB_cframeOn = state
     end
