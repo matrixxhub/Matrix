@@ -1,5 +1,6 @@
--- MATRIX-HUB // STARTUP SCREEN
--- Sin sistema de keys. El usuario inicia Matrix manualmente.
+-- MATRIX-HUB // STARTUP SCREEN - WINDOWS CLASICO
+-- El estilo Windows 98/2000 se limita a esta pantalla de entrada.
+-- El menu principal conserva Matrix Green, glass/acrylic y lluvia digital.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,339 +9,413 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local oldStartup = PlayerGui:FindFirstChild("MATRIXHUB_STARTUP")
-if oldStartup then
-    oldStartup:Destroy()
-end
+if oldStartup then oldStartup:Destroy() end
 
 local startupGui = Instance.new("ScreenGui")
 startupGui.Name = "MATRIXHUB_STARTUP"
 startupGui.ResetOnSpawn = false
 startupGui.IgnoreGuiInset = true
 startupGui.DisplayOrder = 10000
+startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 startupGui.Parent = PlayerGui
 
 local background = Instance.new("Frame")
 background.Name = "Background"
 background.Size = UDim2.fromScale(1, 1)
-background.BackgroundColor3 = Color3.fromRGB(4, 5, 24)
+background.BackgroundColor3 = Color3.fromRGB(2, 7, 8)
 background.BorderSizePixel = 0
 background.ClipsDescendants = true
 background.Parent = startupGui
 
--- Fondo ilustrado. Sube la imagen a Roblox y coloca aquí su ID de imagen.
--- Ejemplo: rbxassetid://1234567890
-local MATRIX_BACKGROUND_IMAGE = "" -- Pega aquí: rbxassetid://ID
-local backgroundImage = Instance.new("ImageLabel")
-backgroundImage.Name = "MatrixBackgroundImage"
-backgroundImage.BackgroundTransparency = 1
-backgroundImage.Size = UDim2.fromScale(1, 1)
-backgroundImage.Position = UDim2.fromScale(0, 0)
-backgroundImage.Visible = MATRIX_BACKGROUND_IMAGE ~= ""
-if backgroundImage.Visible then
-    backgroundImage.Image = MATRIX_BACKGROUND_IMAGE
-end
-backgroundImage.ScaleType = Enum.ScaleType.Crop
-backgroundImage.ImageColor3 = Color3.fromRGB(125, 105, 255)
-backgroundImage.ImageTransparency = 0.08
-backgroundImage.ZIndex = 1
-backgroundImage.Parent = background
-
-local backgroundTint = Instance.new("Frame")
-backgroundTint.Name = "BackgroundTint"
-backgroundTint.Size = UDim2.fromScale(1, 1)
-backgroundTint.BackgroundColor3 = Color3.fromRGB(8, 5, 35)
-backgroundTint.BackgroundTransparency = 0.28
-backgroundTint.BorderSizePixel = 0
-backgroundTint.ZIndex = 2
-backgroundTint.Parent = background
-local tintGradient = Instance.new("UIGradient")
-tintGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 12, 75)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(38, 12, 92)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 8, 42))
+local backgroundGradient = Instance.new("UIGradient")
+backgroundGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(1, 8, 7)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3, 18, 12)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 5, 8))
 })
-tintGradient.Rotation = 35
-tintGradient.Parent = backgroundTint
+backgroundGradient.Rotation = 35
+backgroundGradient.Parent = background
 
--- Lluvia digital con profundidad: números + identidad Matrix.
--- La escala, opacidad y velocidad varían para simular planos cercanos y lejanos.
+-- La lluvia Matrix sigue detrás de la ventana, sin competir con el texto.
 local rng = Random.new()
 local glyphs = {"0", "1"}
 local identityWords = {"SANOX", "MATRIX-HUB", "GHOST"}
 local rainLabels = {}
-local wordRainLabels = {}
+local wordLabels = {}
 local rainAccumulator = 0
-local rainStep = 1 / 20
+local rainStep = 1 / 18
 
-for i = 1, 9 do
-    local depth = rng:NextNumber(0.55, 1.35)
-    local rain = Instance.new("TextLabel")
-    rain.Name = "StartupRain_" .. i
-    rain.BackgroundTransparency = 1
-    rain.BorderSizePixel = 0
-    rain.Size = UDim2.new(0, 26 * depth, 0, 155 * depth)
-    rain.Position = UDim2.new((i - 1) / 8, 0, rng:NextNumber(-1, 0), 0)
-    rain.Font = Enum.Font.Code
-    rain.TextSize = math.floor(15 * depth)
-    rain.TextColor3 = Color3.fromRGB(0, 205, 105)
-    rain.TextTransparency = 0.25 + (1.35 - depth) * 0.34
-    rain.TextStrokeColor3 = Color3.fromRGB(0, 25, 12)
-    rain.TextStrokeTransparency = 0.45
-    rain.TextYAlignment = Enum.TextYAlignment.Top
+for i = 1, 11 do
+    local depth = rng:NextNumber(0.55, 1.25)
+    local label = Instance.new("TextLabel")
+    label.Name = "StartupRain_" .. i
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Size = UDim2.new(0, 24 * depth, 0, 168 * depth)
+    local x = (i - 1) / 10
+    local y = rng:NextNumber(-1, 0)
+    label.Position = UDim2.new(x, 0, y, 0)
+    label.Font = Enum.Font.Code
+    label.TextSize = math.floor(14 * depth)
+    label.TextColor3 = Color3.fromRGB(0, 220, 112)
+    label.TextTransparency = 0.28 + (1.25 - depth) * 0.36
+    label.TextStrokeColor3 = Color3.fromRGB(0, 25, 12)
+    label.TextStrokeTransparency = 0.5
+    label.TextYAlignment = Enum.TextYAlignment.Top
     local chars = {}
-    for n = 1, 9 do chars[n] = glyphs[rng:NextInteger(1, #glyphs)] end
-    rain.Text = table.concat(chars, "\\n")
-    rain.Rotation = rng:NextNumber(-2, 2)
-    rain.ZIndex = 3
-    rain.Parent = background
-
-    rainLabels[#rainLabels + 1] = {
-        Label = rain, X = (i - 1) / 8,
-        Y = rain.Position.Y.Scale,
-        Speed = rng:NextNumber(0.12, 0.28) * depth
-    }
+    for n = 1, 10 do chars[n] = glyphs[rng:NextInteger(1, #glyphs)] end
+    label.Text = table.concat(chars, "\n")
+    label.ZIndex = 2
+    label.Parent = background
+    rainLabels[#rainLabels + 1] = {Label = label, X = x, Y = y, Speed = rng:NextNumber(0.12, 0.26) * depth}
 end
 
--- Palabras de identidad en planos distintos, mezcladas con la lluvia binaria.
-for i = 1, 6 do
-    local depth = rng:NextNumber(0.65, 1.25)
-    local word = Instance.new("TextLabel")
-    word.Name = "StartupIdentity_" .. i
-    word.BackgroundTransparency = 1
-    word.BorderSizePixel = 0
-    word.Size = UDim2.fromOffset(150 * depth, 25 * depth)
-    word.Position = UDim2.new(rng:NextNumber(0.02, 0.78), 0, rng:NextNumber(-1, 0), 0)
-    word.Font = Enum.Font.GothamBlack
-    word.Text = identityWords[((i - 1) % #identityWords) + 1]
-    word.TextSize = math.floor(13 * depth)
-    word.TextColor3 = Color3.fromRGB(130, 255, 190)
-    word.TextTransparency = 0.18 + (1.25 - depth) * 0.45
-    word.TextStrokeColor3 = Color3.fromRGB(0, 30, 16)
-    word.TextStrokeTransparency = 0.28
-    word.Rotation = rng:NextNumber(-5, 5)
-    word.ZIndex = 4
-    word.Parent = background
-    wordRainLabels[#wordRainLabels + 1] = {
-        Label = word, X = word.Position.X.Scale, Y = word.Position.Y.Scale,
-        Speed = rng:NextNumber(0.09, 0.19) * depth,
-        Depth = depth
-    }
+for i = 1, 5 do
+    local depth = rng:NextNumber(0.65, 1.1)
+    local label = Instance.new("TextLabel")
+    label.Name = "StartupIdentity_" .. i
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Size = UDim2.fromOffset(150 * depth, 25 * depth)
+    local x = rng:NextNumber(0.03, 0.78)
+    local y = rng:NextNumber(-1, 0)
+    label.Position = UDim2.new(x, 0, y, 0)
+    label.Font = Enum.Font.Code
+    label.Text = identityWords[((i - 1) % #identityWords) + 1]
+    label.TextSize = math.floor(12 * depth)
+    label.TextColor3 = Color3.fromRGB(100, 255, 165)
+    label.TextTransparency = 0.42
+    label.TextStrokeColor3 = Color3.fromRGB(0, 30, 14)
+    label.TextStrokeTransparency = 0.4
+    label.ZIndex = 3
+    label.Parent = background
+    wordLabels[#wordLabels + 1] = {Label = label, X = x, Y = y, Speed = rng:NextNumber(0.08, 0.17) * depth}
 end
 
+-- Ventana clásica: bordes rectos, cuerpo gris y barra azul activa.
 local panelShadow = Instance.new("Frame")
-panelShadow.Name = "StartupPanelShadow"
+panelShadow.Name = "WindowsPanelShadow"
 panelShadow.AnchorPoint = Vector2.new(0.5, 0.5)
-panelShadow.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 9)
-panelShadow.Size = UDim2.new(0.88, 8, 0, 278)
-panelShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 12)
-panelShadow.BackgroundTransparency = 0.28
+panelShadow.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(7, 8)
+panelShadow.Size = UDim2.new(0.92, 0, 0, 398)
+panelShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+panelShadow.BackgroundTransparency = 0.32
 panelShadow.BorderSizePixel = 0
 panelShadow.ZIndex = 4
 panelShadow.Parent = background
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 19)
-shadowCorner.Parent = panelShadow
-local shadowConstraint = Instance.new("UISizeConstraint")
-shadowConstraint.MaxSize = Vector2.new(398, 278)
-shadowConstraint.Parent = panelShadow
+local shadowScale = Instance.new("UIScale")
+shadowScale.Name = "ResponsiveShadowScale"
+shadowScale.Scale = 1
+shadowScale.Parent = panelShadow
 
 local panel = Instance.new("Frame")
-panel.Name = "StartupPanel"
+panel.Name = "Windows98Window"
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.new(0.88, 0, 0, 270)
-panel.BackgroundColor3 = Color3.fromRGB(13, 10, 38)
-panel.BackgroundTransparency = 0.12
-panel.BorderSizePixel = 0
+panel.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 24)
+panel.Size = UDim2.new(0.92, 0, 0, 398)
+panel.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+panel.BorderColor3 = Color3.fromRGB(20, 20, 20)
+panel.BorderSizePixel = 1
 panel.ZIndex = 5
 panel.Parent = background
 
 local panelConstraint = Instance.new("UISizeConstraint")
-panelConstraint.MaxSize = Vector2.new(390, 270)
+panelConstraint.MaxSize = Vector2.new(440, 398)
 panelConstraint.Parent = panel
 
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 15)
-panelCorner.Parent = panel
+local panelScale = Instance.new("UIScale")
+panelScale.Name = "ResponsiveScale"
+panelScale.Scale = 1
+panelScale.Parent = panel
 
-local panelStroke = Instance.new("UIStroke")
-panelStroke.Color = Color3.fromRGB(159, 78, 255)
-panelStroke.Thickness = 1.8
-panelStroke.Transparency = 0.08
-panelStroke.Parent = panel
-
-local panelGradient = Instance.new("UIGradient")
-panelGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 15, 58)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(9, 12, 42)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(27, 9, 55))
-})
-panelGradient.Rotation = 25
-panelGradient.Parent = panel
-
-local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.BackgroundTransparency = 1
-title.Position = UDim2.fromOffset(12, 24)
-title.Size = UDim2.new(1, -24, 0, 42)
-title.Font = Enum.Font.GothamBlack
-title.Text = "MATRIX-HUB"
-title.TextColor3 = Color3.fromRGB(207, 117, 255)
-title.TextSize = 29
-title.ZIndex = 6
-title.Parent = panel
-
-local subtitle = Instance.new("TextLabel")
-subtitle.BackgroundTransparency = 1
-subtitle.Position = UDim2.fromOffset(15, 67)
-subtitle.Size = UDim2.new(1, -30, 0, 22)
-subtitle.Font = Enum.Font.GothamMedium
-subtitle.Text = "// SYSTEM READY"
-subtitle.TextColor3 = Color3.fromRGB(194, 180, 255)
-subtitle.TextSize = 12
-subtitle.ZIndex = 6
-subtitle.Parent = panel
-
-local startButton = Instance.new("TextButton")
-startButton.Name = "StartMatrix"
-startButton.Position = UDim2.new(0, 22, 0, 112)
-startButton.Size = UDim2.new(1, -44, 0, 42)
-startButton.BackgroundColor3 = Color3.fromRGB(103, 42, 220)
-startButton.BorderSizePixel = 0
-startButton.Font = Enum.Font.Code
-startButton.Text = "INICIAR MATRIX"
-startButton.TextColor3 = Color3.new(1, 1, 1)
-startButton.TextSize = 15
-startButton.ZIndex = 6
-startButton.Parent = panel
-
-local startCorner = Instance.new("UICorner")
-startCorner.CornerRadius = UDim.new(0, 11)
-startCorner.Parent = startButton
-
-local discordButton = Instance.new("TextButton")
-discordButton.Name = "JoinDiscord"
-discordButton.Position = UDim2.new(0, 22, 0, 166)
-discordButton.Size = UDim2.new(1, -44, 0, 38)
-discordButton.BackgroundColor3 = Color3.fromRGB(42, 52, 150)
-discordButton.BorderSizePixel = 0
-discordButton.Font = Enum.Font.Code
-discordButton.Text = "DISCORD COMMUNITY"
-discordButton.TextColor3 = Color3.new(1, 1, 1)
-discordButton.TextSize = 13
-discordButton.ZIndex = 6
-discordButton.Parent = panel
-
-local discordCorner = Instance.new("UICorner")
-discordCorner.CornerRadius = UDim.new(0, 11)
-discordCorner.Parent = discordButton
-
-local function decorateButton(button, colorA, colorB)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new(colorA, colorB)
-    gradient.Rotation = 0
-    gradient.Parent = button
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = colorA:Lerp(Color3.new(1, 1, 1), 0.32)
-    stroke.Thickness = 1.25
-    stroke.Transparency = 0.18
-    stroke.Parent = button
-
-    local scale = Instance.new("UIScale")
-    scale.Scale = 1
-    scale.Parent = button
-
-    local hoverTween = TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.035})
-    local normalTween = TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1})
-    local pressTween = TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.975})
-
-    local function isPointerInput(input)
-        return input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-    end
-
-    button.MouseEnter:Connect(function()
-        if button.Active and button.Visible then
-            normalTween:Cancel()
-            hoverTween:Play()
-        end
-    end)
-    button.MouseLeave:Connect(function()
-        hoverTween:Cancel()
-        pressTween:Cancel()
-        normalTween:Play()
-    end)
-    button.InputBegan:Connect(function(input)
-        if isPointerInput(input) and button.Active and button.Visible then
-            hoverTween:Cancel()
-            pressTween:Play()
-        end
-    end)
-    button.InputEnded:Connect(function(input)
-        if isPointerInput(input) then
-            pressTween:Cancel()
-            if button.Active and button.Visible then
-                hoverTween:Play()
-            else
-                normalTween:Play()
-            end
-        end
-    end)
+local function updateStartupScale()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local viewport = camera.ViewportSize
+    local baseWidth = math.min(440, viewport.X * 0.92)
+    local scale = math.clamp(math.min(1, (viewport.X - 24) / math.max(baseWidth, 1), (viewport.Y - 24) / 398), 0.72, 1)
+    panelScale.Scale = scale
+    shadowScale.Scale = scale
+end
+updateStartupScale()
+local cameraConnection
+if workspace.CurrentCamera then
+    cameraConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateStartupScale)
 end
 
-decorateButton(startButton, Color3.fromRGB(160, 62, 255), Color3.fromRGB(62, 45, 190))
-decorateButton(discordButton, Color3.fromRGB(88, 100, 242), Color3.fromRGB(48, 38, 145))
-
--- Entrada del panel: elevación corta, desenfoque simulado por capas y fade progresivo.
-panel.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 28)
-panel.BackgroundTransparency = 1
-panelStroke.Transparency = 1
-panelShadow.BackgroundTransparency = 1
-title.TextTransparency = 1
-subtitle.TextTransparency = 1
-status = nil -- el estado se crea debajo; no se usa durante esta entrada.
-startButton.BackgroundTransparency = 1
-startButton.TextTransparency = 1
-discordButton.BackgroundTransparency = 1
-discordButton.TextTransparency = 1
-TweenService:Create(panel, TweenInfo.new(0.62, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-    Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 0.12
-}):Play()
-TweenService:Create(panelShadow, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-    BackgroundTransparency = 0.28
-}):Play()
-TweenService:Create(panelStroke, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-    Transparency = 0.08
-}):Play()
-for _, label in ipairs({title, subtitle}) do
-    TweenService:Create(label, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        TextTransparency = 0
-    }):Play()
+-- Bordes en relieve tipo Windows 98.
+local function edge(name, position, size, color, zindex)
+    local item = Instance.new("Frame")
+    item.Name = name
+    item.Position = position
+    item.Size = size
+    item.BackgroundColor3 = color
+    item.BorderSizePixel = 0
+    item.ZIndex = zindex or 6
+    item.Parent = panel
+    return item
 end
-task.delay(0.18, function()
-    if startButton.Parent then
-        TweenService:Create(startButton, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 0, TextTransparency = 0
-        }):Play()
+edge("BevelTop", UDim2.new(0, 1, 0, 1), UDim2.new(1, -2, 0, 2), Color3.fromRGB(255, 255, 255))
+edge("BevelLeft", UDim2.new(0, 1, 0, 1), UDim2.new(0, 2, 1, -2), Color3.fromRGB(255, 255, 255))
+edge("BevelBottom", UDim2.new(0, 1, 1, -3), UDim2.new(1, -2, 0, 2), Color3.fromRGB(80, 80, 80))
+edge("BevelRight", UDim2.new(1, -3, 0, 1), UDim2.new(0, 2, 1, -2), Color3.fromRGB(80, 80, 80))
+
+local titleBar = Instance.new("Frame")
+titleBar.Name = "WindowsTitleBar"
+titleBar.Position = UDim2.fromOffset(4, 4)
+titleBar.Size = UDim2.new(1, -8, 0, 27)
+titleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 128)
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 7
+titleBar.Parent = panel
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new(Color3.fromRGB(0, 0, 128), Color3.fromRGB(16, 132, 208))
+titleGradient.Parent = titleBar
+
+local appIcon = Instance.new("TextLabel")
+appIcon.Name = "WindowIcon"
+appIcon.Position = UDim2.fromOffset(5, 4)
+appIcon.Size = UDim2.fromOffset(18, 18)
+appIcon.BackgroundColor3 = Color3.fromRGB(0, 35, 20)
+appIcon.BorderColor3 = Color3.fromRGB(255, 255, 255)
+appIcon.BorderSizePixel = 1
+appIcon.Font = Enum.Font.Code
+appIcon.Text = "M"
+appIcon.TextColor3 = Color3.fromRGB(0, 255, 120)
+appIcon.TextSize = 14
+appIcon.ZIndex = 8
+appIcon.Parent = titleBar
+
+local windowTitle = Instance.new("TextLabel")
+windowTitle.Name = "WindowTitle"
+windowTitle.BackgroundTransparency = 1
+windowTitle.Position = UDim2.fromOffset(28, 2)
+windowTitle.Size = UDim2.new(1, -112, 1, -4)
+windowTitle.Font = Enum.Font.ArialBold
+windowTitle.Text = "Matrix Hub - Centro de información"
+windowTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+windowTitle.TextSize = 13
+windowTitle.TextXAlignment = Enum.TextXAlignment.Left
+windowTitle.ZIndex = 8
+windowTitle.Parent = titleBar
+
+-- Controles decorativos, como una ventana antigua.
+local function titleControl(symbol, x)
+    local control = Instance.new("TextLabel")
+    control.Position = UDim2.new(1, x, 0, 4)
+    control.Size = UDim2.fromOffset(18, 18)
+    control.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+    control.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    control.BorderSizePixel = 1
+    control.Font = Enum.Font.ArialBold
+    control.Text = symbol
+    control.TextColor3 = Color3.fromRGB(0, 0, 0)
+    control.TextSize = 13
+    control.ZIndex = 8
+    control.Parent = titleBar
+end
+titleControl("_", -61)
+titleControl("□", -40)
+titleControl("×", -19)
+
+local heading = Instance.new("TextLabel")
+heading.Name = "StartupHeading"
+heading.BackgroundTransparency = 1
+heading.Position = UDim2.fromOffset(12, 37)
+heading.Size = UDim2.new(1, -24, 0, 18)
+heading.Font = Enum.Font.ArialBold
+heading.Text = "MATRIX HUB // INFORME DE INICIO"
+heading.TextColor3 = Color3.fromRGB(20, 20, 20)
+heading.TextSize = 13
+heading.TextXAlignment = Enum.TextXAlignment.Left
+heading.ZIndex = 7
+heading.Parent = panel
+
+local warningPanel = Instance.new("Frame")
+warningPanel.Name = "BanDisclaimer"
+warningPanel.Position = UDim2.fromOffset(12, 60)
+warningPanel.Size = UDim2.new(1, -24, 0, 61)
+warningPanel.BackgroundColor3 = Color3.fromRGB(216, 216, 216)
+warningPanel.BorderColor3 = Color3.fromRGB(128, 128, 128)
+warningPanel.BorderSizePixel = 1
+warningPanel.ZIndex = 7
+warningPanel.Parent = panel
+
+local warningTitle = Instance.new("TextLabel")
+warningTitle.BackgroundTransparency = 1
+warningTitle.Position = UDim2.fromOffset(7, 4)
+warningTitle.Size = UDim2.new(1, -14, 0, 16)
+warningTitle.Font = Enum.Font.ArialBold
+warningTitle.Text = "AVISO IMPORTANTE"
+warningTitle.TextColor3 = Color3.fromRGB(128, 0, 0)
+warningTitle.TextSize = 12
+warningTitle.TextXAlignment = Enum.TextXAlignment.Left
+warningTitle.ZIndex = 8
+warningTitle.Parent = warningPanel
+
+local warningText = Instance.new("TextLabel")
+warningText.BackgroundTransparency = 1
+warningText.Position = UDim2.fromOffset(7, 21)
+warningText.Size = UDim2.new(1, -14, 1, -25)
+warningText.Font = Enum.Font.Arial
+warningText.Text = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
+warningText.TextColor3 = Color3.fromRGB(25, 25, 25)
+warningText.TextSize = 11
+warningText.TextWrapped = true
+warningText.TextXAlignment = Enum.TextXAlignment.Left
+warningText.TextYAlignment = Enum.TextYAlignment.Top
+warningText.ZIndex = 8
+warningText.Parent = warningPanel
+
+local notesHeading = Instance.new("TextLabel")
+notesHeading.Name = "ReleaseNotesHeading"
+notesHeading.BackgroundTransparency = 1
+notesHeading.Position = UDim2.fromOffset(12, 127)
+notesHeading.Size = UDim2.new(1, -24, 0, 18)
+notesHeading.Font = Enum.Font.ArialBold
+notesHeading.Text = "NOVEDADES Y CORRECCIONES"
+notesHeading.TextColor3 = Color3.fromRGB(20, 20, 20)
+notesHeading.TextSize = 12
+notesHeading.TextXAlignment = Enum.TextXAlignment.Left
+notesHeading.ZIndex = 7
+notesHeading.Parent = panel
+
+local notesBox = Instance.new("ScrollingFrame")
+notesBox.Name = "ReleaseNotes"
+notesBox.Position = UDim2.fromOffset(12, 148)
+notesBox.Size = UDim2.new(1, -24, 0, 137)
+notesBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+notesBox.BorderColor3 = Color3.fromRGB(128, 128, 128)
+notesBox.BorderSizePixel = 1
+notesBox.ScrollBarThickness = 7
+notesBox.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+notesBox.CanvasSize = UDim2.new(0, 0, 0, 0)
+notesBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+notesBox.ScrollingDirection = Enum.ScrollingDirection.Y
+notesBox.ZIndex = 7
+notesBox.Parent = panel
+
+local notesText = Instance.new("TextLabel")
+notesText.Name = "ReleaseNotesText"
+notesText.BackgroundTransparency = 1
+notesText.Position = UDim2.fromOffset(7, 6)
+notesText.Size = UDim2.new(1, -17, 0, 0)
+notesText.AutomaticSize = Enum.AutomaticSize.Y
+notesText.Font = Enum.Font.Arial
+notesText.TextColor3 = Color3.fromRGB(20, 20, 20)
+notesText.TextSize = 11
+notesText.TextWrapped = true
+notesText.TextXAlignment = Enum.TextXAlignment.Left
+notesText.TextYAlignment = Enum.TextYAlignment.Top
+notesText.ZIndex = 8
+notesText.Text = table.concat({
+    "DISEÑO E INTERFAZ",
+    "• Tema Matrix Green con panel glass/acrílico y lluvia digital detrás del menú principal.",
+    "• Pantalla de entrada estilo ventana clásica de Windows 98/2000.",
+    "• Menú reorganizado; la sección BOTONES queda en una posición intermedia.",
+    "• Estados visuales unificados: gris cuando una opción está apagada y verde cuando está activa.",
+    "",
+    "FUNCIONES DEL HUB",
+    "• CHEATS: Silent Aim, FOV, Auto Shoot normal/agresivo, Alto Fire, Auto Sacar Arma, God Mode, Spin, VOIN Walk y ajustes asociados.",
+    "• AUTO KILL: opciones de Auto Kill e Hitbox Expander.",
+    "• VISUAL ENGINE: ESP Highlight y herramientas visuales.",
+    "• AUTOMATION: Auto Farm de evento integrado desde Random.",
+    "• MOVILIDAD: Fly Speed, Fly Altura, Speed CFrame, Invisible V6 y controles Anti Deltas.",
+    "• PERSONAJE: paquetes de animaciones, mezclador, restaurar animaciones y herramientas de avatar.",
+    "• OTROS: modo streamer, reconectar sesión y cambiar de instancia.",
+    "",
+    "SISTEMAS E INTERFAZ",
+    "• Botones flotantes HUD movibles, con visibilidad y posición guardadas.",
+    "• LIVE STATUS HUD: FPS, ping, jugadores, duración de sesión, servidor y estado del guardado.",
+    "• Diez temas, escala de interfaz, velocidad de animación, transparencia, intensidad Matrix Green y brillo.",
+    "• FPS Boost, Anti-Lag y Anti-AFK.",
+    "• Sonidos de muerte configurables, ID personalizado, volumen y vista previa.",
+    "• Sonidos de interfaz con control de volumen y protección contra dobles reproducciones.",
+    "• Configuración persistente, guardado manual, restablecer personalización y registro de errores.",
+    "",
+    "CORRECCIONES Y ESTABILIDAD",
+    "• Auto Farm usa un único ciclo de trabajo y vuelve a buscar el evento si aún no está disponible.",
+    "• Los botones flotantes guardan su posición y arrastrarlos no activa accidentalmente la opción.",
+    "• El color de los botones refleja el estado real de cada función.",
+    "• FPS Boost y Anti-Lag mantienen estados separados y restauran valores gráficos al desactivarse.",
+    "• Se limita la repetición rápida del sonido de interfaz para evitar dobles clics audibles.",
+    "• Los errores de lectura y escritura de configuración quedan registrados para diagnóstico."
+}, "\n")
+notesText.Parent = notesBox
+
+local function makeClassicButton(name, text, position, size)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Position = position
+    button.Size = size
+    button.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+    button.BorderColor3 = Color3.fromRGB(40, 40, 40)
+    button.BorderSizePixel = 1
+    button.AutoButtonColor = false
+    button.Font = Enum.Font.ArialBold
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(10, 10, 10)
+    button.TextSize = 12
+    button.ZIndex = 8
+    button.Parent = panel
+
+    local top = Instance.new("Frame")
+    top.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    top.BorderSizePixel = 0
+    top.Position = UDim2.fromOffset(1, 1)
+    top.Size = UDim2.new(1, -2, 0, 1)
+    top.ZIndex = 9
+    top.Parent = button
+
+    local left = Instance.new("Frame")
+    left.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    left.BorderSizePixel = 0
+    left.Position = UDim2.fromOffset(1, 1)
+    left.Size = UDim2.new(0, 1, 1, -2)
+    left.ZIndex = 9
+    left.Parent = button
+
+    local bottom = Instance.new("Frame")
+    bottom.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    bottom.BorderSizePixel = 0
+    bottom.Position = UDim2.new(0, 1, 1, -2)
+    bottom.Size = UDim2.new(1, -2, 0, 1)
+    bottom.ZIndex = 9
+    bottom.Parent = button
+
+    local right = Instance.new("Frame")
+    right.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    right.BorderSizePixel = 0
+    right.Position = UDim2.new(1, -2, 0, 1)
+    right.Size = UDim2.new(0, 1, 1, -2)
+    right.ZIndex = 9
+    right.Parent = button
+
+    button.MouseButton1Down:Connect(function()
+        button.Position = position + UDim2.fromOffset(1, 1)
+    end)
+    local function resetPosition()
+        button.Position = position
     end
-    if discordButton.Parent then
-        TweenService:Create(discordButton, TweenInfo.new(0.48, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 0, TextTransparency = 0
-        }):Play()
-    end
-end)
+    button.MouseButton1Up:Connect(resetPosition)
+    button.MouseLeave:Connect(resetPosition)
+    return button
+end
+
+local startButton = makeClassicButton("StartMatrix", "INICIAR MATRIX HUB", UDim2.new(0, 12, 0, 293), UDim2.new(1, -24, 0, 31))
+local discordButton = makeClassicButton("JoinDiscord", "DISCORD COMMUNITY", UDim2.new(0, 12, 0, 331), UDim2.new(1, -24, 0, 27))
 
 local status = Instance.new("TextLabel")
-status.Name = "Status"
+status.Name = "StartupStatus"
 status.BackgroundTransparency = 1
-status.Position = UDim2.new(0, 12, 1, -34)
-status.Size = UDim2.new(1, -24, 0, 20)
-status.Font = Enum.Font.Code
-status.Text = "SANOX // MATRIX HUB"
-status.TextColor3 = Color3.fromRGB(190, 175, 255)
+status.Position = UDim2.new(0, 12, 1, -22)
+status.Size = UDim2.new(1, -24, 0, 15)
+status.Font = Enum.Font.Arial
+status.Text = "SANOX // MATRIX HUB READY"
+status.TextColor3 = Color3.fromRGB(40, 40, 40)
 status.TextSize = 10
-status.ZIndex = 6
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.ZIndex = 8
 status.Parent = panel
 
 local discordInvite = "https://discord.gg/Uq6m3RNDX"
@@ -348,25 +423,36 @@ discordButton.Activated:Connect(function()
     local opened = pcall(function()
         game:GetService("GuiService"):OpenBrowserWindow(discordInvite)
     end)
-
     if not opened then
         local copied = pcall(function()
             setclipboard(discordInvite)
         end)
-
-        if copied then
-            status.Text = "INVITACION COPIADA AL PORTAPAPELES"
-        else
-            status.Text = "discord.gg/Uq6m3RNDX"
-        end
+        status.Text = copied and "INVITACION COPIADA AL PORTAPAPELES" or "discord.gg/Uq6m3RNDX"
     end
 end)
+
+-- Entrada de ventana clásica: aparece con una breve elevación y escala.
+panel.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 24)
+panel.BackgroundTransparency = 1
+local targetStartupScale = panelScale.Scale
+panelScale.Scale = targetStartupScale * 0.94
+panelShadow.BackgroundTransparency = 1
+TweenService:Create(panel, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 0
+}):Play()
+TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Scale = targetStartupScale
+}):Play()
+TweenService:Create(panelShadow, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0.32
+}):Play()
 
 local loading = false
 local rainConnection
 rainConnection = RunService.Heartbeat:Connect(function(dt)
     if not startupGui.Parent then
         if rainConnection then rainConnection:Disconnect() end
+        if cameraConnection then cameraConnection:Disconnect() end
         return
     end
 
@@ -380,15 +466,13 @@ rainConnection = RunService.Heartbeat:Connect(function(dt)
         if column.Y > 1.05 then
             column.Y = -0.35
             local chars = {}
-            for n = 1, 8 do
-                chars[n] = glyphs[rng:NextInteger(1, #glyphs)]
-            end
+            for n = 1, 10 do chars[n] = glyphs[rng:NextInteger(1, #glyphs)] end
             column.Label.Text = table.concat(chars, "\n")
         end
         column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
     end
 
-    for _, column in ipairs(wordRainLabels) do
+    for _, column in ipairs(wordLabels) do
         column.Y += step * column.Speed
         if column.Y > 1.08 then
             column.Y = -0.22
@@ -399,81 +483,74 @@ rainConnection = RunService.Heartbeat:Connect(function(dt)
 end)
 
 local launchMatrixHub
-
 startButton.Activated:Connect(function()
     if loading then return end
     loading = true
     startButton.Active = false
-    startButton.AutoButtonColor = false
     discordButton.Active = false
     startButton.Visible = false
-    subtitle.Text = "// LOADING MATRIX HUB"
+    discordButton.Visible = false
+    notesBox.Visible = false
+    notesHeading.Visible = false
+    warningPanel.Visible = false
+    heading.Text = "MATRIX HUB // CARGANDO COMPONENTES"
+    status.Text = "INICIALIZANDO INTERFAZ..."
 
-    local progress = Instance.new("TextLabel")
-    progress.Name = "LoadingPercent"
-    progress.BackgroundTransparency = 1
-    progress.Position = UDim2.new(0, 15, 0, 112)
-    progress.Size = UDim2.new(1, -30, 0, 42)
-    progress.Font = Enum.Font.Code
-    progress.Text = "0%"
-    progress.TextColor3 = Color3.fromRGB(207, 117, 255)
-    progress.TextSize = 24
-    progress.ZIndex = 7
-    progress.Parent = panel
+    local progressText = Instance.new("TextLabel")
+    progressText.Name = "LoadingPercent"
+    progressText.BackgroundTransparency = 1
+    progressText.Position = UDim2.new(0, 12, 0, 150)
+    progressText.Size = UDim2.new(1, -24, 0, 28)
+    progressText.Font = Enum.Font.ArialBold
+    progressText.Text = "0%"
+    progressText.TextColor3 = Color3.fromRGB(0, 80, 35)
+    progressText.TextSize = 22
+    progressText.ZIndex = 8
+    progressText.Parent = panel
 
     local barBack = Instance.new("Frame")
     barBack.Name = "ProgressBackground"
-    barBack.Position = UDim2.new(0, 22, 0, 158)
-    barBack.Size = UDim2.new(1, -44, 0, 7)
-    barBack.BackgroundColor3 = Color3.fromRGB(24, 16, 54)
-    barBack.BorderSizePixel = 0
-    barBack.ZIndex = 7
+    barBack.Position = UDim2.new(0, 12, 0, 187)
+    barBack.Size = UDim2.new(1, -24, 0, 15)
+    barBack.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    barBack.BorderColor3 = Color3.fromRGB(90, 90, 90)
+    barBack.BorderSizePixel = 1
+    barBack.ZIndex = 8
     barBack.Parent = panel
-    Instance.new("UICorner", barBack).CornerRadius = UDim.new(1, 0)
 
     local bar = Instance.new("Frame")
     bar.Name = "ProgressBar"
-    bar.Size = UDim2.new(0, 0, 1, 0)
-    bar.BackgroundColor3 = Color3.fromRGB(127, 72, 245)
+    bar.Position = UDim2.fromOffset(2, 2)
+    bar.Size = UDim2.new(0, 0, 1, -4)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 130, 55)
     bar.BorderSizePixel = 0
-    bar.ZIndex = 8
+    bar.ZIndex = 9
     bar.Parent = barBack
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-    local barGradient = Instance.new("UIGradient")
-    barGradient.Color = ColorSequence.new(Color3.fromRGB(205, 125, 255), Color3.fromRGB(86, 55, 205))
-    barGradient.Parent = bar
-
-    discordButton.Visible = false
-    status.Text = "INITIALIZING COMPONENTS..."
 
     for value = 1, 100 do
-        progress.Text = tostring(value) .. "%"
-        TweenService:Create(bar, TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(value / 100, 0, 1, 0)
-        }):Play()
-
-        if value == 30 then
-            status.Text = "LOADING INTERFACE..."
-        elseif value == 65 then
-            status.Text = "PREPARING MODULES..."
-        elseif value == 90 then
-            status.Text = "FINALIZING..."
+        if not startupGui.Parent then return end
+        progressText.Text = tostring(value) .. "%"
+        bar.Size = UDim2.new(value / 100, -4, 1, -4)
+        if value < 30 then
+            status.Text = "INICIALIZANDO COMPONENTES..."
+        elseif value < 65 then
+            status.Text = "CARGANDO INTERFAZ..."
+        elseif value < 90 then
+            status.Text = "PREPARANDO MODULOS..."
+        else
+            status.Text = "FINALIZANDO..."
         end
-
-        task.wait(0.035)
+        task.wait(0.025)
     end
 
-    -- Deja que el 100% se dibuje antes de mostrar el panel principal.
-    task.wait(0.15)
-
-    -- Salida con profundidad: el panel se aleja y la lluvia se desvanece antes de limpiar.
-    local exitInfo = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    task.wait(0.12)
+    local exitInfo = TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     TweenService:Create(panel, exitInfo, {
-        Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, -24),
+        Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, -18),
         BackgroundTransparency = 1
     }):Play()
+    TweenService:Create(panelScale, exitInfo, {Scale = panelScale.Scale * 0.96}):Play()
     TweenService:Create(panelShadow, exitInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(panelStroke, exitInfo, {Transparency = 1}):Play()
     for _, obj in ipairs(panel:GetDescendants()) do
         if obj:IsA("TextLabel") or obj:IsA("TextButton") then
             TweenService:Create(obj, exitInfo, {TextTransparency = 1}):Play()
@@ -484,21 +561,15 @@ startButton.Activated:Connect(function()
     for _, column in ipairs(rainLabels) do
         TweenService:Create(column.Label, exitInfo, {TextTransparency = 1}):Play()
     end
-    for _, column in ipairs(wordRainLabels) do
+    for _, column in ipairs(wordLabels) do
         TweenService:Create(column.Label, exitInfo, {TextTransparency = 1}):Play()
     end
-    TweenService:Create(backgroundTint, exitInfo, {BackgroundTransparency = 1}):Play()
-    task.wait(0.44)
-    if rainConnection then
-        rainConnection:Disconnect()
-        rainConnection = nil
-    end
-    startupGui:Destroy()
 
-    -- El panel principal se crea únicamente después de completar la carga.
-    if launchMatrixHub then
-        task.spawn(launchMatrixHub)
-    end
+    task.wait(0.34)
+    if rainConnection then rainConnection:Disconnect() rainConnection = nil end
+    if cameraConnection then cameraConnection:Disconnect() cameraConnection = nil end
+    startupGui:Destroy()
+    if launchMatrixHub then task.spawn(launchMatrixHub) end
 end)
 
 -- FIN DE LA PANTALLA DE INICIO
