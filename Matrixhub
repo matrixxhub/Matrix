@@ -2891,7 +2891,6 @@ local CustomKillSoundId = tostring(MATRIXHUB_CONFIG.CustomKillSoundId or ""):gsu
 local UseCustomKillSoundId = MATRIXHUB_CONFIG.UseCustomKillSound == true and CustomKillSoundId ~= ""
 
 local KillSounds = {
-    { Name = "BESO", Id = "122147831931781" },
     { Name = "ES HACKER",       Id = "126835547301650" },
     { Name = "DOMIDIOS VOLVÍ",         Id = "75227901457581" },
     { Name = "BOYKA APLICACIÓN",         Id = "74574513441326" },
@@ -3022,7 +3021,7 @@ Sonidos:Toggle({
 Sonidos:Input({
     Title = "ID PERSONALIZADO DEL SONIDO",
     Value = CustomKillSoundId,
-    Placeholder = "Ejemplo: 1234567890",
+    Placeholder = "Ejemplo: 67676767",
     Callback = function(text)
         local digits = tostring(text or ""):gsub("%D", "")
         CustomKillSoundId = digits
@@ -3051,7 +3050,7 @@ Sonidos:Dropdown({
 
 Sonidos:Slider({
     Title = "VOLUMEN SONIDO",
-    Value = { Min = 1, Max = 3, Default = KillSoundVolume },
+    Value = { Min = 1, Max = 10, Default = KillSoundVolume },
     Callback = function(v)
         KillSoundVolume = v
         KillSoundPlayer.Volume = v
