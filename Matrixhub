@@ -204,28 +204,6 @@ appIcon.TextSize = 14
 appIcon.ZIndex = 8
 appIcon.Parent = titleBar
 
-local startupTapCount = 0
-local lastStartupTap = 0
-local startupEggGeneration = 0
-appIcon.InputBegan:Connect(function(input)
-    local inputType = input.UserInputType
-    if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
-    local now = os.clock()
-    if now - lastStartupTap > 2.2 then startupTapCount = 0 end
-    lastStartupTap = now
-    startupTapCount += 1
-    if startupTapCount >= 7 then
-        startupTapCount = 0
-        startupEggGeneration += 1
-        local generation = startupEggGeneration
-        status.Text = "♥  CRÉDITOS EMOCIONALES // LESLY"
-        task.delay(4, function()
-            if status and status.Parent and startupEggGeneration == generation then
-                status.Text = string.format("SANOX // MATRIX HUB READY    EJECUCIONES: %d", startupExecutionCount)
-            end
-        end)
-    end
-end)
 
 local windowTitle = Instance.new("TextLabel")
 windowTitle.Name = "WindowTitle"
@@ -474,6 +452,29 @@ status.TextSize = 10
 status.TextXAlignment = Enum.TextXAlignment.Left
 status.ZIndex = 8
 status.Parent = panel
+
+local startupTapCount = 0
+local lastStartupTap = 0
+local startupEggGeneration = 0
+appIcon.InputBegan:Connect(function(input)
+    local inputType = input.UserInputType
+    if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+    local now = os.clock()
+    if now - lastStartupTap > 2.2 then startupTapCount = 0 end
+    lastStartupTap = now
+    startupTapCount += 1
+    if startupTapCount >= 7 then
+        startupTapCount = 0
+        startupEggGeneration += 1
+        local generation = startupEggGeneration
+        status.Text = "♥  CRÉDITOS EMOCIONALES // LESLY"
+        task.delay(4, function()
+            if status and status.Parent and startupEggGeneration == generation then
+                status.Text = string.format("SANOX // MATRIX HUB READY    EJECUCIONES: %d", startupExecutionCount)
+            end
+        end)
+    end
+end)
 
 local discordInvite = "https://discord.gg/Uq6m3RNDX"
 discordButton.Activated:Connect(function()
