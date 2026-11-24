@@ -2543,16 +2543,75 @@ local function MatrixHub_StartPlatforms()
     end)
 end
 
+local MatrixHubPlatformButton = nil
+
+local function MatrixHub_UpdatePlatformButton()
+    if not MatrixHubPlatformButton then return end
+    MatrixHubPlatformButton.Text = MatrixHubPlatformActive and "PLATFORM  •  ON" or "PLATFORM  •  OFF"
+    MatrixHubPlatformButton.BackgroundColor3 = MatrixHubPlatformActive
+        and Color3.fromRGB(0, 125, 65)
+        or Color3.fromRGB(12, 28, 22)
+end
+
+local function MatrixHub_RemovePlatformButton()
+    MatrixHub_StopPlatforms()
+    if MatrixHubPlatformButton then
+        MatrixHubPlatformButton:Destroy()
+        MatrixHubPlatformButton = nil
+    end
+end
+
+local function MatrixHub_CreatePlatformButton()
+    if MatrixHubPlatformButton and MatrixHubPlatformButton.Parent then return end
+
+    local button = Instance.new("TextButton")
+    button.Name = "MatrixHubPlatformButton"
+    button.AnchorPoint = Vector2.new(0.5, 0.5)
+    button.Position = UDim2.new(0.5, 0, 0.45, 0)
+    button.Size = UDim2.fromOffset(132, 42)
+    button.BackgroundColor3 = Color3.fromRGB(12, 28, 22)
+    button.BackgroundTransparency = 0.08
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.Font = Enum.Font.GothamBold
+    button.Text = "PLATFORM  •  OFF"
+    button.TextColor3 = Color3.fromRGB(220, 255, 235)
+    button.TextSize = 13
+    button.ZIndex = 80
+    button.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = button
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 230, 115)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.12
+    stroke.Parent = button
+
+    button.Activated:Connect(function()
+        MatrixHubPlatformActive = not MatrixHubPlatformActive
+        if MatrixHubPlatformActive then
+            MatrixHub_StartPlatforms()
+        else
+            MatrixHub_StopPlatforms()
+        end
+        MatrixHub_UpdatePlatformButton()
+    end)
+
+    MatrixHubPlatformButton = button
+end
+
 Movimiento:Toggle({
     Title = "FIXED PLATFORM",
     Icon = "layers",
     Value = false,
     Callback = function(enabled)
         if enabled then
-            MatrixHubPlatformActive = true
-            MatrixHub_StartPlatforms()
+            MatrixHub_CreatePlatformButton()
         else
-            MatrixHub_StopPlatforms()
+            MatrixHub_RemovePlatformButton()
         end
     end
 })
