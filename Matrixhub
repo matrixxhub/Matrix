@@ -1997,6 +1997,7 @@ do
     local statusTapCount = 0
     local lastStatusTap = 0
     local easterEggGeneration = 0
+    local easterEggActive = false
     local defaultStatusText = info.Text
     hud.InputBegan:Connect(function(input)
         local inputType = input.UserInputType
@@ -2009,9 +2010,13 @@ do
             statusTapCount = 0
             easterEggGeneration += 1
             local thisGeneration = easterEggGeneration
+            easterEggActive = true
             info.Text = "♥  CRÉDITOS EMOCIONALES\nLESLY  //  SIEMPRE EN MATRIX"
             task.delay(4, function()
-                if hudGui.Parent and easterEggGeneration == thisGeneration then info.Text = defaultStatusText end
+                if hudGui.Parent and easterEggGeneration == thisGeneration then
+                    easterEggActive = false
+                    info.Text = defaultStatusText
+                end
             end)
         end
     end)
@@ -2076,10 +2081,12 @@ do
         local memoryText = memoryMb and (tostring(memoryMb) .. " MB") or "N/D"
         local performanceAlert = fps < 25 or (ping ~= nil and ping > 180)
         local fpsGraph = makeFpsGraph(fps)
-        info.Text = string.format(
-            "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
-            fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
-        )
+        if not easterEggActive then
+            info.Text = string.format(
+                "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
+                fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
+            )
+        end
         if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
             local homeText = string.format(
                 "▣ FPS  %d      ◈ PING  %s\n▤ MEMORIA  %s      ♟ JUGADORES  %d/%d\n\nFPS HISTORY  %s",
