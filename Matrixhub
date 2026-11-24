@@ -1196,491 +1196,9 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 
--- MATRIX BUTTON DISPLAY // solo botones útiles para Duelos.
--- Visor pasivo: refleja botones, click izquierdo y toques; no inyecta entradas.
-do
-    local UIS = game:GetService("UserInputService")
-    local keyboardGui = Instance.new("ScreenGui")
-    keyboardGui.Name = "MATRIXHUB_BUTTON_DISPLAY"
-    keyboardGui.ResetOnSpawn = false
-    keyboardGui.IgnoreGuiInset = true
-    keyboardGui.DisplayOrder = 850
-    keyboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    keyboardGui.Enabled = false
-    keyboardGui.Parent = PlayerGui
-
-    local shell = Instance.new("Frame")
-    shell.Name = "ButtonsWindow"
-    shell.AnchorPoint = Vector2.new(0.5, 0.5)
-    shell.Position = UDim2.new(0.5, 0, 0.70, 0)
-    shell.Size = UDim2.fromOffset(350, 170)
-    shell.BackgroundColor3 = Color3.fromRGB(7, 13, 16)
-    shell.BackgroundTransparency = 0.14
-    shell.BorderSizePixel = 0
-    shell.Active = true
-    shell.Parent = keyboardGui
-
-    local keyboardScale = Instance.new("UIScale")
-    keyboardScale.Scale = 0.82
-    keyboardScale.Parent = shell
-
-    Instance.new("UICorner", shell).CornerRadius = UDim.new(0, 14)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 220, 125)
-    stroke.Transparency = 0.12
-    stroke.Thickness = 1.6
-    stroke.Parent = shell
-    local shellGradient = Instance.new("UIGradient")
-    shellGradient.Rotation = 25
-    shellGradient.Color = ColorSequence.new(
-        Color3.fromRGB(8, 28, 23),
-        Color3.fromRGB(5, 9, 15)
-    )
-    shellGradient.Parent = shell
-
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "DragBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 30)
-    titleBar.BackgroundColor3 = Color3.fromRGB(0, 48, 31)
-    titleBar.BackgroundTransparency = 0.12
-    titleBar.BorderSizePixel = 0
-    titleBar.Active = true
-    titleBar.Parent = shell
-    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
-
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(11, 0)
-    title.Size = UDim2.new(1, -110, 1, 0)
-    title.Font = Enum.Font.GothamBold
-    title.Text = "MATRIX // BOTONES"
-    title.TextColor3 = Color3.fromRGB(145, 255, 190)
-    title.TextSize = 14
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = titleBar
-
-    local pin = Instance.new("TextButton")
-    pin.Name = "AnchorButton"
-    pin.Size = UDim2.fromOffset(34, 22)
-    pin.Position = UDim2.new(1, -72, 0, 4)
-    pin.BackgroundColor3 = Color3.fromRGB(20, 75, 49)
-    pin.BorderSizePixel = 0
-    pin.AutoButtonColor = false
-    pin.Font = Enum.Font.GothamBold
-    pin.Text = "PIN"
-    pin.TextSize = 10
-    pin.TextColor3 = Color3.fromRGB(220, 255, 230)
-    pin.Parent = titleBar
-    Instance.new("UICorner", pin).CornerRadius = UDim.new(0, 6)
-
-    local close = Instance.new("TextButton")
-    close.Name = "HideButton"
-    close.Size = UDim2.fromOffset(24, 22)
-    close.Position = UDim2.new(1, -31, 0, 4)
-    close.BackgroundColor3 = Color3.fromRGB(75, 30, 35)
-    close.BorderSizePixel = 0
-    close.AutoButtonColor = false
-    close.Font = Enum.Font.GothamBold
-    close.Text = "×"
-    close.TextSize = 16
-    close.TextColor3 = Color3.fromRGB(255, 225, 225)
-    close.Parent = titleBar
-    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-
-    local keyArea = Instance.new("Frame")
-    keyArea.Name = "GameButtons"
-    keyArea.BackgroundTransparency = 1
-    keyArea.Position = UDim2.fromOffset(9, 39)
-    keyArea.Size = UDim2.fromOffset(204, 122)
-    keyArea.Parent = shell
-
-    local mousePanel = Instance.new("Frame")
-    mousePanel.Name = "MouseAndTouch"
-    mousePanel.Position = UDim2.fromOffset(220, 39)
-    mousePanel.Size = UDim2.fromOffset(120, 122)
-    mousePanel.BackgroundColor3 = Color3.fromRGB(5, 18, 17)
-    mousePanel.BackgroundTransparency = 0.18
-    mousePanel.BorderSizePixel = 0
-    mousePanel.Parent = shell
-    Instance.new("UICorner", mousePanel).CornerRadius = UDim.new(0, 11)
-    local mouseStroke = Instance.new("UIStroke")
-    mouseStroke.Color = Color3.fromRGB(0, 205, 145)
-    mouseStroke.Thickness = 1.3
-    mouseStroke.Transparency = 0.18
-    mouseStroke.Parent = mousePanel
-
-    local mouseCaption = Instance.new("TextLabel")
-    mouseCaption.BackgroundTransparency = 1
-    mouseCaption.Position = UDim2.fromOffset(5, 5)
-    mouseCaption.Size = UDim2.new(1, -10, 0, 18)
-    mouseCaption.Font = Enum.Font.GothamBold
-    mouseCaption.Text = "MOUSE"
-    mouseCaption.TextSize = 12
-    mouseCaption.TextColor3 = Color3.fromRGB(145, 255, 205)
-    mouseCaption.Parent = mousePanel
-
-    -- Ratón dibujado: el botón izquierdo se ilumina al hacer click.
-    -- El punto central representa el movimiento real del cursor/cámara.
-    local mouseBody = Instance.new("Frame")
-    mouseBody.Name = "MouseShape"
-    mouseBody.Position = UDim2.fromOffset(37, 25)
-    mouseBody.Size = UDim2.fromOffset(46, 64)
-    mouseBody.BackgroundColor3 = Color3.fromRGB(7, 23, 20)
-    mouseBody.BackgroundTransparency = 0.04
-    mouseBody.BorderSizePixel = 0
-    mouseBody.ClipsDescendants = true
-    mouseBody.Parent = mousePanel
-    Instance.new("UICorner", mouseBody).CornerRadius = UDim.new(0, 21)
-    local mouseBodyStroke = Instance.new("UIStroke")
-    mouseBodyStroke.Color = Color3.fromRGB(0, 205, 145)
-    mouseBodyStroke.Thickness = 1.5
-    mouseBodyStroke.Transparency = 0.10
-    mouseBodyStroke.Parent = mouseBody
-
-    local leftClickRegion = Instance.new("Frame")
-    leftClickRegion.Name = "LeftMouseButton"
-    leftClickRegion.Position = UDim2.fromOffset(1, 1)
-    leftClickRegion.Size = UDim2.new(0.5, -1, 0, 23)
-    leftClickRegion.BackgroundColor3 = Color3.fromRGB(14, 48, 33)
-    leftClickRegion.BackgroundTransparency = 0.06
-    leftClickRegion.BorderSizePixel = 0
-    leftClickRegion.Parent = mouseBody
-    Instance.new("UICorner", leftClickRegion).CornerRadius = UDim.new(0, 15)
-    local leftClickLabel = Instance.new("TextLabel")
-    leftClickLabel.BackgroundTransparency = 1
-    leftClickLabel.Size = UDim2.fromScale(1, 1)
-    leftClickLabel.Font = Enum.Font.GothamBold
-    leftClickLabel.Text = "L"
-    leftClickLabel.TextSize = 9
-    leftClickLabel.TextColor3 = Color3.fromRGB(190, 255, 220)
-    leftClickLabel.Parent = leftClickRegion
-    local leftClickStroke = Instance.new("UIStroke")
-    leftClickStroke.Color = Color3.fromRGB(0, 220, 125)
-    leftClickStroke.Thickness = 1.1
-    leftClickStroke.Transparency = 0.12
-    leftClickStroke.Parent = leftClickRegion
-
-    local rightClickRegion = Instance.new("Frame")
-    rightClickRegion.Name = "RightMouseButton"
-    rightClickRegion.Position = UDim2.new(0.5, 0, 0, 1)
-    rightClickRegion.Size = UDim2.new(0.5, -1, 0, 23)
-    rightClickRegion.BackgroundColor3 = Color3.fromRGB(8, 26, 23)
-    rightClickRegion.BackgroundTransparency = 0.10
-    rightClickRegion.BorderSizePixel = 0
-    rightClickRegion.Parent = mouseBody
-    Instance.new("UICorner", rightClickRegion).CornerRadius = UDim.new(0, 15)
-    local rightClickLabel = Instance.new("TextLabel")
-    rightClickLabel.BackgroundTransparency = 1
-    rightClickLabel.Size = UDim2.fromScale(1, 1)
-    rightClickLabel.Font = Enum.Font.GothamBold
-    rightClickLabel.Text = "R"
-    rightClickLabel.TextSize = 9
-    rightClickLabel.TextColor3 = Color3.fromRGB(135, 180, 160)
-    rightClickLabel.Parent = rightClickRegion
-
-    local mouseDivider = Instance.new("Frame")
-    mouseDivider.Name = "MouseButtonDivider"
-    mouseDivider.Position = UDim2.new(0.5, -0.5, 0, 3)
-    mouseDivider.Size = UDim2.fromOffset(1, 19)
-    mouseDivider.BackgroundColor3 = Color3.fromRGB(0, 205, 145)
-    mouseDivider.BackgroundTransparency = 0.28
-    mouseDivider.BorderSizePixel = 0
-    mouseDivider.Parent = mouseBody
-
-    local mouseWheel = Instance.new("Frame")
-    mouseWheel.Name = "MouseWheel"
-    mouseWheel.AnchorPoint = Vector2.new(0.5, 0)
-    mouseWheel.Position = UDim2.new(0.5, 0, 0, 8)
-    mouseWheel.Size = UDim2.fromOffset(4, 8)
-    mouseWheel.BackgroundColor3 = Color3.fromRGB(130, 225, 190)
-    mouseWheel.BackgroundTransparency = 0.12
-    mouseWheel.BorderSizePixel = 0
-    mouseWheel.Parent = mouseBody
-    Instance.new("UICorner", mouseWheel).CornerRadius = UDim.new(1, 0)
-
-    -- Anillo y bola móvil en el centro del ratón.
-    local mouseOuter = Instance.new("Frame")
-    mouseOuter.Name = "MouseAxisRing"
-    mouseOuter.AnchorPoint = Vector2.new(0.5, 0.5)
-    mouseOuter.Position = UDim2.new(0.5, 0, 0, 44)
-    mouseOuter.Size = UDim2.fromOffset(23, 23)
-    mouseOuter.BackgroundColor3 = Color3.fromRGB(4, 15, 14)
-    mouseOuter.BackgroundTransparency = 0.12
-    mouseOuter.BorderSizePixel = 0
-    mouseOuter.Parent = mouseBody
-    Instance.new("UICorner", mouseOuter).CornerRadius = UDim.new(1, 0)
-    local ringStroke = Instance.new("UIStroke")
-    ringStroke.Color = Color3.fromRGB(0, 230, 160)
-    ringStroke.Thickness = 1.4
-    ringStroke.Transparency = 0.12
-    ringStroke.Parent = mouseOuter
-    local mouseDot = Instance.new("Frame")
-    mouseDot.Name = "MouseAxisDot"
-    mouseDot.AnchorPoint = Vector2.new(0.5, 0.5)
-    mouseDot.Position = UDim2.fromScale(0.5, 0.5)
-    mouseDot.Size = UDim2.fromOffset(7, 7)
-    mouseDot.BackgroundColor3 = Color3.fromRGB(230, 255, 245)
-    mouseDot.BorderSizePixel = 0
-    mouseDot.Parent = mouseOuter
-    Instance.new("UICorner", mouseDot).CornerRadius = UDim.new(1, 0)
-
-    local keyButtons = {}
-    keyButtons.CLICK = {
-        Frame = leftClickRegion,
-        Stroke = leftClickStroke,
-        BaseColor = Color3.fromRGB(0, 225, 105)
-    }
-    local keyboardAlpha = 0.14
-    local keyColors = {
-        Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 220, 190),
-        Color3.fromRGB(0, 170, 255), Color3.fromRGB(105, 90, 255)
-    }
-
-    local function makeDisplayButton(id, labelText, parent, position, size, colorIndex)
-        local button = Instance.new("TextButton")
-        button.Name = "Button_" .. id
-        button.Position = position
-        button.Size = size
-        button.BackgroundColor3 = Color3.fromRGB(8, 20, 22)
-        button.BackgroundTransparency = math.clamp(keyboardAlpha + 0.08, 0, 0.92)
-        button.BorderSizePixel = 0
-        button.AutoButtonColor = false
-        button.Active = false
-        button.Font = Enum.Font.GothamBold
-        button.Text = labelText
-        button.TextColor3 = Color3.fromRGB(215, 245, 230)
-        button.TextSize = 13
-        button.Parent = parent
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
-        local buttonStroke = Instance.new("UIStroke")
-        buttonStroke.Color = keyColors[colorIndex or 1]
-        buttonStroke.Thickness = 1.25
-        buttonStroke.Transparency = 0.14
-        buttonStroke.Parent = button
-        keyButtons[id] = {Frame = button, Stroke = buttonStroke, BaseColor = buttonStroke.Color}
-    end
-
-    -- Solo WASD, salto y slots 1/2, habituales para movimiento y cambio de herramienta.
-    makeDisplayButton("W", "W", keyArea, UDim2.fromOffset(84, 0), UDim2.fromOffset(36, 26), 1)
-    makeDisplayButton("A", "A", keyArea, UDim2.fromOffset(43, 30), UDim2.fromOffset(36, 26), 2)
-    makeDisplayButton("S", "S", keyArea, UDim2.fromOffset(84, 30), UDim2.fromOffset(36, 26), 3)
-    makeDisplayButton("D", "D", keyArea, UDim2.fromOffset(125, 30), UDim2.fromOffset(36, 26), 4)
-    makeDisplayButton("1", "1", keyArea, UDim2.fromOffset(64, 60), UDim2.fromOffset(36, 26), 1)
-    makeDisplayButton("2", "2", keyArea, UDim2.fromOffset(105, 60), UDim2.fromOffset(36, 26), 2)
-    makeDisplayButton("SPACE", "SALTAR", keyArea, UDim2.fromOffset(54, 90), UDim2.fromOffset(100, 26), 3)
-    makeDisplayButton("TOUCH", "TOQUE", mousePanel, UDim2.fromOffset(22, 94), UDim2.fromOffset(76, 20), 2)
-    keyButtons.TOUCH.Frame.TextSize = 10
-
-    local keyMap = {
-        [Enum.KeyCode.W] = "W",
-        [Enum.KeyCode.A] = "A",
-        [Enum.KeyCode.S] = "S",
-        [Enum.KeyCode.D] = "D",
-        [Enum.KeyCode.Space] = "SPACE",
-        [Enum.KeyCode.One] = "1",
-        [Enum.KeyCode.Two] = "2"
-    }
-
-    local function setKey(keyName, pressed)
-        local item = keyButtons[keyName]
-        if not item then return end
-        item.Pressed = pressed == true
-        item.Frame.BackgroundColor3 = item.Pressed and item.BaseColor or Color3.fromRGB(8, 20, 22)
-        item.Frame.BackgroundTransparency = item.Pressed and 0.02 or math.clamp(keyboardAlpha + 0.08, 0, 0.92)
-        item.Stroke.Thickness = item.Pressed and 2.4 or 1.25
-        item.Stroke.Transparency = item.Pressed and 0.02 or 0.14
-        if item.Frame:IsA("TextButton") or item.Frame:IsA("TextLabel") then
-            item.Frame.TextColor3 = item.Pressed and Color3.new(1, 1, 1) or Color3.fromRGB(215, 245, 230)
-        end
-    end
-
-    local anchored = false
-    local dragging = false
-    local dragStart, startPosition
-    local dragInput
-    local function updateDrag(input)
-        local delta = input.Position - dragStart
-        local camera = workspace.CurrentCamera
-        local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-        local size = shell.AbsoluteSize
-        local centerX = (startPosition.X.Scale * viewport.X) + startPosition.X.Offset + delta.X
-        local centerY = (startPosition.Y.Scale * viewport.Y) + startPosition.Y.Offset + delta.Y
-        local halfW, halfH = size.X * 0.5, size.Y * 0.5
-        centerX = math.clamp(centerX, halfW + 8, math.max(halfW + 8, viewport.X - halfW - 8))
-        centerY = math.clamp(centerY, halfH + 8, math.max(halfH + 8, viewport.Y - halfH - 8))
-        shell.Position = UDim2.fromOffset(centerX, centerY)
-    end
-
-    titleBar.InputBegan:Connect(function(input)
-        if anchored then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPosition = shell.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-    titleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-    end)
-
-    local cameraDotOffset = Vector2.zero
-    local touchMouseDelta = Vector2.zero
-    local lastMouseLocation = UIS:GetMouseLocation()
-    UIS.InputChanged:Connect(function(input)
-        if not keyboardGui.Enabled then return end
-        if input.UserInputType == Enum.UserInputType.Touch then
-            -- En pantalla táctil también refleja el desplazamiento del dedo.
-            touchMouseDelta += Vector2.new(input.Delta.X, input.Delta.Y)
-        end
-        if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.Touch) then
-            updateDrag(input)
-        end
-    end)
-
-    pin.Activated:Connect(function()
-        anchored = not anchored
-        pin.Text = anchored and "LOCK" or "PIN"
-        pin.BackgroundColor3 = anchored and Color3.fromRGB(95, 65, 20) or Color3.fromRGB(20, 75, 49)
-    end)
-    close.Activated:Connect(function()
-        if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(false) else keyboardGui.Enabled = false end
-    end)
-
-    UIS.InputBegan:Connect(function(input)
-        if not keyboardGui.Enabled then return end
-        local keyName = keyMap[input.KeyCode]
-        if keyName then setKey(keyName, true) end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            setKey("CLICK", true)
-        elseif input.UserInputType == Enum.UserInputType.Touch then
-            -- El toque se refleja también como click en el visor de controles.
-            setKey("CLICK", true)
-            setKey("TOUCH", true)
-        end
-    end)
-    UIS.InputEnded:Connect(function(input)
-        if not keyboardGui.Enabled then return end
-        local keyName = keyMap[input.KeyCode]
-        if keyName then setKey(keyName, false) end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            setKey("CLICK", false)
-        elseif input.UserInputType == Enum.UserInputType.Touch then
-            setKey("CLICK", false)
-            setKey("TOUCH", false)
-        end
-    end)
-
-    local RunService = game:GetService("RunService")
-    local movementConnection
-    movementConnection = RunService.RenderStepped:Connect(function()
-        if not keyboardGui.Enabled then return end
-        local character = game:GetService("Players").LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        local camera = workspace.CurrentCamera
-        if humanoid and camera then
-            -- WASD conserva la distribución en cruz: W arriba, A/S/D abajo.
-            -- También refleja el joystick móvil sin invertir los ejes.
-            local move = humanoid.MoveDirection
-            local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
-            local right = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
-            if forward.Magnitude > 0.001 then forward = forward.Unit end
-            if right.Magnitude > 0.001 then right = right.Unit end
-            setKey("W", move:Dot(forward) > 0.18)
-            setKey("S", move:Dot(-forward) > 0.18)
-            setKey("D", move:Dot(right) > 0.18)
-            setKey("A", move:Dot(-right) > 0.18)
-            local state = humanoid:GetState()
-            setKey("SPACE", humanoid.Jump or state == Enum.HumanoidStateType.Jumping)
-        end
-
-        -- Actualiza el punto en cada frame usando la posición real del cursor.
-        -- En juegos que bloquean el cursor (cámara FPS) usa GetMouseDelta como respaldo.
-        local mouseDelta = touchMouseDelta
-        touchMouseDelta = Vector2.zero
-        if UIS.MouseBehavior == Enum.MouseBehavior.Default then
-            local currentMouseLocation = UIS:GetMouseLocation()
-            mouseDelta += currentMouseLocation - lastMouseLocation
-            lastMouseLocation = currentMouseLocation
-        else
-            lastMouseLocation = UIS:GetMouseLocation()
-            local okDelta, lockedDelta = pcall(function()
-                return UIS:GetMouseDelta()
-            end)
-            if okDelta and lockedDelta then
-                mouseDelta += lockedDelta
-            end
-        end
-
-        if mouseDelta.Magnitude > 0.01 then
-            cameraDotOffset += mouseDelta * 0.70
-            cameraDotOffset = Vector2.new(
-                math.clamp(cameraDotOffset.X, -8, 8),
-                math.clamp(cameraDotOffset.Y, -8, 8)
-            )
-        end
-
-        mouseDot.Position = UDim2.new(0.5, cameraDotOffset.X, 0.5, cameraDotOffset.Y)
-        -- Regreso suave al centro; el factor anterior (0.84) lo ocultaba casi al instante.
-        cameraDotOffset *= 0.965
-    end)
-
-    MATRIXHUB_KEYBOARD_SET_ENABLED = function(enabled)
-        keyboardGui.Enabled = enabled == true
-        if not keyboardGui.Enabled then
-            for keyName in pairs(keyButtons) do setKey(keyName, false) end
-            cameraDotOffset = Vector2.zero
-            touchMouseDelta = Vector2.zero
-            lastMouseLocation = UIS:GetMouseLocation()
-            mouseDot.Position = UDim2.fromScale(0.5, 0.5)
-        end
-    end
-
-    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY = function(level)
-        level = math.clamp(math.floor((tonumber(level) or 2) + 0.5), 1, 5)
-        -- Cinco niveles discretos: 1 más opaco, 5 más transparente.
-        local alpha = 0.08 + ((level - 1) * 0.14)
-        keyboardAlpha = alpha
-        shell.BackgroundTransparency = alpha
-        titleBar.BackgroundTransparency = math.clamp(alpha + 0.04, 0, 0.92)
-        mousePanel.BackgroundTransparency = math.clamp(alpha + 0.06, 0, 0.92)
-        stroke.Transparency = math.clamp(0.10 + (level - 1) * 0.07, 0.10, 0.38)
-        mouseStroke.Transparency = math.clamp(0.14 + (level - 1) * 0.07, 0.14, 0.42)
-        for _, item in pairs(keyButtons) do
-            item.Frame.BackgroundTransparency = item.Pressed and 0.02 or math.clamp(alpha + 0.08, 0, 0.94)
-            item.Stroke.Transparency = math.clamp(0.12 + (level - 1) * 0.07, 0.12, 0.40)
-        end
-    end
-    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(2)
-    MATRIXHUB_KEYBOARD_SET_ENABLED(false)
-end
-
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
 
-Otros:Section({ Title = "VISOR DE BOTONES", Icon = "gamepad-2", Opened = true })
-Otros:Toggle({
-    Title = "MOSTRAR BOTONES DE DUELOS",
-    Icon = "gamepad-2",
-    Value = false,
-    Callback = function(enabled)
-        if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(enabled) end
-    end
-})
-Otros:Slider({
-    Title = "TRANSPARENCIA (1 - 5)",
-    Icon = "layers",
-    Value = { Min = 1, Max = 5, Default = 2 },
-    Step = 1,
-    Callback = function(value)
-        local level = math.clamp(math.floor((tonumber(value) or 2) + 0.5), 1, 5)
-        if MATRIXHUB_KEYBOARD_SET_TRANSPARENCY then MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(level) end
-    end
-})
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
 do
@@ -2795,7 +2313,7 @@ MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
@@ -3523,6 +3041,161 @@ Players.PlayerAdded:Connect(function(p) if p ~= LP then if p.Character then Watc
 Visuales:Section({ Title = "VISUAL ENGINE", Icon = "eye", Opened = true })
 Visuales:Toggle({ Title = "ESP HIGHILGHT", Value = false, Callback = function(s) espEnabled = s if not s then for _, p in pairs(Players:GetPlayers()) do local h = espFolder:FindFirstChild(p.Name .. "MATRIXHUB") if h then h:Destroy() end activeESPs[p] = nil end end end })
 Visuales:Colorpicker({ Title = "COLOR DEL ESP", Default = Color3.fromRGB(255, 0, 0), Callback = function(c) espColor = c for _, v in pairs(activeESPs) do if v.Highlight then v.Highlight.FillColor = c end end end })
+
+-- MATRIX RIPPLE // indicador visual del punto tocado. No modifica entradas ni camara.
+do
+    local RippleInputService = game:GetService("UserInputService")
+    local RippleGuiName = "MATRIXHUB_TOUCH_RIPPLE"
+    local RippleGuiOld = PlayerGui:FindFirstChild(RippleGuiName)
+    if RippleGuiOld then RippleGuiOld:Destroy() end
+
+    -- Desconecta el listener de una ejecucion anterior del hub, si existe.
+    local RippleEnv = (type(getgenv) == "function" and getgenv()) or _G
+    if RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION then
+        pcall(function() RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION:Disconnect() end)
+        RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION = nil
+    end
+
+    local RippleGui = Instance.new("ScreenGui")
+    RippleGui.Name = RippleGuiName
+    RippleGui.ResetOnSpawn = false
+    RippleGui.IgnoreGuiInset = true
+    RippleGui.DisplayOrder = 1200
+    RippleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    RippleGui.Enabled = false
+    RippleGui.Parent = PlayerGui
+
+    local RippleEnabled = false
+    local RippleConnection = nil
+    local ActiveRippleCount = 0
+    local MAX_ACTIVE_RIPPLES = 14
+
+    -- Replica el chequeo geometrico usado por el controlador de camara de Roblox:
+    -- los toques iniciados dentro de DynamicThumbstickFrame no generan el efecto.
+    local function IsTouchOnMobileJoystick(position)
+        local touchGui = PlayerGui:FindFirstChild("TouchGui")
+        local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+        if not touchGui or not touchGui.Enabled or not touchFrame then
+            return false
+        end
+
+        local stickFrame = touchFrame:FindFirstChild("DynamicThumbstickFrame")
+            or touchFrame:FindFirstChild("ThumbstickFrame")
+        if not stickFrame or not stickFrame:IsA("GuiObject") then
+            return false
+        end
+
+        local topLeft = stickFrame.AbsolutePosition
+        local bottomRight = topLeft + stickFrame.AbsoluteSize
+        return position.X >= topLeft.X
+            and position.Y >= topLeft.Y
+            and position.X <= bottomRight.X
+            and position.Y <= bottomRight.Y
+    end
+
+    local function CreateMatrixRipple(position)
+        if ActiveRippleCount >= MAX_ACTIVE_RIPPLES then return end
+        ActiveRippleCount += 1
+
+        local ripple = Instance.new("Frame")
+        ripple.Name = "MatrixRipple"
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.Position = UDim2.fromOffset(position.X, position.Y)
+        ripple.Size = UDim2.fromOffset(12, 12)
+        ripple.BackgroundTransparency = 1
+        ripple.BorderSizePixel = 0
+        ripple.Active = false
+        ripple.Selectable = false
+        ripple.ZIndex = 20
+        ripple.Parent = RippleGui
+
+        local round = Instance.new("UICorner")
+        round.CornerRadius = UDim.new(1, 0)
+        round.Parent = ripple
+
+        local outline = Instance.new("UIStroke")
+        outline.Color = Color3.fromRGB(0, 255, 125)
+        outline.Thickness = 2.5
+        outline.Transparency = 0.08
+        outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        outline.Parent = ripple
+
+        local centerDot = Instance.new("Frame")
+        centerDot.Name = "CenterDot"
+        centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+        centerDot.Position = UDim2.fromScale(0.5, 0.5)
+        centerDot.Size = UDim2.fromOffset(4, 4)
+        centerDot.BackgroundColor3 = Color3.fromRGB(120, 255, 180)
+        centerDot.BorderSizePixel = 0
+        centerDot.Active = false
+        centerDot.Selectable = false
+        centerDot.ZIndex = 21
+        centerDot.Parent = ripple
+
+        local dotCorner = Instance.new("UICorner")
+        dotCorner.CornerRadius = UDim.new(1, 0)
+        dotCorner.Parent = centerDot
+
+        local expandInfo = TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(ripple, expandInfo, {
+            Size = UDim2.fromOffset(54, 54)
+        }):Play()
+        TweenService:Create(outline, expandInfo, {
+            Transparency = 1,
+            Thickness = 1
+        }):Play()
+        TweenService:Create(centerDot, expandInfo, {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(2, 2)
+        }):Play()
+
+        task.delay(0.5, function()
+            if ripple and ripple.Parent then ripple:Destroy() end
+            ActiveRippleCount = math.max(0, ActiveRippleCount - 1)
+        end)
+    end
+
+    local function SetMatrixRippleEnabled(enabled)
+        RippleEnabled = enabled == true
+        RippleGui.Enabled = RippleEnabled
+
+        if RippleConnection then
+            RippleConnection:Disconnect()
+            RippleConnection = nil
+        end
+        if RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION then
+            RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION = nil
+        end
+
+        if not RippleEnabled then
+            for _, child in ipairs(RippleGui:GetChildren()) do
+                child:Destroy()
+            end
+            ActiveRippleCount = 0
+            return
+        end
+
+        -- No filtramos gameProcessed globalmente: asi tambien se muestran toques
+        -- sobre botones tactiles del juego. Solo se excluye el area del joystick.
+        RippleConnection = RippleInputService.InputBegan:Connect(function(input)
+            if not RippleEnabled then return end
+            if input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local position = input.Position
+            if IsTouchOnMobileJoystick(position) then return end
+            CreateMatrixRipple(position)
+        end)
+        RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION = RippleConnection
+    end
+
+    Visuales:Section({ Title = "TOUCH EFFECTS", Icon = "mouse-pointer-2", Opened = true })
+    Visuales:Toggle({
+        Title = "MATRIX RIPPLE",
+        Icon = "target",
+        Value = false,
+        Callback = SetMatrixRippleEnabled
+    })
+end
+
 task.spawn(function()
     while task.wait(0.2) do
         if espEnabled and IsInMatchStrict() then
