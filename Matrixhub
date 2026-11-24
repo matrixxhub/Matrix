@@ -643,12 +643,13 @@ local MATRIXHUB_CONFIG = {
     FPSBoost = false,
     AntiLag = false,
     StatusHud = false,
-    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false },
+    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false, Fly = false },
     Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" },
     QuickButtonPositions = {
         Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
         Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
-        AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 }
+        AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
+        Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
     },
     UIScale = 1.08,
     AnimationSpeed = 1,
@@ -665,6 +666,7 @@ local MATRIXHUB_CONFIG = {
     UseCustomKillSound = false
 }
 
+local MATRIXHUB_flying = false
 local MATRIXHUB_CONFIG_STATUS = "CONFIGURACIÓN PREDETERMINADA"
 local MATRIXHUB_ERROR_LOG = {}
 local function RecordMatrixHubError(source, message)
@@ -723,7 +725,7 @@ local function LoadMatrixHubConfig()
         end
     end
     if type(saved.ButtonVisibility) == "table" then
-        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot" }) do
+        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot", "Fly" }) do
             if type(saved.ButtonVisibility[buttonId]) == "boolean" then
                 MATRIXHUB_CONFIG.ButtonVisibility[buttonId] = saved.ButtonVisibility[buttonId]
             end
@@ -738,7 +740,7 @@ local function LoadMatrixHubConfig()
         end
     end
     if type(saved.QuickButtonPositions) == "table" then
-        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot" }) do
+        for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot", "Fly" }) do
             local pos = saved.QuickButtonPositions[buttonId]
             if type(pos) == "table" then
                 local target = MATRIXHUB_CONFIG.QuickButtonPositions[buttonId]
@@ -2690,6 +2692,12 @@ do
         function() return autoShootEnabled == true or autoShootAgresivoEnabled == true or altoFireEnabled == true end,
         setAutoShootQuick)
 
+    makeQuickButton("Fly", "✈", 4, Color3.fromRGB(80, 190, 255),
+        function() return MATRIXHUB_flying == true end,
+        function()
+            if MATRIXHUB_KEY_ACTIONS.Fly then MATRIXHUB_KEY_ACTIONS.Fly() end
+        end)
+
     local viewportConnection
     local function reClampQuickButtons()
         for _, item in pairs(quickButtons) do
@@ -2825,6 +2833,18 @@ do
         Callback = function(enabled)
             quickButtons.Silent.Button.Visible = enabled == true
             MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR FLY",
+        Icon = "plane",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fly == true,
+        Callback = function(enabled)
+            quickButtons.Fly.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fly = enabled == true
             if refreshQuickButtons then refreshQuickButtons() end
             SaveMatrixHubConfig()
             PlayMatrixUISound("Toggle")
@@ -4175,7 +4195,6 @@ end
 
 Movimiento:Section({ Title = "ANTI DELTAS", Icon = "rocket", Opened = true })
 
-local MATRIXHUB_flying = false
 local MATRIXHUB_frozen = false
 local MATRIXHUB_cframeOn = false
 local MATRIXHUB_flyConn = nil
@@ -4183,23 +4202,23 @@ local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
 local MATRIXHUB_speed = 1.2
 local MATRIXHUB_LP = game:GetService("Players").LocalPlayer
-local MATRIXHUB_keys = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
+local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=false, Shift=false}
 local MATRIXHUB_noclipOn = true
 
 game:GetService("UserInputService").InputBegan:Connect(function(i, gp)
     if gp then return end
-    if i.KeyCode == Enum.KeyCode.W then MATRIXHUB_keys.W = true end
-    if i.KeyCode == Enum.KeyCode.S then MATRIXHUB_keys.S = true end
-    if i.KeyCode == Enum.KeyCode.A then MATRIXHUB_keys.A = true end
-    if i.KeyCode == Enum.KeyCode.D then MATRIXHUB_keys.D = true end
+    if i.KeyCode == Enum.KeyCode.Up then MATRIXHUB_keys.Up = true end
+    if i.KeyCode == Enum.KeyCode.Down then MATRIXHUB_keys.Down = true end
+    if i.KeyCode == Enum.KeyCode.Left then MATRIXHUB_keys.Left = true end
+    if i.KeyCode == Enum.KeyCode.Right then MATRIXHUB_keys.Right = true end
     if i.KeyCode == Enum.KeyCode.Space then MATRIXHUB_keys.Space = true end
     if i.KeyCode == Enum.KeyCode.LeftShift then MATRIXHUB_keys.Shift = true end
 end)
 game:GetService("UserInputService").InputEnded:Connect(function(i)
-    if i.KeyCode == Enum.KeyCode.W then MATRIXHUB_keys.W = false end
-    if i.KeyCode == Enum.KeyCode.S then MATRIXHUB_keys.S = false end
-    if i.KeyCode == Enum.KeyCode.A then MATRIXHUB_keys.A = false end
-    if i.KeyCode == Enum.KeyCode.D then MATRIXHUB_keys.D = false end
+    if i.KeyCode == Enum.KeyCode.Up then MATRIXHUB_keys.Up = false end
+    if i.KeyCode == Enum.KeyCode.Down then MATRIXHUB_keys.Down = false end
+    if i.KeyCode == Enum.KeyCode.Left then MATRIXHUB_keys.Left = false end
+    if i.KeyCode == Enum.KeyCode.Right then MATRIXHUB_keys.Right = false end
     if i.KeyCode == Enum.KeyCode.Space then MATRIXHUB_keys.Space = false end
     if i.KeyCode == Enum.KeyCode.LeftShift then MATRIXHUB_keys.Shift = false end
 end)
@@ -4257,11 +4276,10 @@ local function MATRIXHUB_StartFly()
         local cam = workspace.CurrentCamera
         local speed = MATRIXHUB_cframeOn and MATRIXHUB_speed or 0.6
         local dir = Vector3.zero
-        if MATRIXHUB_keys.W then dir += Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
-        if MATRIXHUB_keys.S then dir -= Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
-        if MATRIXHUB_keys.A then dir -= Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z) end
-        if MATRIXHUB_keys.D then dir += Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z) end
-        if h.MoveDirection.Magnitude > 0.1 then dir += h.MoveDirection end
+        if MATRIXHUB_keys.Up then dir += Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
+        if MATRIXHUB_keys.Down then dir -= Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
+        if MATRIXHUB_keys.Left then dir -= Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z) end
+        if MATRIXHUB_keys.Right then dir += Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z) end
         if dir.Magnitude > 0 then dir = dir.Unit end
         local y = 0
         if MATRIXHUB_keys.Space then y = 1.25 end
