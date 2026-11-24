@@ -2746,7 +2746,8 @@ do
         local defaults = {
             Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
             Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
-            AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 }
+            AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
+            Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
         }
         for id, item in pairs(quickButtons) do
             local pos = defaults[id]
@@ -4206,7 +4207,7 @@ local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=fal
 local MATRIXHUB_noclipOn = true
 
 game:GetService("UserInputService").InputBegan:Connect(function(i, gp)
-    if gp then return end
+    if gp and game:GetService("UserInputService"):GetFocusedTextBox() then return end
     if i.KeyCode == Enum.KeyCode.Up then MATRIXHUB_keys.Up = true end
     if i.KeyCode == Enum.KeyCode.Down then MATRIXHUB_keys.Down = true end
     if i.KeyCode == Enum.KeyCode.Left then MATRIXHUB_keys.Left = true end
