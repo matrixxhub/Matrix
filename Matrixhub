@@ -332,7 +332,7 @@ notesText.Text = table.concat({
     "• AUTO KILL: opciones de Auto Kill e Hitbox Expander.",
     "• VISUAL ENGINE: ESP Highlight y herramientas visuales.",
     "• AUTOMATION: Auto Farm de evento integrado desde Random.",
-    "• MOVILIDAD: Fly Speed, Fly Altura, Speed CFrame, Invisible V6 y controles Anti Deltas.",
+    "• MOVILIDAD: Fly Speed, Fly Altura, Speed CFrame, Invisible V6 y apartado Anti Cheats V2.",
     "• PERSONAJE: paquetes de animaciones, mezclador, restaurar animaciones y herramientas de avatar.",
     "• OTROS: modo streamer, reconectar sesión y cambiar de instancia.",
     "",
@@ -2483,6 +2483,81 @@ Movimiento:Toggle({
     end
 })
 
+
+-- MATRIX HUB // FIXED PLATFORM - diseño Matrix Green
+local MatrixHubPlatformActive = false
+local MatrixHubPlatformLoop = false
+local MatrixHubPlatforms = {}
+
+local function MatrixHub_StopPlatforms()
+    MatrixHubPlatformActive = false
+    for _, platform in ipairs(MatrixHubPlatforms) do
+        if platform and platform.Parent then
+            platform:Destroy()
+        end
+    end
+    table.clear(MatrixHubPlatforms)
+end
+
+local function MatrixHub_StartPlatforms()
+    if MatrixHubPlatformLoop then return end
+    MatrixHubPlatformLoop = true
+
+    task.spawn(function()
+        while MatrixHubPlatformActive do
+            task.wait(0.05)
+
+            local character = LP.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+            if root and humanoid and humanoid.Health > 0 then
+                local verticalSpeed = math.abs(root.AssemblyLinearVelocity.Y)
+                if humanoid.MoveDirection.Magnitude > 0.01 or verticalSpeed > 0.05 then
+                    local platform = Instance.new("Part")
+                    platform.Name = "MATRIXHUB_FIXED_PLATFORM"
+                    platform.Size = Vector3.new(6, 0.6, 6)
+                    platform.Anchored = true
+                    platform.CanCollide = true
+                    platform.CanTouch = false
+                    platform.CanQuery = false
+                    platform.Color = Color3.fromRGB(0, 220, 105)
+                    platform.Material = Enum.Material.Neon
+                    platform.Transparency = 0.18
+                    platform.Reflectance = 0.04
+                    platform.TopSurface = Enum.SurfaceType.Smooth
+                    platform.BottomSurface = Enum.SurfaceType.Smooth
+                    platform.CFrame = root.CFrame * CFrame.new(0, -3.3, 0)
+                    platform.Parent = workspace
+
+                    table.insert(MatrixHubPlatforms, platform)
+                    if #MatrixHubPlatforms > 3 then
+                        local oldest = table.remove(MatrixHubPlatforms, 1)
+                        if oldest and oldest.Parent then oldest:Destroy() end
+                    end
+                end
+            end
+        end
+
+        MatrixHubPlatformLoop = false
+    end)
+end
+
+Movimiento:Toggle({
+    Title = "FIXED PLATFORM",
+    Icon = "layers",
+    Value = false,
+    Callback = function(enabled)
+        if enabled then
+            MatrixHubPlatformActive = true
+            MatrixHub_StartPlatforms()
+        else
+            MatrixHub_StopPlatforms()
+        end
+    end
+})
+
+
 -- MATRIX HUB // BOTONES FLOTANTES
 -- Botones circulares estilo HUD, conectados a las funciones originales.
 do
@@ -4194,7 +4269,7 @@ if Random.new():NextNumber() <= 0.30 then
     })
 end
 
-Movimiento:Section({ Title = "ANTI DELTAS", Icon = "rocket", Opened = true })
+Movimiento:Section({ Title = "ANTI CHEATS V2", Icon = "shield-check", Opened = true })
 
 local MATRIXHUB_frozen = false
 local MATRIXHUB_cframeOn = false
