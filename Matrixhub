@@ -3059,7 +3059,9 @@ do
     local RippleGui = Instance.new("ScreenGui")
     RippleGui.Name = RippleGuiName
     RippleGui.ResetOnSpawn = false
-    RippleGui.IgnoreGuiInset = true
+    -- InputObject.Position ya usa coordenadas con el inset de GUI aplicado.
+    -- Mantener IgnoreGuiInset=false hace que ScreenGui use el mismo origen.
+    RippleGui.IgnoreGuiInset = false
     RippleGui.DisplayOrder = 1200
     RippleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     RippleGui.Enabled = false
@@ -3136,7 +3138,8 @@ do
         dotCorner.CornerRadius = UDim.new(1, 0)
         dotCorner.Parent = centerDot
 
-        local expandInfo = TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        -- Efecto más inmediato: el aro empieza a expandirse en cuanto aparece.
+        local expandInfo = TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         TweenService:Create(ripple, expandInfo, {
             Size = UDim2.fromOffset(54, 54)
         }):Play()
@@ -3149,7 +3152,7 @@ do
             Size = UDim2.fromOffset(2, 2)
         }):Play()
 
-        task.delay(0.5, function()
+        task.delay(0.39, function()
             if ripple and ripple.Parent then ripple:Destroy() end
             ActiveRippleCount = math.max(0, ActiveRippleCount - 1)
         end)
@@ -3175,12 +3178,12 @@ do
             return
         end
 
-        -- No filtramos gameProcessed globalmente: asi tambien se muestran toques
-        -- sobre botones tactiles del juego. Solo se excluye el area del joystick.
-        RippleConnection = RippleInputService.InputBegan:Connect(function(input)
+        -- TouchStarted recibe directamente el inicio de cada toque.
+        -- No filtramos gameProcessed para poder mostrar toques sobre botones del juego;
+        -- únicamente excluimos el joystick móvil.
+        RippleConnection = RippleInputService.TouchStarted:Connect(function(input, gameProcessed)
             if not RippleEnabled then return end
-            if input.UserInputType ~= Enum.UserInputType.Touch then return end
-            local position = input.Position
+            local position = Vector2.new(input.Position.X, input.Position.Y)
             if IsTouchOnMobileJoystick(position) then return end
             CreateMatrixRipple(position)
         end)
