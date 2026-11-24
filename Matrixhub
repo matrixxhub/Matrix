@@ -1196,8 +1196,8 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 
--- MATRIX BUTTON DISPLAY // solo controles útiles para Duelos.
--- Visor pasivo: refleja teclado, click izquierdo y toques; no inyecta entradas.
+-- MATRIX BUTTON DISPLAY // solo botones útiles para Duelos.
+-- Visor pasivo: refleja botones, click izquierdo y toques; no inyecta entradas.
 do
     local UIS = game:GetService("UserInputService")
     local keyboardGui = Instance.new("ScreenGui")
@@ -1319,30 +1319,117 @@ do
     mouseCaption.TextColor3 = Color3.fromRGB(145, 255, 205)
     mouseCaption.Parent = mousePanel
 
-    -- Bola del ratón: centro estable y movimiento en los ejes reales X/Y.
+    -- Ratón dibujado: el botón izquierdo se ilumina al hacer click.
+    -- El punto central representa el movimiento real del cursor/cámara.
+    local mouseBody = Instance.new("Frame")
+    mouseBody.Name = "MouseShape"
+    mouseBody.Position = UDim2.fromOffset(37, 25)
+    mouseBody.Size = UDim2.fromOffset(46, 64)
+    mouseBody.BackgroundColor3 = Color3.fromRGB(7, 23, 20)
+    mouseBody.BackgroundTransparency = 0.04
+    mouseBody.BorderSizePixel = 0
+    mouseBody.ClipsDescendants = true
+    mouseBody.Parent = mousePanel
+    Instance.new("UICorner", mouseBody).CornerRadius = UDim.new(0, 21)
+    local mouseBodyStroke = Instance.new("UIStroke")
+    mouseBodyStroke.Color = Color3.fromRGB(0, 205, 145)
+    mouseBodyStroke.Thickness = 1.5
+    mouseBodyStroke.Transparency = 0.10
+    mouseBodyStroke.Parent = mouseBody
+
+    local leftClickRegion = Instance.new("Frame")
+    leftClickRegion.Name = "LeftMouseButton"
+    leftClickRegion.Position = UDim2.fromOffset(1, 1)
+    leftClickRegion.Size = UDim2.new(0.5, -1, 0, 23)
+    leftClickRegion.BackgroundColor3 = Color3.fromRGB(14, 48, 33)
+    leftClickRegion.BackgroundTransparency = 0.06
+    leftClickRegion.BorderSizePixel = 0
+    leftClickRegion.Parent = mouseBody
+    Instance.new("UICorner", leftClickRegion).CornerRadius = UDim.new(0, 15)
+    local leftClickLabel = Instance.new("TextLabel")
+    leftClickLabel.BackgroundTransparency = 1
+    leftClickLabel.Size = UDim2.fromScale(1, 1)
+    leftClickLabel.Font = Enum.Font.GothamBold
+    leftClickLabel.Text = "L"
+    leftClickLabel.TextSize = 9
+    leftClickLabel.TextColor3 = Color3.fromRGB(190, 255, 220)
+    leftClickLabel.Parent = leftClickRegion
+    local leftClickStroke = Instance.new("UIStroke")
+    leftClickStroke.Color = Color3.fromRGB(0, 220, 125)
+    leftClickStroke.Thickness = 1.1
+    leftClickStroke.Transparency = 0.12
+    leftClickStroke.Parent = leftClickRegion
+
+    local rightClickRegion = Instance.new("Frame")
+    rightClickRegion.Name = "RightMouseButton"
+    rightClickRegion.Position = UDim2.new(0.5, 0, 0, 1)
+    rightClickRegion.Size = UDim2.new(0.5, -1, 0, 23)
+    rightClickRegion.BackgroundColor3 = Color3.fromRGB(8, 26, 23)
+    rightClickRegion.BackgroundTransparency = 0.10
+    rightClickRegion.BorderSizePixel = 0
+    rightClickRegion.Parent = mouseBody
+    Instance.new("UICorner", rightClickRegion).CornerRadius = UDim.new(0, 15)
+    local rightClickLabel = Instance.new("TextLabel")
+    rightClickLabel.BackgroundTransparency = 1
+    rightClickLabel.Size = UDim2.fromScale(1, 1)
+    rightClickLabel.Font = Enum.Font.GothamBold
+    rightClickLabel.Text = "R"
+    rightClickLabel.TextSize = 9
+    rightClickLabel.TextColor3 = Color3.fromRGB(135, 180, 160)
+    rightClickLabel.Parent = rightClickRegion
+
+    local mouseDivider = Instance.new("Frame")
+    mouseDivider.Name = "MouseButtonDivider"
+    mouseDivider.Position = UDim2.new(0.5, -0.5, 0, 3)
+    mouseDivider.Size = UDim2.fromOffset(1, 19)
+    mouseDivider.BackgroundColor3 = Color3.fromRGB(0, 205, 145)
+    mouseDivider.BackgroundTransparency = 0.28
+    mouseDivider.BorderSizePixel = 0
+    mouseDivider.Parent = mouseBody
+
+    local mouseWheel = Instance.new("Frame")
+    mouseWheel.Name = "MouseWheel"
+    mouseWheel.AnchorPoint = Vector2.new(0.5, 0)
+    mouseWheel.Position = UDim2.new(0.5, 0, 0, 8)
+    mouseWheel.Size = UDim2.fromOffset(4, 8)
+    mouseWheel.BackgroundColor3 = Color3.fromRGB(130, 225, 190)
+    mouseWheel.BackgroundTransparency = 0.12
+    mouseWheel.BorderSizePixel = 0
+    mouseWheel.Parent = mouseBody
+    Instance.new("UICorner", mouseWheel).CornerRadius = UDim.new(1, 0)
+
+    -- Anillo y bola móvil en el centro del ratón.
     local mouseOuter = Instance.new("Frame")
     mouseOuter.Name = "MouseAxisRing"
     mouseOuter.AnchorPoint = Vector2.new(0.5, 0.5)
-    mouseOuter.Position = UDim2.new(0.5, 0, 0, 48)
-    mouseOuter.Size = UDim2.fromOffset(40, 40)
-    mouseOuter.BackgroundTransparency = 1
-    mouseOuter.Parent = mousePanel
+    mouseOuter.Position = UDim2.new(0.5, 0, 0, 44)
+    mouseOuter.Size = UDim2.fromOffset(23, 23)
+    mouseOuter.BackgroundColor3 = Color3.fromRGB(4, 15, 14)
+    mouseOuter.BackgroundTransparency = 0.12
+    mouseOuter.BorderSizePixel = 0
+    mouseOuter.Parent = mouseBody
     Instance.new("UICorner", mouseOuter).CornerRadius = UDim.new(1, 0)
     local ringStroke = Instance.new("UIStroke")
     ringStroke.Color = Color3.fromRGB(0, 230, 160)
-    ringStroke.Thickness = 1.7
+    ringStroke.Thickness = 1.4
+    ringStroke.Transparency = 0.12
     ringStroke.Parent = mouseOuter
     local mouseDot = Instance.new("Frame")
     mouseDot.Name = "MouseAxisDot"
     mouseDot.AnchorPoint = Vector2.new(0.5, 0.5)
     mouseDot.Position = UDim2.fromScale(0.5, 0.5)
-    mouseDot.Size = UDim2.fromOffset(9, 9)
+    mouseDot.Size = UDim2.fromOffset(7, 7)
     mouseDot.BackgroundColor3 = Color3.fromRGB(230, 255, 245)
     mouseDot.BorderSizePixel = 0
     mouseDot.Parent = mouseOuter
     Instance.new("UICorner", mouseDot).CornerRadius = UDim.new(1, 0)
 
     local keyButtons = {}
+    keyButtons.CLICK = {
+        Frame = leftClickRegion,
+        Stroke = leftClickStroke,
+        BaseColor = Color3.fromRGB(0, 225, 105)
+    }
     local keyboardAlpha = 0.14
     local keyColors = {
         Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 220, 190),
@@ -1381,9 +1468,7 @@ do
     makeDisplayButton("1", "1", keyArea, UDim2.fromOffset(64, 60), UDim2.fromOffset(36, 26), 1)
     makeDisplayButton("2", "2", keyArea, UDim2.fromOffset(105, 60), UDim2.fromOffset(36, 26), 2)
     makeDisplayButton("SPACE", "SALTAR", keyArea, UDim2.fromOffset(54, 90), UDim2.fromOffset(100, 26), 3)
-    makeDisplayButton("CLICK", "CLICK", mousePanel, UDim2.fromOffset(5, 86), UDim2.fromOffset(52, 24), 1)
-    makeDisplayButton("TOUCH", "TOQUE", mousePanel, UDim2.fromOffset(63, 86), UDim2.fromOffset(52, 24), 2)
-    keyButtons.CLICK.Frame.TextSize = 10
+    makeDisplayButton("TOUCH", "TOQUE", mousePanel, UDim2.fromOffset(22, 94), UDim2.fromOffset(76, 20), 2)
     keyButtons.TOUCH.Frame.TextSize = 10
 
     local keyMap = {
@@ -1404,7 +1489,9 @@ do
         item.Frame.BackgroundTransparency = item.Pressed and 0.02 or math.clamp(keyboardAlpha + 0.08, 0, 0.92)
         item.Stroke.Thickness = item.Pressed and 2.4 or 1.25
         item.Stroke.Transparency = item.Pressed and 0.02 or 0.14
-        item.Frame.TextColor3 = item.Pressed and Color3.new(1, 1, 1) or Color3.fromRGB(215, 245, 230)
+        if item.Frame:IsA("TextButton") or item.Frame:IsA("TextLabel") then
+            item.Frame.TextColor3 = item.Pressed and Color3.new(1, 1, 1) or Color3.fromRGB(215, 245, 230)
+        end
     end
 
     local anchored = false
@@ -1442,15 +1529,13 @@ do
     end)
 
     local cameraDotOffset = Vector2.zero
+    local touchMouseDelta = Vector2.zero
+    local lastMouseLocation = UIS:GetMouseLocation()
     UIS.InputChanged:Connect(function(input)
         if not keyboardGui.Enabled then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            -- Delta usa el movimiento real del ratón: X positivo = derecha, Y positivo = abajo.
-            cameraDotOffset += Vector2.new(input.Delta.X, input.Delta.Y) * 0.55
-            cameraDotOffset = Vector2.new(
-                math.clamp(cameraDotOffset.X, -16, 16),
-                math.clamp(cameraDotOffset.Y, -16, 16)
-            )
+        if input.UserInputType == Enum.UserInputType.Touch then
+            -- En pantalla táctil también refleja el desplazamiento del dedo.
+            touchMouseDelta += Vector2.new(input.Delta.X, input.Delta.Y)
         end
         if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.Touch) then
             updateDrag(input)
@@ -1498,6 +1583,7 @@ do
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local camera = workspace.CurrentCamera
         if humanoid and camera then
+            -- WASD conserva la distribución en cruz: W arriba, A/S/D abajo.
             -- También refleja el joystick móvil sin invertir los ejes.
             local move = humanoid.MoveDirection
             local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
@@ -1511,9 +1597,36 @@ do
             local state = humanoid:GetState()
             setKey("SPACE", humanoid.Jump or state == Enum.HumanoidStateType.Jumping)
         end
-        -- El punto sigue el movimiento real del ratón: derecha/derecha y abajo/abajo.
+
+        -- Actualiza el punto en cada frame usando la posición real del cursor.
+        -- En juegos que bloquean el cursor (cámara FPS) usa GetMouseDelta como respaldo.
+        local mouseDelta = touchMouseDelta
+        touchMouseDelta = Vector2.zero
+        if UIS.MouseBehavior == Enum.MouseBehavior.Default then
+            local currentMouseLocation = UIS:GetMouseLocation()
+            mouseDelta += currentMouseLocation - lastMouseLocation
+            lastMouseLocation = currentMouseLocation
+        else
+            lastMouseLocation = UIS:GetMouseLocation()
+            local okDelta, lockedDelta = pcall(function()
+                return UIS:GetMouseDelta()
+            end)
+            if okDelta and lockedDelta then
+                mouseDelta += lockedDelta
+            end
+        end
+
+        if mouseDelta.Magnitude > 0.01 then
+            cameraDotOffset += mouseDelta * 0.70
+            cameraDotOffset = Vector2.new(
+                math.clamp(cameraDotOffset.X, -8, 8),
+                math.clamp(cameraDotOffset.Y, -8, 8)
+            )
+        end
+
         mouseDot.Position = UDim2.new(0.5, cameraDotOffset.X, 0.5, cameraDotOffset.Y)
-        cameraDotOffset *= 0.84
+        -- Regreso suave al centro; el factor anterior (0.84) lo ocultaba casi al instante.
+        cameraDotOffset *= 0.965
     end)
 
     MATRIXHUB_KEYBOARD_SET_ENABLED = function(enabled)
@@ -1521,6 +1634,8 @@ do
         if not keyboardGui.Enabled then
             for keyName in pairs(keyButtons) do setKey(keyName, false) end
             cameraDotOffset = Vector2.zero
+            touchMouseDelta = Vector2.zero
+            lastMouseLocation = UIS:GetMouseLocation()
             mouseDot.Position = UDim2.fromScale(0.5, 0.5)
         end
     end
