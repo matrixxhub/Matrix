@@ -1205,7 +1205,7 @@ local function MATRIXHUB_GetKeybindSummary()
         "SILENT: " .. keys.Silent,
         "AUTO SHOOT: " .. keys.AutoShoot,
         "",
-        "Pulsa un botón de asignación y después la tecla deseada. ESC cancela."
+        MATRIXHUB_KEYBIND_PENDING and ("ESPERANDO TECLA PARA: " .. (MATRIXHUB_KEY_ACTION_TITLES[MATRIXHUB_KEYBIND_PENDING] or MATRIXHUB_KEYBIND_PENDING)) or "Pulsa un botón de asignación y después la tecla deseada. ESC cancela."
     }, "\n")
 end
 local function MATRIXHUB_RefreshKeybindSummary()
