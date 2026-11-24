@@ -2592,6 +2592,7 @@ local function MatrixHub_CreatePlatformButton()
 
     local inputService = game:GetService("UserInputService")
     local dragging = false
+    local moved = false
     local dragInput = nil
     local dragStart = nil
     local startPosition = nil
@@ -2602,6 +2603,7 @@ local function MatrixHub_CreatePlatformButton()
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
+            moved = false
             dragStart = input.Position
             startPosition = button.Position
         end
@@ -2617,6 +2619,7 @@ local function MatrixHub_CreatePlatformButton()
     dragChangedConnection = inputService.InputChanged:Connect(function(input)
         if dragging and dragInput and input == dragInput and dragStart and startPosition then
             local delta = input.Position - dragStart
+            if delta.Magnitude > 6 then moved = true end
             button.Position = UDim2.new(
                 startPosition.X.Scale, startPosition.X.Offset + delta.X,
                 startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
@@ -2638,6 +2641,7 @@ local function MatrixHub_CreatePlatformButton()
     end)
 
     button.Activated:Connect(function()
+        if moved then moved = false return end
         MatrixHubPlatformActive = not MatrixHubPlatformActive
         if MatrixHubPlatformActive then
             MatrixHub_StartPlatforms()
