@@ -2434,7 +2434,7 @@ MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• INICIO renovado: identidad MATRIX HUB y contador de ejecuciones guardado localmente.\n• Easter egg de Lesly: toca el panel STATUS 7 veces en menos de 2.2 segundos.\n• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
