@@ -338,7 +338,7 @@ notesText.Text = table.concat({
     "",
     "SISTEMAS E INTERFAZ",
     "• Botones flotantes HUD movibles, con visibilidad y posición guardadas.",
-    "• LIVE STATUS HUD: FPS, ping, jugadores, duración de sesión, servidor y estado del guardado.",
+    "• STATUS compacto: FPS, ping, jugadores y errores; rendimiento en vivo dentro de OVERVIEW.",
     "• Diez temas, escala de interfaz, velocidad de animación, transparencia, intensidad Matrix Green y brillo.",
     "• FPS Boost, Anti-Lag y Anti-AFK.",
     "• Sonidos de muerte configurables, ID personalizado, volumen y vista previa.",
@@ -612,7 +612,7 @@ local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
     Author = "SANOX",
-    Font = Enum.Font.PermanentMarker,
+    Font = Enum.Font.GothamBold, -- Tipografía más gruesa y legible
     Folder = "MATRIXHUB",
     Acrylic = true, -- Cristal/acrílico translúcido
     Transparent = true,
@@ -904,7 +904,7 @@ do
 
     pcall(function()
         mainWindow.BackgroundColor3 = Color3.fromRGB(8, 15, 20)
-        mainWindow.BackgroundTransparency = 0.24
+        mainWindow.BackgroundTransparency = 0.18
         mainWindow.ClipsDescendants = true
     end)
 
@@ -1196,12 +1196,12 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 
--- MATRIX KEYBOARD DISPLAY // ventana flotante, movible y anclable.
--- Solo muestra la actividad del teclado; no envía entradas al juego.
+-- MATRIX BUTTON DISPLAY // solo controles útiles para Duelos.
+-- Visor pasivo: refleja teclado, click izquierdo y toques; no inyecta entradas.
 do
     local UIS = game:GetService("UserInputService")
     local keyboardGui = Instance.new("ScreenGui")
-    keyboardGui.Name = "MATRIXHUB_KEYBOARD_DISPLAY"
+    keyboardGui.Name = "MATRIXHUB_BUTTON_DISPLAY"
     keyboardGui.ResetOnSpawn = false
     keyboardGui.IgnoreGuiInset = true
     keyboardGui.DisplayOrder = 850
@@ -1210,70 +1210,76 @@ do
     keyboardGui.Parent = PlayerGui
 
     local shell = Instance.new("Frame")
-    shell.Name = "KeyboardWindow"
+    shell.Name = "ButtonsWindow"
     shell.AnchorPoint = Vector2.new(0.5, 0.5)
     shell.Position = UDim2.new(0.5, 0, 0.70, 0)
-    shell.Size = UDim2.fromOffset(410, 185)
-    shell.BackgroundColor3 = Color3.fromRGB(7, 12, 15)
-    shell.BackgroundTransparency = 0.12
+    shell.Size = UDim2.fromOffset(350, 170)
+    shell.BackgroundColor3 = Color3.fromRGB(7, 13, 16)
+    shell.BackgroundTransparency = 0.14
     shell.BorderSizePixel = 0
     shell.Active = true
     shell.Parent = keyboardGui
+
     local keyboardScale = Instance.new("UIScale")
-    keyboardScale.Scale = 0.78
+    keyboardScale.Scale = 0.82
     keyboardScale.Parent = shell
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 13)
-    corner.Parent = shell
+    Instance.new("UICorner", shell).CornerRadius = UDim.new(0, 14)
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 220, 115)
+    stroke.Color = Color3.fromRGB(0, 220, 125)
     stroke.Transparency = 0.12
-    stroke.Thickness = 1.5
+    stroke.Thickness = 1.6
     stroke.Parent = shell
+    local shellGradient = Instance.new("UIGradient")
+    shellGradient.Rotation = 25
+    shellGradient.Color = ColorSequence.new(
+        Color3.fromRGB(8, 28, 23),
+        Color3.fromRGB(5, 9, 15)
+    )
+    shellGradient.Parent = shell
 
     local titleBar = Instance.new("Frame")
     titleBar.Name = "DragBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 27)
-    titleBar.BackgroundColor3 = Color3.fromRGB(0, 35, 23)
-    titleBar.BackgroundTransparency = 0.08
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(0, 48, 31)
+    titleBar.BackgroundTransparency = 0.12
     titleBar.BorderSizePixel = 0
     titleBar.Active = true
     titleBar.Parent = shell
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
-    titleCorner.Parent = titleBar
+    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
     local title = Instance.new("TextLabel")
     title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(10, 0)
-    title.Size = UDim2.new(1, -104, 1, 0)
-    title.Font = Enum.Font.PermanentMarker
-    title.Text = "MATRIX // KEYBOARD"
-    title.TextColor3 = Color3.fromRGB(125, 255, 180)
-    title.TextSize = 15
+    title.Position = UDim2.fromOffset(11, 0)
+    title.Size = UDim2.new(1, -110, 1, 0)
+    title.Font = Enum.Font.GothamBold
+    title.Text = "MATRIX // BOTONES"
+    title.TextColor3 = Color3.fromRGB(145, 255, 190)
+    title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = titleBar
 
     local pin = Instance.new("TextButton")
     pin.Name = "AnchorButton"
-    pin.Size = UDim2.fromOffset(30, 21)
-    pin.Position = UDim2.new(1, -66, 0, 3)
-    pin.BackgroundColor3 = Color3.fromRGB(20, 65, 45)
+    pin.Size = UDim2.fromOffset(34, 22)
+    pin.Position = UDim2.new(1, -72, 0, 4)
+    pin.BackgroundColor3 = Color3.fromRGB(20, 75, 49)
     pin.BorderSizePixel = 0
+    pin.AutoButtonColor = false
     pin.Font = Enum.Font.GothamBold
     pin.Text = "PIN"
     pin.TextSize = 10
-    pin.TextColor3 = Color3.fromRGB(210, 255, 225)
+    pin.TextColor3 = Color3.fromRGB(220, 255, 230)
     pin.Parent = titleBar
     Instance.new("UICorner", pin).CornerRadius = UDim.new(0, 6)
 
     local close = Instance.new("TextButton")
     close.Name = "HideButton"
-    close.Size = UDim2.fromOffset(22, 21)
-    close.Position = UDim2.new(1, -29, 0, 3)
+    close.Size = UDim2.fromOffset(24, 22)
+    close.Position = UDim2.new(1, -31, 0, 4)
     close.BackgroundColor3 = Color3.fromRGB(75, 30, 35)
     close.BorderSizePixel = 0
+    close.AutoButtonColor = false
     close.Font = Enum.Font.GothamBold
     close.Text = "×"
     close.TextSize = 16
@@ -1282,134 +1288,123 @@ do
     Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
 
     local keyArea = Instance.new("Frame")
-    keyArea.Name = "Keys"
+    keyArea.Name = "GameButtons"
     keyArea.BackgroundTransparency = 1
-    keyArea.Position = UDim2.fromOffset(8, 34)
-    keyArea.Size = UDim2.new(1, -16, 1, -42)
+    keyArea.Position = UDim2.fromOffset(9, 39)
+    keyArea.Size = UDim2.fromOffset(204, 122)
     keyArea.Parent = shell
 
-    -- Ratón visual: el punto interior refleja el movimiento de la cámara.
     local mousePanel = Instance.new("Frame")
-    mousePanel.Name = "MouseDisplay"
-    mousePanel.Position = UDim2.fromOffset(320, 37)
-    mousePanel.Size = UDim2.fromOffset(78, 137)
-    mousePanel.BackgroundColor3 = Color3.fromRGB(8, 13, 17)
-    mousePanel.BackgroundTransparency = 0.12
+    mousePanel.Name = "MouseAndTouch"
+    mousePanel.Position = UDim2.fromOffset(220, 39)
+    mousePanel.Size = UDim2.fromOffset(120, 122)
+    mousePanel.BackgroundColor3 = Color3.fromRGB(5, 18, 17)
+    mousePanel.BackgroundTransparency = 0.18
     mousePanel.BorderSizePixel = 0
     mousePanel.Parent = shell
-    Instance.new("UICorner", mousePanel).CornerRadius = UDim.new(0, 30)
+    Instance.new("UICorner", mousePanel).CornerRadius = UDim.new(0, 11)
     local mouseStroke = Instance.new("UIStroke")
-    mouseStroke.Color = Color3.fromRGB(0, 220, 150)
-    mouseStroke.Thickness = 1.5
+    mouseStroke.Color = Color3.fromRGB(0, 205, 145)
+    mouseStroke.Thickness = 1.3
+    mouseStroke.Transparency = 0.18
     mouseStroke.Parent = mousePanel
+
+    local mouseCaption = Instance.new("TextLabel")
+    mouseCaption.BackgroundTransparency = 1
+    mouseCaption.Position = UDim2.fromOffset(5, 5)
+    mouseCaption.Size = UDim2.new(1, -10, 0, 18)
+    mouseCaption.Font = Enum.Font.GothamBold
+    mouseCaption.Text = "MOUSE"
+    mouseCaption.TextSize = 12
+    mouseCaption.TextColor3 = Color3.fromRGB(145, 255, 205)
+    mouseCaption.Parent = mousePanel
+
+    -- Bola del ratón: centro estable y movimiento en los ejes reales X/Y.
     local mouseOuter = Instance.new("Frame")
-    mouseOuter.Name = "CameraRing"
+    mouseOuter.Name = "MouseAxisRing"
     mouseOuter.AnchorPoint = Vector2.new(0.5, 0.5)
-    mouseOuter.Position = UDim2.fromScale(0.5, 0.48)
-    mouseOuter.Size = UDim2.fromOffset(48, 48)
+    mouseOuter.Position = UDim2.new(0.5, 0, 0, 48)
+    mouseOuter.Size = UDim2.fromOffset(40, 40)
     mouseOuter.BackgroundTransparency = 1
     mouseOuter.Parent = mousePanel
     Instance.new("UICorner", mouseOuter).CornerRadius = UDim.new(1, 0)
     local ringStroke = Instance.new("UIStroke")
-    ringStroke.Color = Color3.fromRGB(0, 235, 165)
-    ringStroke.Thickness = 2
+    ringStroke.Color = Color3.fromRGB(0, 230, 160)
+    ringStroke.Thickness = 1.7
     ringStroke.Parent = mouseOuter
     local mouseDot = Instance.new("Frame")
-    mouseDot.Name = "CameraDot"
+    mouseDot.Name = "MouseAxisDot"
     mouseDot.AnchorPoint = Vector2.new(0.5, 0.5)
     mouseDot.Position = UDim2.fromScale(0.5, 0.5)
-    mouseDot.Size = UDim2.fromOffset(10, 10)
+    mouseDot.Size = UDim2.fromOffset(9, 9)
     mouseDot.BackgroundColor3 = Color3.fromRGB(230, 255, 245)
     mouseDot.BorderSizePixel = 0
     mouseDot.Parent = mouseOuter
     Instance.new("UICorner", mouseDot).CornerRadius = UDim.new(1, 0)
-    local mouseCaption = Instance.new("TextLabel")
-    mouseCaption.BackgroundTransparency = 1
-    mouseCaption.Position = UDim2.new(0, 0, 1, -23)
-    mouseCaption.Size = UDim2.new(1, 0, 0, 16)
-    mouseCaption.Font = Enum.Font.PermanentMarker
-    mouseCaption.Text = "MOUSE"
-    mouseCaption.TextSize = 11
-    mouseCaption.TextColor3 = Color3.fromRGB(145, 255, 205)
-    mouseCaption.Parent = mousePanel
 
+    local keyButtons = {}
+    local keyboardAlpha = 0.14
     local keyColors = {
         Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 220, 190),
-        Color3.fromRGB(0, 170, 255), Color3.fromRGB(105, 90, 255),
-        Color3.fromRGB(210, 55, 255)
+        Color3.fromRGB(0, 170, 255), Color3.fromRGB(105, 90, 255)
     }
-    local keyButtons = {}
-    local keyboardAlpha = 0.18
-    local keyRows = {
-        {{"ONE","1"},{"TWO","2"},{"THREE","3"},{"FOUR","4"},{"FIVE","5"}},
-        {{"TAB","TAB"},{"Q","Q"},{"W","W"},{"E","E"},{"R","R"},{"T","T"}},
-        {{"CAPS","CAPS"},{"A","A"},{"S","S"},{"D","D"},{"F","F"},{"G","G"}},
-        {{"SHIFT","SHIFT"},{"Z","Z"},{"X","X"},{"C","C"},{"V","V"}},
-        {{"CTRL","CTRL"},{"ALT","ALT"},{"SPACE","SPACE"}}
-    }
-    local rowWidths = {5, 6, 6, 5, 3}
-    local rowY = {0, 25, 50, 75, 100}
-    for rowIndex, row in ipairs(keyRows) do
-        local count = rowWidths[rowIndex]
-        local gap = 4
-        local totalWidth = 314
-        local keyWidth = rowIndex == 5 and 68 or (rowIndex == 1 and 45 or (totalWidth - (count - 1) * gap) / count)
-        local x = rowIndex == 1 and 36 or 0
-        if rowIndex == 4 then x = 18 end
-        if rowIndex == 5 then x = 0 end
-        for colIndex, entry in ipairs(row) do
-            local id, labelText = entry[1], entry[2]
-            local width = keyWidth
-            if rowIndex == 2 or rowIndex == 3 then width = 45 end
-            if rowIndex == 4 then width = 48 end
-            if rowIndex == 5 and id == "SPACE" then width = 160 end
-            local button = Instance.new("TextLabel")
-            button.Name = "Key_" .. id
-            button.Position = UDim2.fromOffset(x, rowY[rowIndex])
-            button.Size = UDim2.fromOffset(width, 21)
-            button.BackgroundColor3 = Color3.fromRGB(8, 17, 20)
-            button.BackgroundTransparency = 0.08
-            button.BorderSizePixel = 0
-            button.Font = Enum.Font.PermanentMarker
-            button.Text = labelText
-            button.TextColor3 = Color3.fromRGB(205, 235, 220)
-            button.TextSize = id == "SPACE" and 10 or 12
-            button.Parent = keyArea
-            local c = Instance.new("UICorner")
-            c.CornerRadius = UDim.new(0, 6)
-            c.Parent = button
-            local s = Instance.new("UIStroke")
-            s.Color = keyColors[math.clamp(colIndex, 1, #keyColors)]
-            s.Thickness = 1.2
-            s.Transparency = 0.12
-            s.Parent = button
-            keyButtons[id] = {Frame = button, Stroke = s, BaseColor = s.Color}
-            x += width + gap
-        end
+
+    local function makeDisplayButton(id, labelText, parent, position, size, colorIndex)
+        local button = Instance.new("TextButton")
+        button.Name = "Button_" .. id
+        button.Position = position
+        button.Size = size
+        button.BackgroundColor3 = Color3.fromRGB(8, 20, 22)
+        button.BackgroundTransparency = math.clamp(keyboardAlpha + 0.08, 0, 0.92)
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+        button.Active = false
+        button.Font = Enum.Font.GothamBold
+        button.Text = labelText
+        button.TextColor3 = Color3.fromRGB(215, 245, 230)
+        button.TextSize = 13
+        button.Parent = parent
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
+        local buttonStroke = Instance.new("UIStroke")
+        buttonStroke.Color = keyColors[colorIndex or 1]
+        buttonStroke.Thickness = 1.25
+        buttonStroke.Transparency = 0.14
+        buttonStroke.Parent = button
+        keyButtons[id] = {Frame = button, Stroke = buttonStroke, BaseColor = buttonStroke.Color}
     end
 
+    -- Solo WASD, salto y slots 1/2, habituales para movimiento y cambio de herramienta.
+    makeDisplayButton("W", "W", keyArea, UDim2.fromOffset(84, 0), UDim2.fromOffset(36, 26), 1)
+    makeDisplayButton("A", "A", keyArea, UDim2.fromOffset(43, 30), UDim2.fromOffset(36, 26), 2)
+    makeDisplayButton("S", "S", keyArea, UDim2.fromOffset(84, 30), UDim2.fromOffset(36, 26), 3)
+    makeDisplayButton("D", "D", keyArea, UDim2.fromOffset(125, 30), UDim2.fromOffset(36, 26), 4)
+    makeDisplayButton("1", "1", keyArea, UDim2.fromOffset(64, 60), UDim2.fromOffset(36, 26), 1)
+    makeDisplayButton("2", "2", keyArea, UDim2.fromOffset(105, 60), UDim2.fromOffset(36, 26), 2)
+    makeDisplayButton("SPACE", "SALTAR", keyArea, UDim2.fromOffset(54, 90), UDim2.fromOffset(100, 26), 3)
+    makeDisplayButton("CLICK", "CLICK", mousePanel, UDim2.fromOffset(5, 86), UDim2.fromOffset(52, 24), 1)
+    makeDisplayButton("TOUCH", "TOQUE", mousePanel, UDim2.fromOffset(63, 86), UDim2.fromOffset(52, 24), 2)
+    keyButtons.CLICK.Frame.TextSize = 10
+    keyButtons.TOUCH.Frame.TextSize = 10
+
     local keyMap = {
-        [Enum.KeyCode.One]="1", [Enum.KeyCode.Two]="2", [Enum.KeyCode.Three]="3",
-        [Enum.KeyCode.Four]="4", [Enum.KeyCode.Five]="5",
-        [Enum.KeyCode.Tab]="TAB", [Enum.KeyCode.Q]="Q", [Enum.KeyCode.W]="W",
-        [Enum.KeyCode.E]="E", [Enum.KeyCode.R]="R", [Enum.KeyCode.T]="T",
-        [Enum.KeyCode.CapsLock]="CAPS", [Enum.KeyCode.A]="A", [Enum.KeyCode.S]="S",
-        [Enum.KeyCode.D]="D", [Enum.KeyCode.F]="F", [Enum.KeyCode.G]="G",
-        [Enum.KeyCode.LeftShift]="SHIFT", [Enum.KeyCode.RightShift]="SHIFT",
-        [Enum.KeyCode.Z]="Z", [Enum.KeyCode.X]="X", [Enum.KeyCode.C]="C",
-        [Enum.KeyCode.V]="V", [Enum.KeyCode.LeftControl]="CTRL",
-        [Enum.KeyCode.RightControl]="CTRL", [Enum.KeyCode.LeftAlt]="ALT",
-        [Enum.KeyCode.RightAlt]="ALT", [Enum.KeyCode.Space]="SPACE"
+        [Enum.KeyCode.W] = "W",
+        [Enum.KeyCode.A] = "A",
+        [Enum.KeyCode.S] = "S",
+        [Enum.KeyCode.D] = "D",
+        [Enum.KeyCode.Space] = "SPACE",
+        [Enum.KeyCode.One] = "1",
+        [Enum.KeyCode.Two] = "2"
     }
+
     local function setKey(keyName, pressed)
         local item = keyButtons[keyName]
         if not item then return end
-        item.Frame.BackgroundColor3 = pressed and item.BaseColor or Color3.fromRGB(8, 17, 20)
-        item.Pressed = pressed
-        item.Frame.BackgroundTransparency = pressed and 0 or math.clamp(keyboardAlpha + 0.08, 0, 0.95)
-        item.Stroke.Thickness = pressed and 2.5 or 1.2
-        item.Stroke.Transparency = pressed and 0 or 0.12
-        item.Frame.TextColor3 = pressed and Color3.new(1,1,1) or Color3.fromRGB(205,235,220)
+        item.Pressed = pressed == true
+        item.Frame.BackgroundColor3 = item.Pressed and item.BaseColor or Color3.fromRGB(8, 20, 22)
+        item.Frame.BackgroundTransparency = item.Pressed and 0.02 or math.clamp(keyboardAlpha + 0.08, 0, 0.92)
+        item.Stroke.Thickness = item.Pressed and 2.4 or 1.25
+        item.Stroke.Transparency = item.Pressed and 0.02 or 0.14
+        item.Frame.TextColor3 = item.Pressed and Color3.new(1, 1, 1) or Color3.fromRGB(215, 245, 230)
     end
 
     local anchored = false
@@ -1428,6 +1423,7 @@ do
         centerY = math.clamp(centerY, halfH + 8, math.max(halfH + 8, viewport.Y - halfH - 8))
         shell.Position = UDim2.fromOffset(centerX, centerY)
     end
+
     titleBar.InputBegan:Connect(function(input)
         if anchored then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -1444,7 +1440,18 @@ do
         if input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
     end)
+
+    local cameraDotOffset = Vector2.zero
     UIS.InputChanged:Connect(function(input)
+        if not keyboardGui.Enabled then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            -- Delta usa el movimiento real del ratón: X positivo = derecha, Y positivo = abajo.
+            cameraDotOffset += Vector2.new(input.Delta.X, input.Delta.Y) * 0.55
+            cameraDotOffset = Vector2.new(
+                math.clamp(cameraDotOffset.X, -16, 16),
+                math.clamp(cameraDotOffset.Y, -16, 16)
+            )
+        end
         if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.Touch) then
             updateDrag(input)
         end
@@ -1453,7 +1460,7 @@ do
     pin.Activated:Connect(function()
         anchored = not anchored
         pin.Text = anchored and "LOCK" or "PIN"
-        pin.BackgroundColor3 = anchored and Color3.fromRGB(95, 65, 20) or Color3.fromRGB(20, 65, 45)
+        pin.BackgroundColor3 = anchored and Color3.fromRGB(95, 65, 20) or Color3.fromRGB(20, 75, 49)
     end)
     close.Activated:Connect(function()
         if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(false) else keyboardGui.Enabled = false end
@@ -1463,15 +1470,27 @@ do
         if not keyboardGui.Enabled then return end
         local keyName = keyMap[input.KeyCode]
         if keyName then setKey(keyName, true) end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setKey("CLICK", true)
+        elseif input.UserInputType == Enum.UserInputType.Touch then
+            -- El toque se refleja también como click en el visor de controles.
+            setKey("CLICK", true)
+            setKey("TOUCH", true)
+        end
     end)
     UIS.InputEnded:Connect(function(input)
+        if not keyboardGui.Enabled then return end
         local keyName = keyMap[input.KeyCode]
         if keyName then setKey(keyName, false) end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setKey("CLICK", false)
+        elseif input.UserInputType == Enum.UserInputType.Touch then
+            setKey("CLICK", false)
+            setKey("TOUCH", false)
+        end
     end)
 
     local RunService = game:GetService("RunService")
-    local lastCameraCFrame = workspace.CurrentCamera and workspace.CurrentCamera.CFrame
-    local cameraDotOffset = Vector2.zero
     local movementConnection
     movementConnection = RunService.RenderStepped:Connect(function()
         if not keyboardGui.Enabled then return end
@@ -1479,71 +1498,72 @@ do
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local camera = workspace.CurrentCamera
         if humanoid and camera then
+            -- También refleja el joystick móvil sin invertir los ejes.
             local move = humanoid.MoveDirection
-            local forward = camera.CFrame.LookVector
-            local right = camera.CFrame.RightVector
-            setKey("W", move:Dot(Vector3.new(forward.X, 0, forward.Z)) > 0.18)
-            setKey("S", move:Dot(Vector3.new(-forward.X, 0, -forward.Z)) > 0.18)
-            setKey("D", move:Dot(Vector3.new(right.X, 0, right.Z)) > 0.18)
-            setKey("A", move:Dot(Vector3.new(-right.X, 0, -right.Z)) > 0.18)
+            local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+            local right = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+            if forward.Magnitude > 0.001 then forward = forward.Unit end
+            if right.Magnitude > 0.001 then right = right.Unit end
+            setKey("W", move:Dot(forward) > 0.18)
+            setKey("S", move:Dot(-forward) > 0.18)
+            setKey("D", move:Dot(right) > 0.18)
+            setKey("A", move:Dot(-right) > 0.18)
             local state = humanoid:GetState()
-            local jumping = humanoid.Jump or state == Enum.HumanoidStateType.Jumping
-            setKey("SPACE", jumping)
+            setKey("SPACE", humanoid.Jump or state == Enum.HumanoidStateType.Jumping)
         end
-        if camera and lastCameraCFrame then
-            local delta = camera.CFrame:ToObjectSpace(lastCameraCFrame)
-            local yaw, pitch = delta:ToOrientation()
-            cameraDotOffset += Vector2.new(-yaw * 24, pitch * 24)
-            cameraDotOffset = Vector2.new(math.clamp(cameraDotOffset.X, -15, 15), math.clamp(cameraDotOffset.Y, -15, 15))
-            mouseDot.Position = UDim2.new(0.5, cameraDotOffset.X, 0.5, cameraDotOffset.Y)
-            cameraDotOffset *= 0.82
-        end
-        if camera then lastCameraCFrame = camera.CFrame end
+        -- El punto sigue el movimiento real del ratón: derecha/derecha y abajo/abajo.
+        mouseDot.Position = UDim2.new(0.5, cameraDotOffset.X, 0.5, cameraDotOffset.Y)
+        cameraDotOffset *= 0.84
     end)
 
     MATRIXHUB_KEYBOARD_SET_ENABLED = function(enabled)
         keyboardGui.Enabled = enabled == true
         if not keyboardGui.Enabled then
             for keyName in pairs(keyButtons) do setKey(keyName, false) end
+            cameraDotOffset = Vector2.zero
             mouseDot.Position = UDim2.fromScale(0.5, 0.5)
         end
     end
-    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY = function(alpha)
-        alpha = math.clamp(tonumber(alpha) or 0.18, 0, 0.85)
+
+    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY = function(level)
+        level = math.clamp(math.floor((tonumber(level) or 2) + 0.5), 1, 5)
+        -- Cinco niveles discretos: 1 más opaco, 5 más transparente.
+        local alpha = 0.08 + ((level - 1) * 0.14)
         keyboardAlpha = alpha
         shell.BackgroundTransparency = alpha
-        titleBar.BackgroundTransparency = math.clamp(alpha + 0.08, 0, 0.95)
-        mousePanel.BackgroundTransparency = math.clamp(alpha + 0.08, 0, 0.95)
-        stroke.Transparency = math.clamp(alpha, 0, 0.9)
-        mouseStroke.Transparency = math.clamp(alpha, 0, 0.9)
+        titleBar.BackgroundTransparency = math.clamp(alpha + 0.04, 0, 0.92)
+        mousePanel.BackgroundTransparency = math.clamp(alpha + 0.06, 0, 0.92)
+        stroke.Transparency = math.clamp(0.10 + (level - 1) * 0.07, 0.10, 0.38)
+        mouseStroke.Transparency = math.clamp(0.14 + (level - 1) * 0.07, 0.14, 0.42)
         for _, item in pairs(keyButtons) do
-            item.Frame.BackgroundTransparency = item.Pressed and 0 or math.clamp(alpha + 0.08, 0, 0.95)
-            item.Stroke.Transparency = math.clamp(alpha, 0, 0.9)
+            item.Frame.BackgroundTransparency = item.Pressed and 0.02 or math.clamp(alpha + 0.08, 0, 0.94)
+            item.Stroke.Transparency = math.clamp(0.12 + (level - 1) * 0.07, 0.12, 0.40)
         end
     end
-    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(0.18)
+    MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(2)
     MATRIXHUB_KEYBOARD_SET_ENABLED(false)
 end
 
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
 
-Otros:Section({ Title = "KEYBOARD DISPLAY", Icon = "keyboard", Opened = true })
+Otros:Section({ Title = "VISOR DE BOTONES", Icon = "gamepad-2", Opened = true })
 Otros:Toggle({
-    Title = "ACTIVAR / DESACTIVAR TECLADO",
-    Icon = "keyboard",
+    Title = "MOSTRAR BOTONES DE DUELOS",
+    Icon = "gamepad-2",
     Value = false,
     Callback = function(enabled)
         if MATRIXHUB_KEYBOARD_SET_ENABLED then MATRIXHUB_KEYBOARD_SET_ENABLED(enabled) end
     end
 })
 Otros:Slider({
-    Title = "TRANSPARENCIA DEL TECLADO",
+    Title = "TRANSPARENCIA (1 - 5)",
     Icon = "layers",
-    Value = { Min = 0, Max = 0.85, Default = 0.18 },
+    Value = { Min = 1, Max = 5, Default = 2 },
+    Step = 1,
     Callback = function(value)
-        local alpha = math.clamp(value, 0, 0.85)
-        if MATRIXHUB_KEYBOARD_SET_TRANSPARENCY then MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(alpha) end
+        local level = math.clamp(math.floor((tonumber(value) or 2) + 0.5), 1, 5)
+        if MATRIXHUB_KEYBOARD_SET_TRANSPARENCY then MATRIXHUB_KEYBOARD_SET_TRANSPARENCY(level) end
     end
 })
 -- AUTOMATION // AUTO FARM HALLOWEEN
@@ -2187,14 +2207,13 @@ end
 
 -- El selector de temas se retiró: el menú usa Matrix predeterminado.
 
--- MATRIX HUB // LIVE DASHBOARD + MATRIX SYSTEM
+-- MATRIX HUB // PERFORMANCE MONITOR + STATUS
 -- Actualización agrupada cada medio segundo para mantener bajo el consumo.
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local StatsService = game:GetService("Stats")
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-    local sessionStartedAt = os.clock()
 
     local oldHud = playerGui:FindFirstChild("MATRIXHUB_STATUS_HUD")
     if oldHud then oldHud:Destroy() end
@@ -2211,9 +2230,9 @@ do
     hud.Name = "StatusPanel"
     hud.AnchorPoint = Vector2.new(1, 0)
     hud.Position = UDim2.new(1, -14, 0, 14)
-    hud.Size = UDim2.fromOffset(252, 142)
+    hud.Size = UDim2.fromOffset(218, 96)
     hud.BackgroundColor3 = Color3.fromRGB(3, 15, 10)
-    hud.BackgroundTransparency = MATRIXHUB_CONFIG.PanelTransparency
+    hud.BackgroundTransparency = math.clamp(MATRIXHUB_CONFIG.PanelTransparency, 0.12, 0.42)
     hud.BorderSizePixel = 0
     hud.Parent = hudGui
     Instance.new("UICorner", hud).CornerRadius = UDim.new(0, 12)
@@ -2233,26 +2252,26 @@ do
     header.Name = "Header"
     header.BackgroundTransparency = 1
     header.Position = UDim2.fromOffset(12, 8)
-    header.Size = UDim2.new(1, -24, 0, 21)
+    header.Size = UDim2.new(1, -24, 0, 22)
     header.Font = Enum.Font.GothamBold
-    header.TextSize = 13
+    header.TextSize = 15
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.TextColor3 = Color3.fromRGB(110, 255, 170)
-    header.Text = "MATRIX // SYSTEM ONLINE"
+    header.Text = "STATUS"
     header.Parent = hud
 
     local info = Instance.new("TextLabel")
     info.Name = "LiveInfo"
     info.BackgroundTransparency = 1
-    info.Position = UDim2.fromOffset(12, 33)
+    info.Position = UDim2.fromOffset(12, 34)
     info.Size = UDim2.new(1, -24, 1, -42)
-    info.Font = Enum.Font.Code
-    info.TextSize = 11
+    info.Font = Enum.Font.GothamBold
+    info.TextSize = 13
     info.TextColor3 = Color3.fromRGB(205, 230, 215)
     info.TextXAlignment = Enum.TextXAlignment.Left
     info.TextYAlignment = Enum.TextYAlignment.Top
     info.TextWrapped = true
-    info.Text = "FPS: --   PING: --\nPLAYERS: --\nSESSION: --\nSERVER: --\nPERFORMANCE: STARTING\nSAVE: " .. MATRIXHUB_CONFIG_STATUS
+    info.Text = "FPS: --   PING: --\nPLAYERS: --/--\nERRORS: --"
     info.Parent = hud
 
     local frames = 0
@@ -2268,13 +2287,6 @@ do
             return math.floor(value + 0.5)
         end
         return nil
-    end
-    local function getRootPosition()
-        local character = Players.LocalPlayer and Players.LocalPlayer.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if not root then return "N/D" end
-        local pos = root.Position
-        return string.format("%.0f, %.0f, %.0f", pos.X, pos.Y, pos.Z)
     end
     local function makeFpsGraph(value)
         local levels = { "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" }
@@ -2297,14 +2309,6 @@ do
         end
         return nil
     end
-    local function formatDuration(seconds)
-        seconds = math.max(0, math.floor(seconds))
-        local hours = math.floor(seconds / 3600)
-        local minutes = math.floor((seconds % 3600) / 60)
-        local secs = seconds % 60
-        return string.format("%02d:%02d:%02d", hours, minutes, secs)
-    end
-
     local hudAccumulator = 0
     hudConnection = RunService.RenderStepped:Connect(function(dt)
         if not hudGui.Parent then
@@ -2325,29 +2329,25 @@ do
         local ping = getPingMs()
         local playersNow = #Players:GetPlayers()
         local maxPlayers = Players.MaxPlayers
-        local serverId = tostring(game.JobId or "local")
-        if #serverId > 8 then serverId = serverId:sub(1, 8) end
         local pingText = ping and (tostring(ping) .. " ms") or "N/D"
         local memoryMb = getMemoryMb()
         local memoryText = memoryMb and (tostring(memoryMb) .. " MB") or "N/D"
-        local positionText = getRootPosition()
-        local sessionText = formatDuration(os.clock() - sessionStartedAt)
-        local performance = fps < 25 and "LOW FPS" or (ping and ping > 180 and "HIGH PING" or "STABLE")
+        local performanceAlert = fps < 25 or (ping ~= nil and ping > 180)
         local fpsGraph = makeFpsGraph(fps)
         info.Text = string.format(
-            "FPS: %d   PING: %s\nPLAYERS: %d/%d\nSESSION: %s\nSERVER: %s\nPERFORMANCE: %s\nSAVE: %s\nERRORS: %d",
-            fps, pingText, playersNow, maxPlayers, sessionText, serverId, performance, MATRIXHUB_CONFIG_STATUS, #MATRIXHUB_ERROR_LOG
+            "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
+            fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
         )
         if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
             local homeText = string.format(
-                "FPS: %d      PING: %s\nMEMORIA: %s      JUGADORES: %d/%d\nPOSICIÓN: %s\nSESIÓN: %s\nRENDIMIENTO: %s\nFPS GRAPH: %s",
-                fps, pingText, memoryText, playersNow, maxPlayers, positionText, sessionText, performance, fpsGraph
+                "▣ FPS  %d      ◈ PING  %s\n▤ MEMORIA  %s      ♟ JUGADORES  %d/%d\n\nFPS HISTORY  %s",
+                fps, pingText, memoryText, playersNow, maxPlayers, fpsGraph
             )
             pcall(function()
                 MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH:SetDesc(homeText)
             end)
         end
-        if performance ~= "STABLE" then
+        if performanceAlert then
             hudStroke.Color = Color3.fromRGB(255, 175, 65)
             header.TextColor3 = Color3.fromRGB(255, 205, 125)
         else
@@ -2360,7 +2360,7 @@ do
 
     -- Se retiraron los controles de personalización que no aplicaban correctamente.
     Settings:Toggle({
-        Title = "LIVE STATUS HUD",
+        Title = "STATUS",
         Icon = "activity",
         Value = MATRIXHUB_CONFIG.StatusHud == true,
         Callback = function(enabled)
@@ -2666,23 +2666,16 @@ AutoKills:Toggle({
     end
 })
 
-local function getGameName()
-    local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
-    if ok and info and info.Name then return info.Name end
-    return "matrix-hub"
-end
-local gameThumb = "rbxthumb://type=GameIcon&id="..game.GameId.."&w=512&h=512"
-
 -- INICIO: aviso, panel de rendimiento en vivo e información general.
 Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
 Home:Paragraph({
     Title = "AVISO DE BANEOS",
     Desc = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
 })
-Home:Section({ Title = "MATRIX PERFORMANCE", Icon = "activity", Opened = true })
+Home:Section({ Title = "MATRIX // PERFORMANCE", Icon = "activity", Opened = true })
 MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
-    Title = "RENDIMIENTO EN TIEMPO REAL",
-    Desc = "FPS: --      PING: --\nMEMORIA: --      JUGADORES: --\nPOSICIÓN: --\nSESIÓN: --\nRENDIMIENTO: INICIANDO\nFPS GRAPH: --"
+    Title = "◈ RENDIMIENTO EN TIEMPO REAL",
+    Desc = "▣ FPS  --      ◈ PING  --\n▤ MEMORIA  --      ♟ JUGADORES  --/--\n\nFPS HISTORY  --"
 })
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
@@ -2693,10 +2686,6 @@ Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
     Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla y monitor principal integrado en OVERVIEW."
 })
-Home:Section({ Title = "SESSION DATA", Icon = "server", Opened = true })
-Home:Paragraph({ Title = "ACTIVE EXPERIENCE", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
-Home:Section({ Title = "MATRIX SYSTEM", Icon = "cpu", Opened = true })
-Home:Paragraph({ Title = "ESTADO DEL SISTEMA", Desc = "Guardado automático con respaldo de ruta, monitor de rendimiento y preferencias visuales persistentes." })
 -- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
 setSilentAimQuick = function(enabled)
     silentAimManualEnabled = enabled
