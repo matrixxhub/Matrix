@@ -2484,6 +2484,7 @@ Movimiento:Toggle({
 })
 
 
+do -- Ámbito aislado para no agotar los registros locales de launchMatrixHub
 -- MATRIX HUB // FIXED PLATFORM - diseño Matrix Green
 local MatrixHubPlatformActive = false
 local MatrixHubPlatformLoop = false
@@ -2666,7 +2667,7 @@ Movimiento:Toggle({
         end
     end
 })
-
+end -- FIN DEL ÁMBITO FIXED PLATFORM
 
 -- MATRIX HUB // BOTONES FLOTANTES
 -- Botones circulares estilo HUD, conectados a las funciones originales.
