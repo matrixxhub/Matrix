@@ -1186,6 +1186,7 @@ end)
 
 -- PESTANAS PRINCIPALES: BOTONES queda en la zona media, no al final.
 local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
+local MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = nil
 local Cheats = MATRIXHUB:Tab({ Title = "CHEATS", Icon = "crosshair" })
 local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Botones = MATRIXHUB:Tab({ Title = "BOTONES", Icon = "app-window" })
@@ -2257,7 +2258,31 @@ do
     local frames = 0
     local elapsed = 0
     local fps = 0
+    local fpsHistory = {}
     local hudConnection
+    local function getMemoryMb()
+        local ok, value = pcall(function()
+            return StatsService:GetTotalMemoryUsageMb()
+        end)
+        if ok and type(value) == "number" then
+            return math.floor(value + 0.5)
+        end
+        return nil
+    end
+    local function getRootPosition()
+        local character = Players.LocalPlayer and Players.LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root then return "N/D" end
+        local pos = root.Position
+        return string.format("%.0f, %.0f, %.0f", pos.X, pos.Y, pos.Z)
+    end
+    local function makeFpsGraph(value)
+        local levels = { "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" }
+        local level = math.clamp(math.floor(math.clamp(value, 0, 120) / 120 * 8), 1, 8)
+        fpsHistory[#fpsHistory + 1] = levels[level]
+        while #fpsHistory > 14 do table.remove(fpsHistory, 1) end
+        return table.concat(fpsHistory)
+    end
     local function getPingMs()
         local ok, value = pcall(function()
             return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
@@ -2286,12 +2311,7 @@ do
             if hudConnection then hudConnection:Disconnect() end
             return
         end
-        if not hudGui.Enabled then
-            frames = 0
-            elapsed = 0
-            hudAccumulator = 0
-            return
-        end
+        -- El monitor también alimenta OVERVIEW; no debe depender de que el HUD flotante esté visible.
         frames += 1
         elapsed += dt
         hudAccumulator += dt
@@ -2308,11 +2328,25 @@ do
         local serverId = tostring(game.JobId or "local")
         if #serverId > 8 then serverId = serverId:sub(1, 8) end
         local pingText = ping and (tostring(ping) .. " ms") or "N/D"
+        local memoryMb = getMemoryMb()
+        local memoryText = memoryMb and (tostring(memoryMb) .. " MB") or "N/D"
+        local positionText = getRootPosition()
+        local sessionText = formatDuration(os.clock() - sessionStartedAt)
         local performance = fps < 25 and "LOW FPS" or (ping and ping > 180 and "HIGH PING" or "STABLE")
+        local fpsGraph = makeFpsGraph(fps)
         info.Text = string.format(
             "FPS: %d   PING: %s\nPLAYERS: %d/%d\nSESSION: %s\nSERVER: %s\nPERFORMANCE: %s\nSAVE: %s\nERRORS: %d",
-            fps, pingText, playersNow, maxPlayers, formatDuration(os.clock() - sessionStartedAt), serverId, performance, MATRIXHUB_CONFIG_STATUS, #MATRIXHUB_ERROR_LOG
+            fps, pingText, playersNow, maxPlayers, sessionText, serverId, performance, MATRIXHUB_CONFIG_STATUS, #MATRIXHUB_ERROR_LOG
         )
+        if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
+            local homeText = string.format(
+                "FPS: %d      PING: %s\nMEMORIA: %s      JUGADORES: %d/%d\nPOSICIÓN: %s\nSESIÓN: %s\nRENDIMIENTO: %s\nFPS GRAPH: %s",
+                fps, pingText, memoryText, playersNow, maxPlayers, positionText, sessionText, performance, fpsGraph
+            )
+            pcall(function()
+                MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH:SetDesc(homeText)
+            end)
+        end
         if performance ~= "STABLE" then
             hudStroke.Color = Color3.fromRGB(255, 175, 65)
             header.TextColor3 = Color3.fromRGB(255, 205, 125)
@@ -2632,41 +2666,35 @@ AutoKills:Toggle({
     end
 })
 
-local function getExecutor()
-    if identifyexecutor then local ok, exec = pcall(identifyexecutor) if ok and exec then return exec end end
-    return "Delta"
-end
 local function getGameName()
     local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
     if ok and info and info.Name then return info.Name end
     return "matrix-hub"
 end
-local avatarThumb = "rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=420&h=420"
 local gameThumb = "rbxthumb://type=GameIcon&id="..game.GameId.."&w=512&h=512"
 
--- PRIORIDAD DEL INICIO: el aviso de uso se muestra antes del perfil y del estado.
+-- INICIO: aviso, panel de rendimiento en vivo e información general.
 Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
 Home:Paragraph({
     Title = "AVISO DE BANEOS",
     Desc = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
 })
+Home:Section({ Title = "MATRIX PERFORMANCE", Icon = "activity", Opened = true })
+MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
+    Title = "RENDIMIENTO EN TIEMPO REAL",
+    Desc = "FPS: --      PING: --\nMEMORIA: --      JUGADORES: --\nPOSICIÓN: --\nSESIÓN: --\nRENDIMIENTO: INICIANDO\nFPS GRAPH: --"
+})
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Aviso de uso y resumen del proyecto al principio del OVERVIEW.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
-    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD: FPS, ping, jugadores, duración de sesión y estado del servidor."
+    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla y monitor principal integrado en OVERVIEW."
 })
-Home:Section({ Title = "USER PROFILE", Icon = "user", Opened = true })
-Home:Paragraph({ Title = "Usuario: "..LP.DisplayName, Desc = "Usuario: @"..LP.Name.."\nID: "..LP.UserId.."\nEdad de la cuenta: "..LP.AccountAge.." días", Image = avatarThumb, ImageSize = 60 })
-Home:Section({ Title = "ENVIRONMENT", Icon = "monitor", Opened = true })
-Home:Paragraph({ Title = "EXECUTOR", Desc = "Ejecutor actual: "..getExecutor() })
 Home:Section({ Title = "SESSION DATA", Icon = "server", Opened = true })
 Home:Paragraph({ Title = "ACTIVE EXPERIENCE", Desc = getGameName().."\nPlace ID: "..game.PlaceId, Image = gameThumb, ImageSize = 60 })
-Home:Section({ Title = "MATRIX LIVE DASHBOARD", Icon = "activity", Opened = true })
-Home:Paragraph({ Title = "MONITOR EN TIEMPO REAL", Desc = "FPS, ping, jugadores, duración de sesión y estado del servidor aparecen en LIVE STATUS HUD." })
 Home:Section({ Title = "MATRIX SYSTEM", Icon = "cpu", Opened = true })
 Home:Paragraph({ Title = "ESTADO DEL SISTEMA", Desc = "Guardado automático con respaldo de ruta, monitor de rendimiento y preferencias visuales persistentes." })
 -- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
