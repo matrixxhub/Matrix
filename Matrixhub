@@ -205,7 +205,7 @@ appIcon.ZIndex = 8
 appIcon.Parent = titleBar
 
 
-local windowTitle = Instance.new("TextLabel")
+local windowTitle = Instance.new("TextButton")
 windowTitle.Name = "WindowTitle"
 windowTitle.BackgroundTransparency = 1
 windowTitle.Position = UDim2.fromOffset(28, 2)
@@ -215,6 +215,8 @@ windowTitle.Text = "Matrix Hub - Centro de información"
 windowTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 windowTitle.TextSize = 13
 windowTitle.TextXAlignment = Enum.TextXAlignment.Left
+windowTitle.AutoButtonColor = false
+windowTitle.Active = true
 windowTitle.ZIndex = 8
 windowTitle.Parent = titleBar
 
@@ -456,14 +458,12 @@ status.Parent = panel
 local startupTapCount = 0
 local lastStartupTap = 0
 local startupEggGeneration = 0
-appIcon.InputBegan:Connect(function(input)
-    local inputType = input.UserInputType
-    if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+windowTitle.Activated:Connect(function()
     local now = os.clock()
     if now - lastStartupTap > 2.2 then startupTapCount = 0 end
     lastStartupTap = now
     startupTapCount += 1
-    if startupTapCount >= 7 then
+    if startupTapCount >= 3 then
         startupTapCount = 0
         startupEggGeneration += 1
         local generation = startupEggGeneration
