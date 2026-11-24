@@ -2590,6 +2590,53 @@ local function MatrixHub_CreatePlatformButton()
     stroke.Transparency = 0.12
     stroke.Parent = button
 
+    local inputService = game:GetService("UserInputService")
+    local dragging = false
+    local dragInput = nil
+    local dragStart = nil
+    local startPosition = nil
+    local dragChangedConnection
+    local dragEndedConnection
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPosition = button.Position
+        end
+    end)
+
+    button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    dragChangedConnection = inputService.InputChanged:Connect(function(input)
+        if dragging and dragInput and input == dragInput and dragStart and startPosition then
+            local delta = input.Position - dragStart
+            button.Position = UDim2.new(
+                startPosition.X.Scale, startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    dragEndedConnection = inputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            dragInput = nil
+        end
+    end)
+
+    button.Destroying:Connect(function()
+        if dragChangedConnection then dragChangedConnection:Disconnect() end
+        if dragEndedConnection then dragEndedConnection:Disconnect() end
+    end)
+
     button.Activated:Connect(function()
         MatrixHubPlatformActive = not MatrixHubPlatformActive
         if MatrixHubPlatformActive then
