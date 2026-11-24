@@ -1226,7 +1226,24 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             return
         end
         if input.KeyCode ~= Enum.KeyCode.Unknown then
-            MATRIXHUB_CONFIG.Keybinds[MATRIXHUB_KEYBIND_PENDING] = input.KeyCode.Name
+            local requestedKey = input.KeyCode.Name
+            local conflict
+            for otherAction, assignedKey in pairs(MATRIXHUB_CONFIG.Keybinds) do
+                if otherAction ~= MATRIXHUB_KEYBIND_PENDING and assignedKey == requestedKey then
+                    conflict = otherAction
+                    break
+                end
+            end
+            if conflict then
+                MATRIXHUB_KEYBIND_PENDING = nil
+                if MATRIXHUB_KEYBIND_PARAGRAPH then
+                    pcall(function()
+                        MATRIXHUB_KEYBIND_PARAGRAPH:SetDesc("TECLA " .. requestedKey .. " YA ASIGNADA A " .. MATRIXHUB_KEY_ACTION_TITLES[conflict] .. ".\n\n" .. MATRIXHUB_GetKeybindSummary())
+                    end)
+                end
+                return
+            end
+            MATRIXHUB_CONFIG.Keybinds[MATRIXHUB_KEYBIND_PENDING] = requestedKey
             MATRIXHUB_KEYBIND_PENDING = nil
             SaveMatrixHubConfig()
             MATRIXHUB_RefreshKeybindSummary()
@@ -1328,30 +1345,6 @@ end
 -- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
-Settings:Section({ Title = "ATAJOS DE TECLADO // PC", Icon = "keyboard", Opened = true })
-MATRIXHUB_KEYBIND_PARAGRAPH = Settings:Paragraph({
-    Title = "ASIGNACIONES ACTUALES",
-    Desc = MATRIXHUB_GetKeybindSummary()
-})
-for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
-    Settings:Button({
-        Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
-        Icon = "keyboard",
-        Callback = function()
-            MATRIXHUB_BeginKeybindCapture(actionName)
-        end
-    })
-end
-Settings:Button({
-    Title = "RESTABLECER TECLAS PREDETERMINADAS",
-    Icon = "rotate-ccw",
-    Callback = function()
-        MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
-        MATRIXHUB_KEYBIND_PENDING = nil
-        SaveMatrixHubConfig()
-        MATRIXHUB_RefreshKeybindSummary()
-    end
-})
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
@@ -2784,6 +2777,32 @@ do
         refreshQuickButtons()
     end
     MATRIXHUB_RefreshKeybindSummary()
+
+    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
+    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
+    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
+        Title = "ASIGNACIONES ACTUALES",
+        Desc = MATRIXHUB_GetKeybindSummary()
+    })
+    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+        Botones:Button({
+            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
+            Icon = "keyboard",
+            Callback = function()
+                MATRIXHUB_BeginKeybindCapture(actionName)
+            end
+        })
+    end
+    Botones:Button({
+        Title = "RESTABLECER TECLAS PREDETERMINADAS",
+        Icon = "rotate-ccw",
+        Callback = function()
+            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
+            MATRIXHUB_KEYBIND_PENDING = nil
+            SaveMatrixHubConfig()
+            MATRIXHUB_RefreshKeybindSummary()
+        end
+    })
 
     -- Controles de visibilidad agrupados en la pestaña BOTONES.
     Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
