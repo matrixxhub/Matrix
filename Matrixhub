@@ -644,6 +644,7 @@ local MATRIXHUB_CONFIG = {
     AntiLag = false,
     StatusHud = false,
     ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false },
+    Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" },
     QuickButtonPositions = {
         Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
         Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
@@ -725,6 +726,14 @@ local function LoadMatrixHubConfig()
         for _, buttonId in ipairs({ "Fantasma", "Silent", "AutoShoot" }) do
             if type(saved.ButtonVisibility[buttonId]) == "boolean" then
                 MATRIXHUB_CONFIG.ButtonVisibility[buttonId] = saved.ButtonVisibility[buttonId]
+            end
+        end
+    end
+    if type(saved.Keybinds) == "table" then
+        for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+            local keyName = saved.Keybinds[actionName]
+            if type(keyName) == "string" and Enum.KeyCode[keyName] and Enum.KeyCode[keyName] ~= Enum.KeyCode.Unknown then
+                MATRIXHUB_CONFIG.Keybinds[actionName] = keyName
             end
         end
     end
@@ -1177,12 +1186,66 @@ do
 end
 
 UserInputService = game:GetService("UserInputService")
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.X then
-        MATRIXHUB:Toggle()
+local MATRIXHUB_KEY_ACTIONS = {}
+local MATRIXHUB_KEYBIND_PARAGRAPH = nil
+local MATRIXHUB_KEYBIND_PENDING = nil
+local MATRIXHUB_KEY_ACTION_TITLES = {
+    Menu = "ABRIR / CERRAR MENÚ",
+    Fly = "ACTIVAR / DESACTIVAR FLY",
+    Fantasma = "BOTÓN FANTASMA",
+    Silent = "BOTÓN SILENT",
+    AutoShoot = "BOTÓN AUTO SHOOT"
+}
+local function MATRIXHUB_GetKeybindSummary()
+    local keys = MATRIXHUB_CONFIG.Keybinds
+    return table.concat({
+        "MENÚ: " .. keys.Menu,
+        "FLY: " .. keys.Fly,
+        "FANTASMA: " .. keys.Fantasma,
+        "SILENT: " .. keys.Silent,
+        "AUTO SHOOT: " .. keys.AutoShoot,
+        "",
+        "Pulsa un botón de asignación y después la tecla deseada. ESC cancela."
+    }, "\n")
+end
+local function MATRIXHUB_RefreshKeybindSummary()
+    if MATRIXHUB_KEYBIND_PARAGRAPH then
+        pcall(function() MATRIXHUB_KEYBIND_PARAGRAPH:SetDesc(MATRIXHUB_GetKeybindSummary()) end)
     end
-end) 
+end
+local function MATRIXHUB_BeginKeybindCapture(actionName)
+    MATRIXHUB_KEYBIND_PENDING = actionName
+    MATRIXHUB_RefreshKeybindSummary()
+end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    if MATRIXHUB_KEYBIND_PENDING then
+        if input.KeyCode == Enum.KeyCode.Escape then
+            MATRIXHUB_KEYBIND_PENDING = nil
+            MATRIXHUB_RefreshKeybindSummary()
+            return
+        end
+        if input.KeyCode ~= Enum.KeyCode.Unknown then
+            MATRIXHUB_CONFIG.Keybinds[MATRIXHUB_KEYBIND_PENDING] = input.KeyCode.Name
+            MATRIXHUB_KEYBIND_PENDING = nil
+            SaveMatrixHubConfig()
+            MATRIXHUB_RefreshKeybindSummary()
+        end
+        return
+    end
+    if gameProcessed or UserInputService:GetFocusedTextBox() then return end
+    local pressedName = input.KeyCode.Name
+    for actionName, keyName in pairs(MATRIXHUB_CONFIG.Keybinds) do
+        if pressedName == keyName then
+            local callback = MATRIXHUB_KEY_ACTIONS[actionName]
+            if callback then pcall(callback) end
+            break
+        end
+    end
+end)
+MATRIXHUB_KEY_ACTIONS.Menu = function()
+    MATRIXHUB:Toggle()
+end
 
 -- PESTANAS PRINCIPALES: BOTONES queda en la zona media, no al final.
 local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
@@ -1265,6 +1328,30 @@ end
 -- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
+Settings:Section({ Title = "ATAJOS DE TECLADO // PC", Icon = "keyboard", Opened = true })
+MATRIXHUB_KEYBIND_PARAGRAPH = Settings:Paragraph({
+    Title = "ASIGNACIONES ACTUALES",
+    Desc = MATRIXHUB_GetKeybindSummary()
+})
+for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+    Settings:Button({
+        Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
+        Icon = "keyboard",
+        Callback = function()
+            MATRIXHUB_BeginKeybindCapture(actionName)
+        end
+    })
+end
+Settings:Button({
+    Title = "RESTABLECER TECLAS PREDETERMINADAS",
+    Icon = "rotate-ccw",
+    Callback = function()
+        MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
+        MATRIXHUB_KEYBIND_PENDING = nil
+        SaveMatrixHubConfig()
+        MATRIXHUB_RefreshKeybindSummary()
+    end
+})
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
@@ -2674,6 +2761,29 @@ do
     end
 
     refreshQuickButtons()
+
+    -- Atajos de teclado para los botones rápidos existentes.
+    MATRIXHUB_KEY_ACTIONS.Fantasma = function()
+        setInvisibleV6(not (_G.InvisActive == true))
+        refreshQuickButtons()
+    end
+    MATRIXHUB_KEY_ACTIONS.Silent = function()
+        setSilentAimQuick(not (silentAimManualEnabled == true or silentAimFovEnabled == true))
+        refreshQuickButtons()
+    end
+    MATRIXHUB_KEY_ACTIONS.AutoShoot = function()
+        local enabled = autoShootEnabled == true or autoShootAgresivoEnabled == true or altoFireEnabled == true
+        if enabled then
+            autoShootEnabled = false
+            autoShootAgresivoEnabled = false
+            altoFireEnabled = false
+            if getgenv then getgenv().MatrixHubTargetPart = nil end
+        else
+            autoShootEnabled = true
+        end
+        refreshQuickButtons()
+    end
+    MATRIXHUB_RefreshKeybindSummary()
 
     -- Controles de visibilidad agrupados en la pestaña BOTONES.
     Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
@@ -4170,6 +4280,14 @@ local function MATRIXHUB_StopFly()
     hum.PlatformStand = false
     hrp.AssemblyLinearVelocity = Vector3.zero
     hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+end
+
+MATRIXHUB_KEY_ACTIONS.Fly = function()
+    if MATRIXHUB_flying then
+        MATRIXHUB_StopFly()
+    else
+        MATRIXHUB_StartFly()
+    end
 end
 
 Movimiento:Toggle({
