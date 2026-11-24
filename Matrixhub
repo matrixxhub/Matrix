@@ -7,6 +7,23 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local startupExecutionCount = 1
+do
+    if type(readfile) == "function" then
+        for _, path in ipairs({ "MATRIXHUB/MatrixHubConfig.json", "MatrixHubConfig.json" }) do
+            local okRead, raw = pcall(readfile, path)
+            if okRead and type(raw) == "string" and raw ~= "" then
+                local okDecode, saved = pcall(function()
+                    return game:GetService("HttpService"):JSONDecode(raw)
+                end)
+                if okDecode and type(saved) == "table" then
+                    startupExecutionCount = math.max(0, math.floor(tonumber(saved.ExecutionCount) or 0)) + 1
+                    break
+                end
+            end
+        end
+    end
+end
 
 local oldStartup = PlayerGui:FindFirstChild("MATRIXHUB_STARTUP")
 if oldStartup then oldStartup:Destroy() end
@@ -181,10 +198,34 @@ appIcon.BorderColor3 = Color3.fromRGB(255, 255, 255)
 appIcon.BorderSizePixel = 1
 appIcon.Font = Enum.Font.Code
 appIcon.Text = "M"
+appIcon.Active = true
 appIcon.TextColor3 = Color3.fromRGB(0, 255, 120)
 appIcon.TextSize = 14
 appIcon.ZIndex = 8
 appIcon.Parent = titleBar
+
+local startupTapCount = 0
+local lastStartupTap = 0
+local startupEggGeneration = 0
+appIcon.InputBegan:Connect(function(input)
+    local inputType = input.UserInputType
+    if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+    local now = os.clock()
+    if now - lastStartupTap > 2.2 then startupTapCount = 0 end
+    lastStartupTap = now
+    startupTapCount += 1
+    if startupTapCount >= 7 then
+        startupTapCount = 0
+        startupEggGeneration += 1
+        local generation = startupEggGeneration
+        status.Text = "♥  CRÉDITOS EMOCIONALES // LESLY"
+        task.delay(4, function()
+            if status and status.Parent and startupEggGeneration == generation then
+                status.Text = string.format("SANOX // MATRIX HUB READY    EJECUCIONES: %d", startupExecutionCount)
+            end
+        end)
+    end
+end)
 
 local windowTitle = Instance.new("TextLabel")
 windowTitle.Name = "WindowTitle"
@@ -427,7 +468,7 @@ status.BackgroundTransparency = 1
 status.Position = UDim2.new(0, 12, 1, -22)
 status.Size = UDim2.new(1, -24, 0, 15)
 status.Font = Enum.Font.Arial
-status.Text = "SANOX // MATRIX HUB READY"
+status.Text = string.format("SANOX // MATRIX HUB READY    EJECUCIONES: %d", startupExecutionCount)
 status.TextColor3 = Color3.fromRGB(40, 40, 40)
 status.TextSize = 10
 status.TextXAlignment = Enum.TextXAlignment.Left
@@ -679,8 +720,6 @@ local matrixConfigDirty = false
 local matrixSaveGeneration = 0
 
 local function LoadMatrixHubConfig()
-MATRIXHUB_CONFIG.ExecutionCount = (tonumber(MATRIXHUB_CONFIG.ExecutionCount) or 0) + 1
-SaveMatrixHubConfig(true)
     if type(readfile) ~= "function" then
         MATRIXHUB_CONFIG_STATUS = "LECTURA NO DISPONIBLE"
         return false
@@ -711,6 +750,7 @@ SaveMatrixHubConfig(true)
         return false
     end
 
+    if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
@@ -775,7 +815,6 @@ SaveMatrixHubConfig(true)
         MATRIXHUB_CONFIG.SelectedKillSound = saved.SelectedKillSound
     end
 
-    MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(tonumber(saved.ExecutionCount) or 0))
     MATRIXHUB_CONFIG_STATUS = "CONFIGURACIÓN CARGADA"
     return true
 end
@@ -842,6 +881,8 @@ local function SaveMatrixHubConfig(force)
 end
 
 LoadMatrixHubConfig()
+MATRIXHUB_CONFIG.ExecutionCount = (tonumber(MATRIXHUB_CONFIG.ExecutionCount) or 0) + 1
+SaveMatrixHubConfig(true)
 -- Menú fijo en su configuración predeterminada; se ignoran personalizaciones antiguas.
 MATRIXHUB_CONFIG.Theme = "Matrix"
 MATRIXHUB_CONFIG.UIScale = 1.08
@@ -1947,7 +1988,6 @@ do
 
     local hud = Instance.new("Frame")
     hud.Name = "StatusPanel"
-    hud.Active = true
     hud.AnchorPoint = Vector2.new(1, 0)
     hud.Position = UDim2.new(1, -14, 0, 14)
     hud.Size = UDim2.fromOffset(218, 96)
@@ -1993,33 +2033,6 @@ do
     info.TextWrapped = true
     info.Text = "FPS: --   PING: --\nPLAYERS: --/--\nERRORS: --"
     info.Parent = hud
-
-    local statusTapCount = 0
-    local lastStatusTap = 0
-    local easterEggGeneration = 0
-    local easterEggActive = false
-    local defaultStatusText = info.Text
-    hud.InputBegan:Connect(function(input)
-        local inputType = input.UserInputType
-        if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
-        local now = os.clock()
-        if now - lastStatusTap > 2.2 then statusTapCount = 0 end
-        lastStatusTap = now
-        statusTapCount += 1
-        if statusTapCount >= 7 then
-            statusTapCount = 0
-            easterEggGeneration += 1
-            local thisGeneration = easterEggGeneration
-            easterEggActive = true
-            info.Text = "♥  CRÉDITOS EMOCIONALES\nLESLY  //  SIEMPRE EN MATRIX"
-            task.delay(4, function()
-                if hudGui.Parent and easterEggGeneration == thisGeneration then
-                    easterEggActive = false
-                    info.Text = defaultStatusText
-                end
-            end)
-        end
-    end)
 
     local frames = 0
     local elapsed = 0
@@ -2081,12 +2094,10 @@ do
         local memoryText = memoryMb and (tostring(memoryMb) .. " MB") or "N/D"
         local performanceAlert = fps < 25 or (ping ~= nil and ping > 180)
         local fpsGraph = makeFpsGraph(fps)
-        if not easterEggActive then
-            info.Text = string.format(
-                "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
-                fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
-            )
-        end
+        info.Text = string.format(
+            "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
+            fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
+        )
         if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
             local homeText = string.format(
                 "▣ FPS  %d      ◈ PING  %s\n▤ MEMORIA  %s      ♟ JUGADORES  %d/%d\n\nFPS HISTORY  %s",
@@ -2415,12 +2426,7 @@ AutoKills:Toggle({
     end
 })
 
--- INICIO: identidad, contador local y panel de rendimiento.
-Home:Section({ Title = "MATRIX // CONTROL CENTER", Icon = "house", Opened = true })
-Home:Paragraph({
-    Title = "M A T R I X   H U B",
-    Desc = string.format("▣ EJECUCIONES EN ESTE DISPOSITIVO: %d\n◈ MATRIX GREEN  //  SESSION READY\n\nEl contador se guarda localmente si el ejecutor permite guardar archivos.", MATRIXHUB_CONFIG.ExecutionCount)
-})
+-- INICIO: aviso, panel de rendimiento en vivo e información general.
 Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
 Home:Paragraph({
     Title = "AVISO DE BANEOS",
@@ -2434,7 +2440,7 @@ MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• INICIO renovado: identidad MATRIX HUB y contador de ejecuciones guardado localmente.\n• Easter egg de Lesly: toca el panel STATUS 7 veces en menos de 2.2 segundos.\n• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
