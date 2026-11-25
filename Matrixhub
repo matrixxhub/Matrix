@@ -1449,7 +1449,24 @@ local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
+local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
  
+-- MATRIXHUB // CREDITOS
+Creditos:Section({ Title = "CRÉDITOS", Icon = "crown", Opened = true })
+
+Creditos:Paragraph({
+    Title = "SANOX // CREADOR PRINCIPAL",
+    Desc = '<font color="#7DFFAF">[CREADOR PRINCIPAL]</font>\nCreador y desarrollador principal de Matrix Hub. Responsable de la dirección del proyecto, sus modificaciones y su evolución.',
+    ImageSize = 90
+})
+
+Creditos:Paragraph({
+    Title = "01ROXHUB // SUBCREADOR",
+    Desc = '<font color="#7DFFAF">[SUBCREADOR]</font>\nTodo comenzó con una idea. Este panel nació de algo que existió antes, pero evolucionó hasta convertirse en Matrix Hub.\n\nCrédito a 01ROXHUB por la base e inspiración original.',
+    Image = "rbxassetid://76111147434526",
+    ImageSize = 90
+})
+
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
 do
@@ -4775,17 +4792,6 @@ Animaciones:Button({
     Callback = function()
         restoreAvatar01()
     end
-})
-
--- MATRIXHUB // CREDITOS
-Animaciones:Section({ Title = "CREDITOS", Icon = "award", Opened = true })
-Animaciones:Paragraph({
-    Title = "SANOX // CREADOR PRINCIPAL",
-    Desc = "Creador y desarrollador principal de Matrix Hub. Responsable de la dirección del proyecto, sus modificaciones y su evolución."
-})
-Animaciones:Paragraph({
-    Title = "01ROXHUB // SUBCREADOR",
-    Desc = "Todo comenzó con una idea. Este panel nació de algo que existió antes, pero evolucionó hasta convertirse en Matrix Hub.\n\nCrédito a 01ROXHUB por la base e inspiración original."
 })
 
 AutoKills:Section({ Title = "HITBOX EXPANDER", Icon = "box" })
