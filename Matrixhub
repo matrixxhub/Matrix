@@ -3215,6 +3215,73 @@ do
             PlayMatrixUISound("Toggle")
         end
     })
+
+    -- SELECTOR CPS INDEPENDIENTE: solo muestra y guarda el valor elegido.
+    -- No genera clics, entradas ni acciones sobre armas/jugadores.
+    local MATRIXHUB_CPS_MIN = 2
+    local MATRIXHUB_CPS_MAX = 15
+    local MATRIXHUB_CPS_VALUE = math.clamp(
+        math.floor(tonumber(MATRIXHUB_CONFIG.CPSSelectorValue) or 2),
+        MATRIXHUB_CPS_MIN,
+        MATRIXHUB_CPS_MAX
+    )
+    local MATRIXHUB_CPS_PANEL_ENABLED = MATRIXHUB_CONFIG.CPSSelectorEnabled == true
+
+    Botones:Section({ Title = "CONTROL CPS // SELECTOR", Icon = "gauge", Opened = true })
+    local MATRIXHUB_CPS_PARAGRAPH = Botones:Paragraph({
+        Title = "VALOR SELECCIONADO",
+        Desc = string.format(
+            "%d CPS  |  RANGO: %d-%d\n%s\nSelector visual independiente; no automatiza clics ni disparos.",
+            MATRIXHUB_CPS_VALUE,
+            MATRIXHUB_CPS_MIN,
+            MATRIXHUB_CPS_MAX,
+            MATRIXHUB_CPS_PANEL_ENABLED and "PANEL: ACTIVADO" or "PANEL: DESACTIVADO"
+        )
+    })
+
+    local function MATRIXHUB_UpdateCPSSelector()
+        pcall(function()
+            MATRIXHUB_CPS_PARAGRAPH:SetDesc(string.format(
+                "%d CPS  |  RANGO: %d-%d\n%s\nSelector visual independiente; no automatiza clics ni disparos.",
+                MATRIXHUB_CPS_VALUE,
+                MATRIXHUB_CPS_MIN,
+                MATRIXHUB_CPS_MAX,
+                MATRIXHUB_CPS_PANEL_ENABLED and "PANEL: ACTIVADO" or "PANEL: DESACTIVADO"
+            ))
+        end)
+        MATRIXHUB_CONFIG.CPSSelectorValue = MATRIXHUB_CPS_VALUE
+        MATRIXHUB_CONFIG.CPSSelectorEnabled = MATRIXHUB_CPS_PANEL_ENABLED
+        SaveMatrixHubConfig()
+    end
+
+    Botones:Button({
+        Title = "-  DISMINUIR CPS",
+        Icon = "minus",
+        Callback = function()
+            MATRIXHUB_CPS_VALUE = math.max(MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_VALUE - 1)
+            MATRIXHUB_UpdateCPSSelector()
+            PlayMatrixUISound("Click")
+        end
+    })
+    Botones:Button({
+        Title = "+  AUMENTAR CPS",
+        Icon = "plus",
+        Callback = function()
+            MATRIXHUB_CPS_VALUE = math.min(MATRIXHUB_CPS_MAX, MATRIXHUB_CPS_VALUE + 1)
+            MATRIXHUB_UpdateCPSSelector()
+            PlayMatrixUISound("Click")
+        end
+    })
+    Botones:Toggle({
+        Title = "ACTIVAR PANEL CPS (DEMO)",
+        Icon = "activity",
+        Value = MATRIXHUB_CPS_PANEL_ENABLED,
+        Callback = function(enabled)
+            MATRIXHUB_CPS_PANEL_ENABLED = enabled == true
+            MATRIXHUB_UpdateCPSSelector()
+            PlayMatrixUISound("Toggle")
+        end
+    })
 end
 
 Movimiento:Toggle({
