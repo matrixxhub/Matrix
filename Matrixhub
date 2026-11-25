@@ -3443,7 +3443,8 @@ Movimiento:Toggle({
         gui.Name = "MATRIXHUB_FLYSPEED"
         gui.ResetOnSpawn = false
         gui.IgnoreGuiInset = true
-        gui.DisplayOrder = 30
+        gui.DisplayOrder = 10000
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
         gui.Parent = PlayerGui
 
         local SPEED = 0.75
@@ -3770,10 +3771,7 @@ Movimiento:Toggle({
 
         _G.FlyCon1 = RunService.RenderStepped:Connect(function()
             if not PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then return end
-            if not estaEnPartida() then
-                pad.Visible = false
-                return
-            end
+            -- Mantener el panel visible también en lobby; el estado de partida no debe ocultar la interfaz.
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
