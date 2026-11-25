@@ -3219,8 +3219,8 @@ do
         end
     })
 
-    -- AUTO CLICKER // clic izquierdo genérico en la posición actual del cursor.
-    -- No selecciona herramientas, no cambia slots y no contiene lógica de armas.
+    -- GUN SLOT SPAM // control de repetición de la tecla 2.
+    -- Comparte velocidad CPS entre el control y sus botones + / -.
     local MATRIXHUB_CPS_MIN = 2
     local MATRIXHUB_CPS_MAX = 15
     local MATRIXHUB_CPS_VALUE = math.clamp(
@@ -3228,39 +3228,41 @@ do
         MATRIXHUB_CPS_MIN,
         MATRIXHUB_CPS_MAX
     )
-    local MATRIXHUB_AUTO_CLICKER_ENABLED = false
-    local MATRIXHUB_AUTO_CLICKER_WORKER_ID = 0
+    local MATRIXHUB_SLOT2_SPAM_ENABLED = false
+    local MATRIXHUB_SLOT2_SPAM_WORKER_ID = 0
+    local MATRIXHUB_SLOT2_KEY_FUNCTION
 
-    local MATRIXHUB_AUTO_CLICK_FUNCTION
-    if type(mouse1click) == "function" then
-        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
-            mouse1click()
+    if type(keypress) == "function" and type(keyrelease) == "function" then
+        MATRIXHUB_SLOT2_KEY_FUNCTION = function()
+            keypress(0x32)
+            task.wait(0.015)
+            keyrelease(0x32)
         end
-    elseif type(mouse1press) == "function" and type(mouse1release) == "function" then
-        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
-            mouse1press()
-            task.wait(0.01)
-            mouse1release()
+    else
+        local okInput, virtualInput = pcall(function()
+            return game:GetService("VirtualInputManager")
+        end)
+        if okInput and virtualInput then
+            MATRIXHUB_SLOT2_KEY_FUNCTION = function()
+                virtualInput:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+                task.wait(0.015)
+                virtualInput:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+            end
         end
     end
 
-    Botones:Section({ Title = "AUTO CLICKER // CONTROL", Icon = "mouse-pointer-click", Opened = true })
-    local MATRIXHUB_CPS_PARAGRAPH = Botones:Paragraph({
-        Title = "AUTO CLICKER",
-        Desc = string.format(
-            "ESTADO: OFF\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
-            MATRIXHUB_CPS_VALUE,
-            MATRIXHUB_CPS_MIN,
-            MATRIXHUB_CPS_MAX
-        )
+    Botones:Section({ Title = "GUN SLOT SPAM // CONTROL", Icon = "repeat", Opened = true })
+    local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
+        Title = "GUN SLOT SPAM // SLOT 2",
+        Desc = "ESTADO: OFF\\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS"
     })
 
-    local function MATRIXHUB_UpdateAutoClickerInfo()
-        local apiStatus = MATRIXHUB_AUTO_CLICK_FUNCTION and "LISTO" or "API DE CLIC NO DISPONIBLE"
-        local stateText = MATRIXHUB_AUTO_CLICKER_ENABLED and "ON" or "OFF"
+    local function MATRIXHUB_UpdateSlot2Info()
+        local stateText = MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
+        local apiStatus = MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE"
         pcall(function()
-            MATRIXHUB_CPS_PARAGRAPH:SetDesc(string.format(
-                "ESTADO: %s  |  MOTOR: %s\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
+            MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(string.format(
+                "ESTADO: %s  |  MOTOR: %s\\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\\nRepite únicamente la tecla 2.",
                 stateText,
                 apiStatus,
                 MATRIXHUB_CPS_VALUE,
@@ -3278,11 +3280,11 @@ do
             MATRIXHUB_CPS_MIN,
             MATRIXHUB_CPS_MAX
         )
-        MATRIXHUB_UpdateAutoClickerInfo()
+        MATRIXHUB_UpdateSlot2Info()
     end
 
     Botones:Slider({
-        Title = "VELOCIDAD AUTO CLICKER",
+        Title = "VELOCIDAD GUN SLOT SPAM",
         Icon = "gauge",
         Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
         Callback = function(value)
@@ -3307,93 +3309,6 @@ do
             PlayMatrixUISound("Click")
         end
     })
-
-    Botones:Toggle({
-        Title = "AUTO CLICKER (ON/OFF)",
-        Icon = "mouse-pointer-click",
-        Value = false,
-        Callback = function(enabled)
-            if enabled and not MATRIXHUB_AUTO_CLICK_FUNCTION then
-                MATRIXHUB_AUTO_CLICKER_ENABLED = false
-                RecordMatrixHubError("AUTO CLICKER", "El ejecutor no ofrece mouse1click ni mouse1press/mouse1release")
-                MATRIXHUB_UpdateAutoClickerInfo()
-                warn("[Matrix Hub] Auto Clicker: esta API de clic no está disponible en este ejecutor.")
-                return
-            end
-
-            MATRIXHUB_AUTO_CLICKER_ENABLED = enabled == true
-            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
-            local workerId = MATRIXHUB_AUTO_CLICKER_WORKER_ID
-
-            if MATRIXHUB_AUTO_CLICKER_ENABLED then
-                task.spawn(function()
-                    -- Pausa breve para permitir mover el cursor fuera del control ON/OFF.
-                    task.wait(0.45)
-                    while MATRIXHUB_AUTO_CLICKER_ENABLED and workerId == MATRIXHUB_AUTO_CLICKER_WORKER_ID do
-                        local ok, clickError = pcall(MATRIXHUB_AUTO_CLICK_FUNCTION)
-                        if not ok then
-                            MATRIXHUB_AUTO_CLICKER_ENABLED = false
-                            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
-                            RecordMatrixHubError("AUTO CLICKER", clickError)
-                            MATRIXHUB_UpdateAutoClickerInfo()
-                            warn("[Matrix Hub] Auto Clicker detenido por un error: " .. tostring(clickError))
-                            break
-                        end
-
-                        local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
-                        task.wait(1 / cps)
-                    end
-                end)
-            end
-
-            MATRIXHUB_UpdateAutoClickerInfo()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-
-    MATRIXHUB_UpdateAutoClickerInfo()
-
-    -- GUN SLOT SPAM // repite únicamente la tecla del slot 2; no activa la herramienta ni dispara.
-    local MATRIXHUB_SLOT2_SPAM_ENABLED = false
-    local MATRIXHUB_SLOT2_SPAM_WORKER_ID = 0
-    local MATRIXHUB_SLOT2_KEY_FUNCTION
-
-    if type(keypress) == "function" and type(keyrelease) == "function" then
-        MATRIXHUB_SLOT2_KEY_FUNCTION = function()
-            keypress(0x32)
-            task.wait(0.015)
-            keyrelease(0x32)
-        end
-    else
-        local okInput, virtualInput = pcall(function()
-            return game:GetService("VirtualInputManager")
-        end)
-        if okInput and virtualInput then
-            MATRIXHUB_SLOT2_KEY_FUNCTION = function()
-                virtualInput:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
-                task.wait(0.015)
-                virtualInput:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
-            end
-        end
-    end
-
-    local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
-        Title = "GUN SLOT SPAM // SLOT 2",
-        Desc = "ESTADO: OFF\\nENVÍA únicamente la tecla 2. No llama Tool:Activate() ni Auto Shoot."
-    })
-
-    local function MATRIXHUB_UpdateSlot2Info()
-        local stateText = MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
-        local apiStatus = MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE"
-        pcall(function()
-            MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(string.format(
-                "ESTADO: %s  |  MOTOR: %s\\nVELOCIDAD: %d CPS\\nEnvía la tecla 2; no activa ni dispara la herramienta.",
-                stateText,
-                apiStatus,
-                MATRIXHUB_CPS_VALUE
-            ))
-        end)
-    end
 
     Botones:Toggle({
         Title = "GUN SLOT SPAM (SLOT 2)",
@@ -3433,12 +3348,6 @@ do
         end
     })
 
-    -- Mantiene el indicador sincronizado con el selector CPS compartido.
-    local MATRIXHUB_PREVIOUS_SET_CPS = MATRIXHUB_SetAutoClickerCPS
-    MATRIXHUB_SetAutoClickerCPS = function(value)
-        MATRIXHUB_PREVIOUS_SET_CPS(value)
-        MATRIXHUB_UpdateSlot2Info()
-    end
     MATRIXHUB_UpdateSlot2Info()
 
 end
