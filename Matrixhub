@@ -1501,7 +1501,7 @@ do
         local root = character and character:FindFirstChild("HumanoidRootPart")
         if root then
             -- La imagen queda en una posición elevada del mundo, no delante de la cámara.
-            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 190, -35))
+            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 190, 0))
         end
     end)
 end
