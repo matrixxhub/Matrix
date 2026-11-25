@@ -3893,7 +3893,8 @@ local function createESPLine(name)
     line.Size = UDim2.fromOffset(1, 2)
     line.Visible = false
     line.ZIndex = 10
-    line.Parent = espFolder
+    -- Las líneas GUI van directamente al ScreenGui para que Roblox las renderice.
+    line.Parent = screenGui
     return line
 end
 
