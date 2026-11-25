@@ -3152,96 +3152,6 @@ do
     end
     MATRIXHUB_RefreshKeybindSummary()
 
-    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
-    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
-    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
-        Title = "ASIGNACIONES ACTUALES",
-        Desc = MATRIXHUB_GetKeybindSummary()
-    })
-    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
-        Botones:Button({
-            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
-            Icon = "keyboard",
-            Callback = function()
-                MATRIXHUB_BeginKeybindCapture(actionName)
-            end
-        })
-    end
-    Botones:Button({
-        Title = "RESTABLECER TECLAS PREDETERMINADAS",
-        Icon = "rotate-ccw",
-        Callback = function()
-            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
-            MATRIXHUB_KEYBIND_PENDING = nil
-            SaveMatrixHubConfig()
-            MATRIXHUB_RefreshKeybindSummary()
-        end
-    })
-
-    -- Controles de visibilidad agrupados en la pestaña BOTONES.
-    Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
-    Botones:Toggle({
-        Title = "MOSTRAR FANTASMA",
-        Icon = "ghost",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
-        Callback = function(enabled)
-            quickButtons.Fantasma.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR SILENT",
-        Icon = "crosshair",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
-        Callback = function(enabled)
-            quickButtons.Silent.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR FLY",
-        Icon = "plane",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fly == true,
-        Callback = function(enabled)
-            quickButtons.Fly.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Fly = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR AUTO SHOOT",
-        Icon = "target",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
-        Callback = function(enabled)
-            quickButtons.AutoShoot.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-
-    Botones:Toggle({
-        Title = "MOSTRAR BOTÓN SLOT 2 TÁCTIL",
-        Icon = "repeat",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
-        Callback = function(enabled)
-            quickButtons.GunSlotSpam.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-
     -- SLOT 2 TÁCTIL // alterna equipar/guardar la pistola; no simula teclas ni activa el arma.
     Botones:Section({ Title = "AUTO SLOT 2 // TÁCTIL", Icon = "repeat", Opened = true })
 
@@ -3312,8 +3222,9 @@ do
     end
 
     Botones:Slider({
-        Title = "VELOCIDAD AUTO SLOT 2",
+        Title = "VELOCIDAD AUTO SLOT 2 (2-15 CPS)",
         Icon = "gauge",
+        Step = 1,
         Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
         Callback = function(value)
             MATRIXHUB_SetGunSlotSpamCPS(value)
@@ -3404,6 +3315,98 @@ do
     })
 
     MATRIXHUB_UpdateSlot2Info()
+
+
+    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
+    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
+    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
+        Title = "ASIGNACIONES ACTUALES",
+        Desc = MATRIXHUB_GetKeybindSummary()
+    })
+    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+        Botones:Button({
+            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
+            Icon = "keyboard",
+            Callback = function()
+                MATRIXHUB_BeginKeybindCapture(actionName)
+            end
+        })
+    end
+    Botones:Button({
+        Title = "RESTABLECER TECLAS PREDETERMINADAS",
+        Icon = "rotate-ccw",
+        Callback = function()
+            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
+            MATRIXHUB_KEYBIND_PENDING = nil
+            SaveMatrixHubConfig()
+            MATRIXHUB_RefreshKeybindSummary()
+        end
+    })
+
+    -- Controles de visibilidad agrupados en la pestaña BOTONES.
+    Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
+    Botones:Toggle({
+        Title = "MOSTRAR FANTASMA",
+        Icon = "ghost",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
+        Callback = function(enabled)
+            quickButtons.Fantasma.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR SILENT",
+        Icon = "crosshair",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
+        Callback = function(enabled)
+            quickButtons.Silent.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR FLY",
+        Icon = "plane",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fly == true,
+        Callback = function(enabled)
+            quickButtons.Fly.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fly = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR AUTO SHOOT",
+        Icon = "target",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
+        Callback = function(enabled)
+            quickButtons.AutoShoot.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
+    Botones:Toggle({
+        Title = "MOSTRAR BOTÓN SLOT 2 TÁCTIL",
+        Icon = "repeat",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
+        Callback = function(enabled)
+            quickButtons.GunSlotSpam.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
 
 end
 
