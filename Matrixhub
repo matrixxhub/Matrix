@@ -3248,7 +3248,7 @@ do
 
     local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
         Title = "BOTÓN MÓVIL // SLOT 2",
-        Desc = "ESTADO: BUSCANDO PISTOLA...\\nMODO: TOQUE MANUAL\\nUn toque equipa la pistola una vez. No activa ni repite disparos."
+        Desc = "ESTADO: BUSCANDO PISTOLA...\nMODO: TOQUE MANUAL\nUn toque equipa la pistola una vez. No activa ni repite disparos."
     })
 
     local function MATRIXHUB_IsPistolTool(tool)
@@ -3289,12 +3289,12 @@ do
     local function MATRIXHUB_UpdateSlot2Info(message)
         local equipped = _G.MATRIXHUB_IsSlot2GunEquipped()
         local stateText = equipped and "PISTOLA EQUIPADA" or "LISTO PARA EQUIPAR"
-        local extra = message and ("\\n" .. message) or ""
+        local extra = message and ("\n" .. message) or ""
         pcall(function()
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(
                 "ESTADO: " .. stateText ..
-                "\\nMODO: TOQUE MANUAL" ..
-                "\\nEl botón 2 equipa una vez; no simula teclas ni activa el arma." ..
+                "\nMODO: TOQUE MANUAL" ..
+                "\nEl botón 2 equipa una vez; no simula teclas ni activa el arma." ..
                 extra
             )
         end)
