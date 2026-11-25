@@ -2312,8 +2312,8 @@ silentAimManualEnabled = false
 silentAimFovEnabled = false
 silentAimTargetPart = "Cabeza"
 local espEnabled = false
-local tracersEnabled = false
-local skeletonEnabled = false
+local espVisualState = { TracersEnabled = false, SkeletonEnabled = false }
+local espTools = {}
 local espColor = Color3.fromRGB(255, 0, 0)
 local activeESPs = {}
 local MAX_ESP_DISTANCE = 1500
@@ -3864,7 +3864,7 @@ task.spawn(function()
         end
     end
 end)
-local function destroyESPLine(line)
+espTools.destroyLine = function(line)
     if line then
         line.Visible = false
         line:Destroy()
@@ -3875,16 +3875,16 @@ local function cleanESP(targetPlayer)
     local data = activeESPs[targetPlayer]
     if not data then return end
     if data.Highlight then data.Highlight:Destroy() end
-    destroyESPLine(data.Tracer)
+    espTools.destroyLine(data.Tracer)
     if data.SkeletonLines then
         for _, line in ipairs(data.SkeletonLines) do
-            destroyESPLine(line)
+            espTools.destroyLine(line)
         end
     end
     activeESPs[targetPlayer] = nil
 end
 
-local function createESPLine(name)
+espTools.createLine = function(name)
     local line = Instance.new("Frame")
     line.Name = name
     line.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -3898,7 +3898,7 @@ local function createESPLine(name)
     return line
 end
 
-local function updateESPLine(line, fromPosition, toPosition, color)
+espTools.updateLine = function(line, fromPosition, toPosition, color)
     if not line then return end
     local delta = toPosition - fromPosition
     local length = delta.Magnitude
@@ -3913,14 +3913,14 @@ local function updateESPLine(line, fromPosition, toPosition, color)
     line.Visible = true
 end
 
-local R6Skeleton = {
+espTools.R6Skeleton = {
     {"Head", "Torso"},
     {"Torso", "Left Arm"},
     {"Torso", "Right Arm"},
     {"Torso", "Left Leg"},
     {"Torso", "Right Leg"}
 }
-local R15Skeleton = {
+espTools.R15Skeleton = {
     {"Head", "UpperTorso"},
     {"UpperTorso", "LowerTorso"},
     {"LowerTorso", "HumanoidRootPart"},
@@ -3938,31 +3938,31 @@ local R15Skeleton = {
     {"RightLowerLeg", "RightFoot"}
 }
 
-local function projectESPPart(part, currentCamera)
+espTools.projectPart = function(part, currentCamera)
     if not part or not part:IsA("BasePart") then return nil end
     local point, onScreen = currentCamera:WorldToViewportPoint(part.Position)
     if not onScreen or point.Z <= 0 then return nil end
     return Vector2.new(point.X, point.Y)
 end
 
-local function clearESPHighlight(data)
+espTools.clearHighlight = function(data)
     if data and data.Highlight then
         data.Highlight:Destroy()
         data.Highlight = nil
     end
 end
 
-local function clearESPTracer(data)
+espTools.clearTracer = function(data)
     if data and data.Tracer then
-        destroyESPLine(data.Tracer)
+        espTools.destroyLine(data.Tracer)
         data.Tracer = nil
     end
 end
 
-local function clearESPSkeleton(data)
+espTools.clearSkeleton = function(data)
     if not data or not data.SkeletonLines then return end
     for _, line in ipairs(data.SkeletonLines) do
-        destroyESPLine(line)
+        espTools.destroyLine(line)
     end
     data.SkeletonLines = nil
 end
@@ -3984,7 +3984,7 @@ Visuales:Toggle({
         espEnabled = state
         for _, data in pairs(activeESPs) do
             if not state then
-                clearESPHighlight(data)
+                espTools.clearHighlight(data)
             elseif data.Char and data.Char.Parent then
                 if not data.Highlight then
                     local highlight = Instance.new("Highlight")
@@ -4025,9 +4025,9 @@ Visuales:Toggle({
     Title = "TRACERS",
     Value = false,
     Callback = function(state)
-        tracersEnabled = state
+        espVisualState.TracersEnabled = state
         if not state then
-            for _, data in pairs(activeESPs) do clearESPTracer(data) end
+            for _, data in pairs(activeESPs) do espTools.clearTracer(data) end
         end
     end
 })
@@ -4035,9 +4035,9 @@ Visuales:Toggle({
     Title = "SKELETON ESP",
     Value = false,
     Callback = function(state)
-        skeletonEnabled = state
+        espVisualState.SkeletonEnabled = state
         if not state then
-            for _, data in pairs(activeESPs) do clearESPSkeleton(data) end
+            for _, data in pairs(activeESPs) do espTools.clearSkeleton(data) end
         end
     end
 })
@@ -4201,7 +4201,7 @@ end
 
 task.spawn(function()
     while task.wait(0.2) do
-        local anyVisualESP = espEnabled or tracersEnabled or skeletonEnabled
+        local anyVisualESP = espEnabled or espVisualState.TracersEnabled or espVisualState.SkeletonEnabled
         if anyVisualESP and IsInMatchStrict() then
             local myChar = LP.Character
             local myHead = myChar and myChar:FindFirstChild("Head")
@@ -4238,7 +4238,7 @@ task.spawn(function()
                                     data.Highlight = highlight
                                 end
                             else
-                                clearESPHighlight(data)
+                                espTools.clearHighlight(data)
                             end
                         else
                             cleanESP(p)
@@ -4255,7 +4255,7 @@ task.spawn(function()
 end)
 
 RunService.RenderStepped:Connect(function()
-    if not (tracersEnabled or skeletonEnabled) then return end
+    if not (espVisualState.TracersEnabled or espVisualState.SkeletonEnabled) then return end
     local currentCamera = workspace.CurrentCamera
     if not currentCamera then return end
     local viewport = currentCamera.ViewportSize
@@ -4266,38 +4266,38 @@ RunService.RenderStepped:Connect(function()
         if not char or not char.Parent then
             cleanESP(targetPlayer)
         else
-            if tracersEnabled then
+            if espVisualState.TracersEnabled then
                 if not data.Tracer then
-                    data.Tracer = createESPLine("MATRIXHUB_Tracer_" .. targetPlayer.Name)
+                    data.Tracer = espTools.createLine("MATRIXHUB_Tracer_" .. targetPlayer.Name)
                 end
                 local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-                local targetPoint = projectESPPart(root, currentCamera)
+                local targetPoint = espTools.projectPart(root, currentCamera)
                 if targetPoint then
-                    updateESPLine(data.Tracer, tracerOrigin, targetPoint, espColor)
+                    espTools.updateLine(data.Tracer, tracerOrigin, targetPoint, espColor)
                 else
                     data.Tracer.Visible = false
                 end
             else
-                clearESPTracer(data)
+                espTools.clearTracer(data)
             end
 
-            if skeletonEnabled then
+            if espVisualState.SkeletonEnabled then
                 local isR15 = char:FindFirstChild("UpperTorso") ~= nil
-                local links = isR15 and R15Skeleton or R6Skeleton
+                local links = isR15 and espTools.R15Skeleton or espTools.R6Skeleton
                 if not data.SkeletonLines then data.SkeletonLines = {} end
 
                 for index, link in ipairs(links) do
                     local line = data.SkeletonLines[index]
                     if not line then
-                        line = createESPLine("MATRIXHUB_Skeleton_" .. targetPlayer.Name .. "_" .. index)
+                        line = espTools.createLine("MATRIXHUB_Skeleton_" .. targetPlayer.Name .. "_" .. index)
                         data.SkeletonLines[index] = line
                     end
                     local partA = char:FindFirstChild(link[1])
                     local partB = char:FindFirstChild(link[2])
-                    local pointA = projectESPPart(partA, currentCamera)
-                    local pointB = projectESPPart(partB, currentCamera)
+                    local pointA = espTools.projectPart(partA, currentCamera)
+                    local pointB = espTools.projectPart(partB, currentCamera)
                     if pointA and pointB then
-                        updateESPLine(line, pointA, pointB, espColor)
+                        espTools.updateLine(line, pointA, pointB, espColor)
                     else
                         line.Visible = false
                     end
@@ -4305,12 +4305,12 @@ RunService.RenderStepped:Connect(function()
 
                 for index = #links + 1, #data.SkeletonLines do
                     if data.SkeletonLines[index] then
-                        destroyESPLine(data.SkeletonLines[index])
+                        espTools.destroyLine(data.SkeletonLines[index])
                         data.SkeletonLines[index] = nil
                     end
                 end
             else
-                clearESPSkeleton(data)
+                espTools.clearSkeleton(data)
             end
         end
     end
