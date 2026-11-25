@@ -2980,6 +2980,8 @@ Movimiento:Toggle({
             if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
             if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
             if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
+            if _G.FlyPanelDragCon1 then _G.FlyPanelDragCon1:Disconnect() _G.FlyPanelDragCon1 = nil end
+            if _G.FlyPanelDragCon2 then _G.FlyPanelDragCon2:Disconnect() _G.FlyPanelDragCon2 = nil end
             if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
                 lp.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.GettingUp)
             end
@@ -2992,6 +2994,8 @@ Movimiento:Toggle({
         if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
         if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
         if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
+        if _G.FlyPanelDragCon1 then _G.FlyPanelDragCon1:Disconnect() _G.FlyPanelDragCon1 = nil end
+        if _G.FlyPanelDragCon2 then _G.FlyPanelDragCon2:Disconnect() _G.FlyPanelDragCon2 = nil end
 
         local gui = Instance.new("ScreenGui")
         gui.Name = "MATRIXHUB_FLYSPEED"
@@ -3152,7 +3156,7 @@ Movimiento:Toggle({
                 panelDragInput = input
             end
         end)
-        UserInputService.InputChanged:Connect(function(input)
+        _G.FlyPanelDragCon1 = UserInputService.InputChanged:Connect(function(input)
             if draggingPanel and panelDragInput and input == panelDragInput
                 and panelDragStart and panelStartPosition then
                 local delta = input.Position - panelDragStart
@@ -3163,7 +3167,7 @@ Movimiento:Toggle({
                 clampFlyPanel()
             end
         end)
-        UserInputService.InputEnded:Connect(function(input)
+        _G.FlyPanelDragCon2 = UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 draggingPanel = false
