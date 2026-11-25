@@ -734,7 +734,7 @@ local function LoadMatrixHubConfig()
 
     if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
-    local savedGunSlotSpamCPS = tonumber(saved.GunSlotSpamCPS) or tonumber(saved.AutoClickerCPS) or tonumber(saved.CPSSelectorValue)
+    local savedGunSlotSpamCPS = tonumber(saved.GunSlotSpamCPS) or tonumber(saved.CPSSelectorValue)
     if savedGunSlotSpamCPS then MATRIXHUB_CONFIG.GunSlotSpamCPS = math.clamp(math.floor(savedGunSlotSpamCPS), 2, 15) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
