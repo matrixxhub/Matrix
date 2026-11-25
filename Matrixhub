@@ -3252,22 +3252,30 @@ do
     _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
     local MATRIXHUB_SLOT2_SPAM_WORKER_ID = 0
     local MATRIXHUB_SLOT2_KEY_FUNCTION
+    local MATRIXHUB_TOUCH_DEVICE = false
+    pcall(function()
+        MATRIXHUB_TOUCH_DEVICE = game:GetService("UserInputService").TouchEnabled == true
+    end)
 
-    if type(keypress) == "function" and type(keyrelease) == "function" then
-        MATRIXHUB_SLOT2_KEY_FUNCTION = function()
-            keypress(0x32)
-            task.wait(0.015)
-            keyrelease(0x32)
-        end
-    else
-        local okInput, virtualInput = pcall(function()
-            return game:GetService("VirtualInputManager")
-        end)
-        if okInput and virtualInput then
+    -- No inyectar teclas en dispositivos táctiles: puede cambiar el esquema
+    -- de entrada de Roblox y dejar de responder al joystick virtual.
+    if not MATRIXHUB_TOUCH_DEVICE then
+        if type(keypress) == "function" and type(keyrelease) == "function" then
             MATRIXHUB_SLOT2_KEY_FUNCTION = function()
-                virtualInput:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+                keypress(0x32)
                 task.wait(0.015)
-                virtualInput:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+                keyrelease(0x32)
+            end
+        else
+            local okInput, virtualInput = pcall(function()
+                return game:GetService("VirtualInputManager")
+            end)
+            if okInput and virtualInput then
+                MATRIXHUB_SLOT2_KEY_FUNCTION = function()
+                    virtualInput:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+                    task.wait(0.015)
+                    virtualInput:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+                end
             end
         end
     end
@@ -3280,7 +3288,7 @@ do
 
     local function MATRIXHUB_UpdateSlot2Info()
         local stateText = _G.MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
-        local apiStatus = MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE"
+        local apiStatus = MATRIXHUB_TOUCH_DEVICE and "DESACTIVADO EN MÓVIL (PROTEGE JOYSTICK)" or (MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE")
         pcall(function()
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(string.format(
                 "ESTADO: %s  |  MOTOR: %s\\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\\nRepite únicamente la tecla 2.",
@@ -3332,6 +3340,14 @@ do
     })
 
     _G.MATRIXHUB_SetSlot2Spam = function(enabled)
+        if enabled and MATRIXHUB_TOUCH_DEVICE then
+            _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+            MATRIXHUB_UpdateSlot2Info()
+            warn("[Matrix Hub] Gun Slot Spam está desactivado en dispositivos táctiles para evitar cambiar los controles y bloquear el joystick.")
+            if refreshQuickButtons then refreshQuickButtons() end
+            return
+        end
+
         if enabled and not MATRIXHUB_SLOT2_KEY_FUNCTION then
             _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
             MATRIXHUB_UpdateSlot2Info()
