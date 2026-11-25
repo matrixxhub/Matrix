@@ -675,6 +675,7 @@ local MATRIXHUB_CONFIG = {
     },
     UIScale = 1.08,
     AnimationSpeed = 1,
+    AutoClickerCPS = 2,
     AccentIntensity = 1,
     PanelTransparency = 0.24,
     GlowEnabled = true,
@@ -732,6 +733,8 @@ local function LoadMatrixHubConfig()
 
     if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
+    local savedAutoClickerCPS = tonumber(saved.AutoClickerCPS) or tonumber(saved.CPSSelectorValue)
+    if savedAutoClickerCPS then MATRIXHUB_CONFIG.AutoClickerCPS = math.clamp(math.floor(savedAutoClickerCPS), 2, 15) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
@@ -3216,72 +3219,139 @@ do
         end
     })
 
-    -- SELECTOR CPS INDEPENDIENTE: solo muestra y guarda el valor elegido.
-    -- No genera clics, entradas ni acciones sobre armas/jugadores.
+    -- AUTO CLICKER // clic izquierdo genérico en la posición actual del cursor.
+    -- No selecciona herramientas, no cambia slots y no contiene lógica de armas.
     local MATRIXHUB_CPS_MIN = 2
     local MATRIXHUB_CPS_MAX = 15
     local MATRIXHUB_CPS_VALUE = math.clamp(
-        math.floor(tonumber(MATRIXHUB_CONFIG.CPSSelectorValue) or 2),
+        math.floor(tonumber(MATRIXHUB_CONFIG.AutoClickerCPS) or 2),
         MATRIXHUB_CPS_MIN,
         MATRIXHUB_CPS_MAX
     )
-    local MATRIXHUB_CPS_PANEL_ENABLED = MATRIXHUB_CONFIG.CPSSelectorEnabled == true
+    local MATRIXHUB_AUTO_CLICKER_ENABLED = false
+    local MATRIXHUB_AUTO_CLICKER_WORKER_ID = 0
 
-    Botones:Section({ Title = "CONTROL CPS // SELECTOR", Icon = "gauge", Opened = true })
+    local MATRIXHUB_AUTO_CLICK_FUNCTION
+    if type(mouse1click) == "function" then
+        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
+            mouse1click()
+        end
+    elseif type(mouse1press) == "function" and type(mouse1release) == "function" then
+        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
+            mouse1press()
+            task.wait(0.01)
+            mouse1release()
+        end
+    end
+
+    Botones:Section({ Title = "AUTO CLICKER // CONTROL", Icon = "mouse-pointer-click", Opened = true })
     local MATRIXHUB_CPS_PARAGRAPH = Botones:Paragraph({
-        Title = "VALOR SELECCIONADO",
+        Title = "AUTO CLICKER",
         Desc = string.format(
-            "%d CPS  |  RANGO: %d-%d\n%s\nSelector visual independiente; no automatiza clics ni disparos.",
+            "ESTADO: OFF\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
             MATRIXHUB_CPS_VALUE,
             MATRIXHUB_CPS_MIN,
-            MATRIXHUB_CPS_MAX,
-            MATRIXHUB_CPS_PANEL_ENABLED and "PANEL: ACTIVADO" or "PANEL: DESACTIVADO"
+            MATRIXHUB_CPS_MAX
         )
     })
 
-    local function MATRIXHUB_UpdateCPSSelector()
+    local function MATRIXHUB_UpdateAutoClickerInfo()
+        local apiStatus = MATRIXHUB_AUTO_CLICK_FUNCTION and "LISTO" or "API DE CLIC NO DISPONIBLE"
+        local stateText = MATRIXHUB_AUTO_CLICKER_ENABLED and "ON" or "OFF"
         pcall(function()
             MATRIXHUB_CPS_PARAGRAPH:SetDesc(string.format(
-                "%d CPS  |  RANGO: %d-%d\n%s\nSelector visual independiente; no automatiza clics ni disparos.",
+                "ESTADO: %s  |  MOTOR: %s\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
+                stateText,
+                apiStatus,
                 MATRIXHUB_CPS_VALUE,
                 MATRIXHUB_CPS_MIN,
-                MATRIXHUB_CPS_MAX,
-                MATRIXHUB_CPS_PANEL_ENABLED and "PANEL: ACTIVADO" or "PANEL: DESACTIVADO"
+                MATRIXHUB_CPS_MAX
             ))
         end)
-        MATRIXHUB_CONFIG.CPSSelectorValue = MATRIXHUB_CPS_VALUE
-        MATRIXHUB_CONFIG.CPSSelectorEnabled = MATRIXHUB_CPS_PANEL_ENABLED
+        MATRIXHUB_CONFIG.AutoClickerCPS = MATRIXHUB_CPS_VALUE
         SaveMatrixHubConfig()
     end
+
+    local function MATRIXHUB_SetAutoClickerCPS(value)
+        MATRIXHUB_CPS_VALUE = math.clamp(
+            math.floor(tonumber(value) or MATRIXHUB_CPS_MIN),
+            MATRIXHUB_CPS_MIN,
+            MATRIXHUB_CPS_MAX
+        )
+        MATRIXHUB_UpdateAutoClickerInfo()
+    end
+
+    Botones:Slider({
+        Title = "VELOCIDAD AUTO CLICKER",
+        Icon = "gauge",
+        Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
+        Callback = function(value)
+            MATRIXHUB_SetAutoClickerCPS(value)
+        end
+    })
 
     Botones:Button({
         Title = "-  DISMINUIR CPS",
         Icon = "minus",
         Callback = function()
-            MATRIXHUB_CPS_VALUE = math.max(MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_VALUE - 1)
-            MATRIXHUB_UpdateCPSSelector()
+            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE - 1)
             PlayMatrixUISound("Click")
         end
     })
+
     Botones:Button({
         Title = "+  AUMENTAR CPS",
         Icon = "plus",
         Callback = function()
-            MATRIXHUB_CPS_VALUE = math.min(MATRIXHUB_CPS_MAX, MATRIXHUB_CPS_VALUE + 1)
-            MATRIXHUB_UpdateCPSSelector()
+            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE + 1)
             PlayMatrixUISound("Click")
         end
     })
+
     Botones:Toggle({
-        Title = "ACTIVAR PANEL CPS (DEMO)",
-        Icon = "activity",
-        Value = MATRIXHUB_CPS_PANEL_ENABLED,
+        Title = "AUTO CLICKER (ON/OFF)",
+        Icon = "mouse-pointer-click",
+        Value = false,
         Callback = function(enabled)
-            MATRIXHUB_CPS_PANEL_ENABLED = enabled == true
-            MATRIXHUB_UpdateCPSSelector()
+            if enabled and not MATRIXHUB_AUTO_CLICK_FUNCTION then
+                MATRIXHUB_AUTO_CLICKER_ENABLED = false
+                RecordMatrixHubError("AUTO CLICKER", "El ejecutor no ofrece mouse1click ni mouse1press/mouse1release")
+                MATRIXHUB_UpdateAutoClickerInfo()
+                warn("[Matrix Hub] Auto Clicker: esta API de clic no está disponible en este ejecutor.")
+                return
+            end
+
+            MATRIXHUB_AUTO_CLICKER_ENABLED = enabled == true
+            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
+            local workerId = MATRIXHUB_AUTO_CLICKER_WORKER_ID
+
+            if MATRIXHUB_AUTO_CLICKER_ENABLED then
+                task.spawn(function()
+                    -- Pausa breve para permitir mover el cursor fuera del control ON/OFF.
+                    task.wait(0.45)
+                    while MATRIXHUB_AUTO_CLICKER_ENABLED and workerId == MATRIXHUB_AUTO_CLICKER_WORKER_ID do
+                        local ok, clickError = pcall(MATRIXHUB_AUTO_CLICK_FUNCTION)
+                        if not ok then
+                            MATRIXHUB_AUTO_CLICKER_ENABLED = false
+                            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
+                            RecordMatrixHubError("AUTO CLICKER", clickError)
+                            MATRIXHUB_UpdateAutoClickerInfo()
+                            warn("[Matrix Hub] Auto Clicker detenido por un error: " .. tostring(clickError))
+                            break
+                        end
+
+                        local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
+                        task.wait(1 / cps)
+                    end
+                end)
+            end
+
+            MATRIXHUB_UpdateAutoClickerInfo()
             PlayMatrixUISound("Toggle")
         end
     })
+
+    MATRIXHUB_UpdateAutoClickerInfo()
 end
 
 Movimiento:Toggle({
