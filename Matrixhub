@@ -3152,8 +3152,100 @@ do
     end
     MATRIXHUB_RefreshKeybindSummary()
 
-    -- SLOT 2 TÁCTIL // alterna equipar/guardar la pistola; no simula teclas ni activa el arma.
-    Botones:Section({ Title = "AUTO SLOT 2 // TÁCTIL", Icon = "repeat", Opened = true })
+    -- Controles de visibilidad agrupados en la pestaña BOTONES.
+    Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
+    Botones:Toggle({
+        Title = "MOSTRAR FANTASMA",
+        Icon = "ghost",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
+        Callback = function(enabled)
+            quickButtons.Fantasma.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR SILENT",
+        Icon = "crosshair",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
+        Callback = function(enabled)
+            quickButtons.Silent.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR FLY",
+        Icon = "plane",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fly == true,
+        Callback = function(enabled)
+            quickButtons.Fly.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.Fly = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+    Botones:Toggle({
+        Title = "MOSTRAR AUTO SHOOT",
+        Icon = "target",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
+        Callback = function(enabled)
+            quickButtons.AutoShoot.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
+    Botones:Toggle({
+        Title = "MOSTRAR BOTÓN SLOT 2 TÁCTIL",
+        Icon = "repeat",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
+        Callback = function(enabled)
+            quickButtons.GunSlotSpam.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
+    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
+    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
+    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
+        Title = "ASIGNACIONES ACTUALES",
+        Desc = MATRIXHUB_GetKeybindSummary()
+    })
+    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+        Botones:Button({
+            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
+            Icon = "keyboard",
+            Callback = function()
+                MATRIXHUB_BeginKeybindCapture(actionName)
+            end
+        })
+    end
+    Botones:Button({
+        Title = "RESTABLECER TECLAS PREDETERMINADAS",
+        Icon = "rotate-ccw",
+        Callback = function()
+            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
+            MATRIXHUB_KEYBIND_PENDING = nil
+            SaveMatrixHubConfig()
+            MATRIXHUB_RefreshKeybindSummary()
+        end
+    })
+
+
+
+-- AUTO CLICKER // alterna equipar y guardar la pistola en el inventario.
+    Botones:Section({ Title = "AUTO CLICKER // SLOT 2", Icon = "repeat", Opened = true })
 
     local MATRIXHUB_CPS_MIN = 2
     local MATRIXHUB_CPS_MAX = 15
@@ -3166,8 +3258,8 @@ do
     local MATRIXHUB_SLOT2_WORKER_ID = 0
 
     local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
-        Title = "AUTO SLOT 2 // SIN DISPARO",
-        Desc = "ESTADO: OFF\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\nAlterna equipar/guardar la pistola. No la activa."
+        Title = "AUTO CLICKER",
+        Desc = "ESTADO: OFF\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\nAlterna equipar y guardar la pistola."
     })
 
     local function MATRIXHUB_IsPistolTool(tool)
@@ -3203,7 +3295,7 @@ do
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(
                 "ESTADO: " .. stateText ..
                 "\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS (2-15)" ..
-                "\nAlterna equipar/guardar la pistola. No simula teclas ni llama Tool:Activate()." ..
+                "\nAlterna equipar y guardar la pistola." ..
                 extra
             )
         end)
@@ -3222,7 +3314,7 @@ do
     end
 
     Botones:Slider({
-        Title = "VELOCIDAD AUTO SLOT 2 (2-15 CPS)",
+        Title = "VELOCIDAD AUTO CLICKER (2-15 CPS)",
         Icon = "gauge",
         Step = 1,
         Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
@@ -3308,7 +3400,7 @@ do
     end
 
     Botones:Toggle({
-        Title = "AUTO SLOT 2 (SIN DISPARO)",
+        Title = "AUTO CLICKER",
         Icon = "repeat",
         Value = false,
         Callback = _G.MATRIXHUB_SetSlot2Spam
@@ -3317,95 +3409,7 @@ do
     MATRIXHUB_UpdateSlot2Info()
 
 
-    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
-    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
-    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
-        Title = "ASIGNACIONES ACTUALES",
-        Desc = MATRIXHUB_GetKeybindSummary()
-    })
-    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
-        Botones:Button({
-            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
-            Icon = "keyboard",
-            Callback = function()
-                MATRIXHUB_BeginKeybindCapture(actionName)
-            end
-        })
-    end
-    Botones:Button({
-        Title = "RESTABLECER TECLAS PREDETERMINADAS",
-        Icon = "rotate-ccw",
-        Callback = function()
-            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
-            MATRIXHUB_KEYBIND_PENDING = nil
-            SaveMatrixHubConfig()
-            MATRIXHUB_RefreshKeybindSummary()
-        end
-    })
 
-    -- Controles de visibilidad agrupados en la pestaña BOTONES.
-    Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
-    Botones:Toggle({
-        Title = "MOSTRAR FANTASMA",
-        Icon = "ghost",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fantasma == true,
-        Callback = function(enabled)
-            quickButtons.Fantasma.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Fantasma = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR SILENT",
-        Icon = "crosshair",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Silent == true,
-        Callback = function(enabled)
-            quickButtons.Silent.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Silent = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR FLY",
-        Icon = "plane",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.Fly == true,
-        Callback = function(enabled)
-            quickButtons.Fly.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.Fly = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-    Botones:Toggle({
-        Title = "MOSTRAR AUTO SHOOT",
-        Icon = "target",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot == true,
-        Callback = function(enabled)
-            quickButtons.AutoShoot.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.AutoShoot = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-
-    Botones:Toggle({
-        Title = "MOSTRAR BOTÓN SLOT 2 TÁCTIL",
-        Icon = "repeat",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
-        Callback = function(enabled)
-            quickButtons.GunSlotSpam.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
 
 
 end
@@ -4130,6 +4134,189 @@ if LP.Character then
     task.spawn(captureDefaultAnimationIds, LP.Character)
 end
 
+
+-- MATRIXHUB_FAKE_AVATAR // LOCAL COSMETICS
+-- Efectos visuales locales; no cambian el inventario ni los artículos de la cuenta.
+local MATRIXHUB_FAKE_AVATAR = {
+    Headless = false,
+    Korblox = false,
+    HeadOriginals = setmetatable({}, { __mode = "k" }),
+    LegOriginals = setmetatable({}, { __mode = "k" }),
+    FakeKorbloxModel = nil
+}
+
+local function MATRIXHUB_SaveAndHidePart(part, originals)
+    if not part or not part:IsA("BasePart") then return end
+    if originals[part] == nil then
+        originals[part] = part.LocalTransparencyModifier
+    end
+    part.LocalTransparencyModifier = 1
+end
+
+local function MATRIXHUB_RestoreLocalParts(originals)
+    for object, original in pairs(originals) do
+        if object and object.Parent and object:IsA("BasePart") then
+            pcall(function() object.LocalTransparencyModifier = original end)
+        end
+        originals[object] = nil
+    end
+end
+
+local function MATRIXHUB_ApplyFakeHeadless(character)
+    if not character then return end
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    MATRIXHUB_SaveAndHidePart(head, MATRIXHUB_FAKE_AVATAR.HeadOriginals)
+    for _, object in ipairs(head:GetDescendants()) do
+        if object:IsA("Decal") or object:IsA("Texture") then
+            if MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] == nil then
+                MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] = object.Transparency
+            end
+            object.Transparency = 1
+        end
+    end
+end
+
+local function MATRIXHUB_RestoreFakeHeadless()
+    for object, original in pairs(MATRIXHUB_FAKE_AVATAR.HeadOriginals) do
+        if object and object.Parent then
+            pcall(function()
+                if object:IsA("BasePart") then
+                    object.LocalTransparencyModifier = original
+                elseif object:IsA("Decal") or object:IsA("Texture") then
+                    object.Transparency = original
+                end
+            end)
+        end
+        MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] = nil
+    end
+end
+
+local function MATRIXHUB_RemoveFakeKorbloxModel()
+    local model = MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel
+    if model then
+        pcall(function() model:Destroy() end)
+        MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = nil
+    end
+end
+
+local function MATRIXHUB_ApplyFakeKorblox(character)
+    if not character then return end
+    MATRIXHUB_RemoveFakeKorbloxModel()
+
+    local anchor = character:FindFirstChild("LeftLowerLeg")
+        or character:FindFirstChild("Left Leg")
+        or character:FindFirstChild("LeftFoot")
+    if not anchor or not anchor:IsA("BasePart") then return end
+
+    for _, partName in ipairs({ "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "Left Leg" }) do
+        local part = character:FindFirstChild(partName)
+        if part and part:IsA("BasePart") then
+            MATRIXHUB_SaveAndHidePart(part, MATRIXHUB_FAKE_AVATAR.LegOriginals)
+        end
+    end
+
+    local model = Instance.new("Model")
+    model.Name = "MATRIXHUB_FAKE_KORBLOX_LOCAL"
+    model.Parent = character
+    MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = model
+
+    local baseHeight = math.max(anchor.Size.Y * 0.48, 0.28)
+    local baseWidth = math.max(math.min(anchor.Size.X, anchor.Size.Z) * 0.72, 0.18)
+
+    local stump = Instance.new("Part")
+    stump.Name = "KorbloxLocalStump"
+    stump.Shape = Enum.PartType.Cylinder
+    stump.Size = Vector3.new(baseWidth, baseHeight, baseWidth)
+    stump.CFrame = anchor.CFrame
+        * CFrame.new(0, -anchor.Size.Y * 0.24, 0)
+        * CFrame.Angles(0, 0, math.rad(90))
+    stump.Color = Color3.fromRGB(55, 58, 145)
+    stump.Material = Enum.Material.SmoothPlastic
+    stump.Anchored = false
+    stump.CanCollide = false
+    stump.CanTouch = false
+    stump.CanQuery = false
+    stump.Massless = true
+    stump.CastShadow = false
+    stump.Parent = model
+
+    local stumpWeld = Instance.new("WeldConstraint")
+    stumpWeld.Part0 = anchor
+    stumpWeld.Part1 = stump
+    stumpWeld.Parent = stump
+
+    local tip = Instance.new("WedgePart")
+    tip.Name = "KorbloxLocalPoint"
+    tip.Size = Vector3.new(baseWidth * 0.92, math.max(baseWidth * 0.62, 0.12), baseWidth * 0.92)
+    tip.CFrame = stump.CFrame
+        * CFrame.new(0, -(baseHeight * 0.5) - (tip.Size.Y * 0.35), 0)
+        * CFrame.Angles(math.rad(180), math.rad(90), 0)
+    tip.Color = Color3.fromRGB(119, 151, 255)
+    tip.Material = Enum.Material.SmoothPlastic
+    tip.Anchored = false
+    tip.CanCollide = false
+    tip.CanTouch = false
+    tip.CanQuery = false
+    tip.Massless = true
+    tip.CastShadow = false
+    tip.Parent = model
+
+    local tipWeld = Instance.new("WeldConstraint")
+    tipWeld.Part0 = anchor
+    tipWeld.Part1 = tip
+    tipWeld.Parent = tip
+end
+
+local function MATRIXHUB_SetFakeHeadless(enabled)
+    MATRIXHUB_FAKE_AVATAR.Headless = enabled == true
+    if MATRIXHUB_FAKE_AVATAR.Headless then
+        MATRIXHUB_ApplyFakeHeadless(LP.Character)
+    else
+        MATRIXHUB_RestoreFakeHeadless()
+    end
+end
+
+local function MATRIXHUB_SetFakeKorblox(enabled)
+    MATRIXHUB_FAKE_AVATAR.Korblox = enabled == true
+    if MATRIXHUB_FAKE_AVATAR.Korblox then
+        MATRIXHUB_ApplyFakeKorblox(LP.Character)
+    else
+        MATRIXHUB_RemoveFakeKorbloxModel()
+        MATRIXHUB_RestoreLocalParts(MATRIXHUB_FAKE_AVATAR.LegOriginals)
+    end
+end
+
+Animaciones:Section({ Title = "APARIENCIA FALSA // LOCAL", Icon = "user-round", Opened = true })
+Animaciones:Toggle({
+    Title = "FAKE HEADLESS",
+    Icon = "eye-off",
+    Value = false,
+    Callback = MATRIXHUB_SetFakeHeadless
+})
+Animaciones:Toggle({
+    Title = "FAKE KORBLOX",
+    Icon = "footprints",
+    Value = false,
+    Callback = MATRIXHUB_SetFakeKorblox
+})
+
+LP.CharacterAdded:Connect(function(character)
+    task.spawn(function()
+        character:WaitForChild("Humanoid", 10)
+        task.wait(0.35)
+        MATRIXHUB_FAKE_AVATAR.HeadOriginals = setmetatable({}, { __mode = "k" })
+        MATRIXHUB_FAKE_AVATAR.LegOriginals = setmetatable({}, { __mode = "k" })
+        MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = nil
+        if MATRIXHUB_FAKE_AVATAR.Headless then
+            MATRIXHUB_ApplyFakeHeadless(character)
+        end
+        if MATRIXHUB_FAKE_AVATAR.Korblox then
+            MATRIXHUB_ApplyFakeKorblox(character)
+        end
+    end)
+end)
 
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
