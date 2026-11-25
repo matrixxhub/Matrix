@@ -3451,7 +3451,7 @@ Movimiento:Toggle({
 
         local SPEED = 0.75
         local V_SPEED = 1.1
-        local mov = {W=false,A=false,S=false,D=false}
+        local mov = {W=false,A=false,S=false,D=false,Up=false,Down=false}
         local presionando = false
 
         local pad = Instance.new("Frame")
@@ -3570,6 +3570,10 @@ Movimiento:Toggle({
         local left = makeButton(UDim2.fromOffset(5, 109), UDim2.fromOffset(42, 39), "◀", "FLY_LEFT")
         local right = makeButton(UDim2.fromOffset(93, 109), UDim2.fromOffset(42, 39), "▶", "FLY_RIGHT")
         local down = makeButton(UDim2.fromOffset(49, 152), UDim2.fromOffset(42, 39), "▼", "FLY_BACK")
+        local upV = makeButton(UDim2.fromOffset(158, 83), UDim2.fromOffset(88, 49), "⬆  SUBIR", "FLY_UP")
+        upV.TextSize = 15
+        local downV = makeButton(UDim2.fromOffset(158, 143), UDim2.fromOffset(88, 49), "⬇  BAJAR", "FLY_DOWN")
+        downV.TextSize = 15
 
         local speedDivider = Instance.new("Frame")
         speedDivider.Position = UDim2.fromOffset(13, 211)
@@ -3662,6 +3666,8 @@ Movimiento:Toggle({
             local dir = Vector3.new(0,0,0)
             if mov.W then dir += workspace.CurrentCamera.CFrame.LookVector end
             if mov.S then dir -= workspace.CurrentCamera.CFrame.LookVector end
+            if mov.Up then dir += Vector3.new(0,1,0) end
+            if mov.Down then dir += Vector3.new(0,-1,0) end
             if mov.A then dir -= workspace.CurrentCamera.CFrame.RightVector end
             if mov.D then dir += workspace.CurrentCamera.CFrame.RightVector end
                         if dir.Magnitude == 0 then return end
@@ -3682,7 +3688,7 @@ Movimiento:Toggle({
             end)
             button.MouseButton1Up:Connect(function()
                 mov[key] = false
-                if not mov.W and not mov.A and not mov.S and not mov.D then
+                if not mov.W and not mov.A and not mov.S and not mov.D and not mov.Up and not mov.Down then
                     presionando = false
                 end
             end)
@@ -3698,6 +3704,8 @@ Movimiento:Toggle({
         conectar(left, "A")
         conectar(right, "D")
         conectar(down, "S")
+        conectar(upV, "Up")
+        conectar(downV, "Down")
 
         minus.MouseButton1Click:Connect(function()
             SPEED = math.clamp(SPEED - 0.1, 0.2, 3)
@@ -3738,7 +3746,7 @@ Movimiento:Toggle({
             if not hrp then return end
             local hum = char:FindFirstChildOfClass("Humanoid")
             if not hum then return end
-            if mov.W or mov.A or mov.S or mov.D then
+            if mov.Up or mov.Down or mov.W or mov.A or mov.S or mov.D then
                 hum:ChangeState(Enum.HumanoidStateType.Flying)
                 hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X * 0.1, 0, hrp.AssemblyLinearVelocity.Z * 0.1)
             end
@@ -3750,6 +3758,8 @@ Movimiento:Toggle({
             if mov.A then dir -= Vector3.new(cam.RightVector.X,0,cam.RightVector.Z) end
             if mov.D then dir += Vector3.new(cam.RightVector.X,0,cam.RightVector.Z) end
             if dir.Magnitude > 0 then hrp.CFrame = hrp.CFrame + dir.Unit * SPEED end
+            if mov.Up then hrp.CFrame = hrp.CFrame + Vector3.new(0, V_SPEED, 0) end
+            if mov.Down then hrp.CFrame = hrp.CFrame - Vector3.new(0, V_SPEED, 0) end
         end)
 
         _G.FlyCon2 = RunService.Heartbeat:Connect(function()
