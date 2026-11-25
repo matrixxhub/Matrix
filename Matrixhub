@@ -189,10 +189,16 @@ MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 -- BLOQUEO DE APARICIÓN: la interfaz completa se mantiene oculta mientras
 -- se construyen las pestañas y controles. No cambia el diseño del splash.
 local MATRIXHUB_LOADING_SCREEN_GUI = nil
+local MATRIXHUB_LOADING_MAIN_ELEMENT = nil
 pcall(function()
-    local mainElement = MATRIXHUB.UIElements and MATRIXHUB.UIElements.Main
-    if mainElement then
-        MATRIXHUB_LOADING_SCREEN_GUI = mainElement:FindFirstAncestorWhichIsA("ScreenGui")
+    MATRIXHUB_LOADING_MAIN_ELEMENT = MATRIXHUB.UIElements and MATRIXHUB.UIElements.Main
+    if MATRIXHUB_LOADING_MAIN_ELEMENT then
+        -- Oculta el panel directamente: UIElements.Main puede no tener un
+        -- ScreenGui accesible en este punto de la inicialización.
+        if MATRIXHUB_LOADING_MAIN_ELEMENT:IsA("GuiObject") then
+            MATRIXHUB_LOADING_MAIN_ELEMENT.Visible = false
+        end
+        MATRIXHUB_LOADING_SCREEN_GUI = MATRIXHUB_LOADING_MAIN_ELEMENT:FindFirstAncestorWhichIsA("ScreenGui")
         if MATRIXHUB_LOADING_SCREEN_GUI then
             MATRIXHUB_LOADING_SCREEN_GUI.Enabled = false
         end
@@ -5054,6 +5060,10 @@ Movimiento:Slider({
 -- La interfaz solo se habilita cuando ya terminó de construirse el hub.
 if MATRIXHUB_LOADING_SCREEN_GUI and MATRIXHUB_LOADING_SCREEN_GUI.Parent then
     MATRIXHUB_LOADING_SCREEN_GUI.Enabled = true
+end
+if MATRIXHUB_LOADING_MAIN_ELEMENT and MATRIXHUB_LOADING_MAIN_ELEMENT.Parent
+    and MATRIXHUB_LOADING_MAIN_ELEMENT:IsA("GuiObject") then
+    MATRIXHUB_LOADING_MAIN_ELEMENT.Visible = true
 end
 task.wait()
 
