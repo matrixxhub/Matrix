@@ -1463,10 +1463,10 @@ do
     local skyFolder = nil
     local skyPanels = {}
     local skyRenderConnection = nil
-    local SKY_RADIUS = 2500
+    local SKY_RADIUS = 450
     local PANEL_SIZE = SKY_RADIUS * 2
 
-    -- Cada panel mira hacia el centro; la cámara permanece dentro del cubo.
+    -- Paneles cercanos a la cámara para evitar que el motor los descarte por distancia.
     local panelDirections = {
         { name = "FRONT", direction = Vector3.new(0, 0, -1), up = Vector3.new(0, 1, 0) },
         { name = "BACK",  direction = Vector3.new(0, 0, 1),  up = Vector3.new(0, 1, 0) },
