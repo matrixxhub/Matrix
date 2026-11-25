@@ -1477,7 +1477,7 @@ do
     billboard.Name = "SanoxAnimeSkyBillboard"
     billboard.Adornee = skyAnchor
     billboard.Size = UDim2.fromOffset(460, 460)
-    billboard.AlwaysOnTop = false
+    billboard.AlwaysOnTop = true
     billboard.LightInfluence = 0
     billboard.MaxDistance = 10000
     billboard.Parent = skyAnchor
@@ -1486,7 +1486,7 @@ do
     image.Name = "SanoxAnimeImage"
     image.Size = UDim2.fromScale(1, 1)
     image.BackgroundTransparency = 1
-    image.Image = "rbxassetid://128047927855303"
+    image.Image = "rbxthumb://type=Asset&id=128047927855303&w=420&h=420"
     image.ScaleType = Enum.ScaleType.Stretch
     image.Parent = billboard
 
@@ -1496,12 +1496,10 @@ do
             if skyConnection then skyConnection:Disconnect() skyConnection = nil end
             return
         end
-
         local character = playerSky.Character
         local root = character and character:FindFirstChild("HumanoidRootPart")
         if root then
-            -- La imagen queda en una posición elevada del mundo, no delante de la cámara.
-            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 190, 0))
+            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 65, 0))
         end
     end)
 end
