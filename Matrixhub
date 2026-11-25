@@ -3445,7 +3445,7 @@ Movimiento:Toggle({
         gui.Name = "MATRIXHUB_FLYSPEED"
         gui.ResetOnSpawn = false
         gui.IgnoreGuiInset = true
-        gui.DisplayOrder = 10000
+        gui.DisplayOrder = 1000000
         gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
         gui.Parent = PlayerGui
 
@@ -3456,7 +3456,7 @@ Movimiento:Toggle({
 
         local pad = Instance.new("Frame")
         pad.Name = "MATRIXHUB_FLY_PANEL"
-        pad.Size = UDim2.fromOffset(260, 326)
+        pad.Size = UDim2.fromOffset(260, 210)
         pad.AnchorPoint = Vector2.new(0.5, 0.5)
         pad.Position = UDim2.fromScale(0.5, 0.62)
         pad.BackgroundColor3 = Color3.fromRGB(2, 10, 8)
@@ -3541,6 +3541,34 @@ Movimiento:Toggle({
         title.TextColor3 = Color3.fromRGB(75, 255, 170)
         title.ZIndex = 3
         title.Parent = pad
+
+        local anchored = true
+        pad.Draggable = false
+        local anchorButton = Instance.new("TextButton")
+        anchorButton.Name = "FLY_PANEL_ANCHOR"
+        anchorButton.Position = UDim2.fromOffset(216, 9)
+        anchorButton.Size = UDim2.fromOffset(30, 28)
+        anchorButton.Text = "📌"
+        anchorButton.Font = Enum.Font.GothamBold
+        anchorButton.TextSize = 17
+        anchorButton.TextColor3 = Color3.fromRGB(210, 255, 230)
+        anchorButton.BackgroundColor3 = Color3.fromRGB(0, 65, 40)
+        anchorButton.BackgroundTransparency = 0.08
+        anchorButton.AutoButtonColor = false
+        anchorButton.BorderSizePixel = 0
+        anchorButton.ZIndex = 5
+        anchorButton.Parent = pad
+        Instance.new("UICorner", anchorButton).CornerRadius = UDim.new(0, 7)
+        local anchorStroke = Instance.new("UIStroke")
+        anchorStroke.Color = Color3.fromRGB(0, 255, 130)
+        anchorStroke.Transparency = 0.2
+        anchorStroke.Parent = anchorButton
+        anchorButton.MouseButton1Click:Connect(function()
+            anchored = not anchored
+            pad.Draggable = not anchored
+            anchorButton.Text = anchored and "📌" or "↔"
+            anchorButton.BackgroundColor3 = anchored and Color3.fromRGB(0, 65, 40) or Color3.fromRGB(20, 75, 55)
+        end)
 
         local function makeButton(pos, size, txt, name)
             local button = Instance.new("TextButton")
@@ -3658,7 +3686,7 @@ Movimiento:Toggle({
                 local label = item.Label
                 if label and label.Parent then
                     local y = label.Position.Y.Offset + item.Speed * step
-                    if y > 330 then
+                    if y > 210 then
                         y = rainRandom:NextInteger(-125, -35)
                         label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 238), y)
                     else
@@ -3673,6 +3701,7 @@ Movimiento:Toggle({
             -- Reforzar la visibilidad del panel y su ScreenGui.
             if gui.Parent ~= PlayerGui then gui.Parent = PlayerGui end
             gui.Enabled = true
+            gui.DisplayOrder = 1000000
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
