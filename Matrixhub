@@ -1448,95 +1448,121 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
  
--- MATRIX SKY // lluvia digital y arte estático, solo visual local.
+-- MATRIX SKY // elementos 3D colocados en la zona del cielo, relativos a la cámara.
 do
-    local PlayersSky = game:GetService("Players")
     local RunServiceSky = game:GetService("RunService")
-    local playerSky = PlayersSky.LocalPlayer
-    local playerGuiSky = playerSky:WaitForChild("PlayerGui")
-    local oldSkyGui = playerGuiSky:FindFirstChild("MATRIXHUB_SKY_VISUAL")
-    if oldSkyGui then oldSkyGui:Destroy() end
+    local WorkspaceSky = game:GetService("Workspace")
+    local cameraSky = WorkspaceSky.CurrentCamera
+    local oldSkyFolder = WorkspaceSky:FindFirstChild("MATRIXHUB_SKY_VISUAL")
+    if oldSkyFolder then oldSkyFolder:Destroy() end
 
-    local skyGui = Instance.new("ScreenGui")
-    skyGui.Name = "MATRIXHUB_SKY_VISUAL"
-    skyGui.ResetOnSpawn = false
-    skyGui.IgnoreGuiInset = true
-    skyGui.DisplayOrder = 2
-    skyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    skyGui.Parent = playerGuiSky
-
-    local skyPanel = Instance.new("Frame")
-    skyPanel.Name = "SkyArea"
-    skyPanel.Size = UDim2.new(1, 0, 0.48, 0)
-    skyPanel.Position = UDim2.new(0, 0, 0, 0)
-    skyPanel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    skyPanel.BorderSizePixel = 0
-    skyPanel.ClipsDescendants = true
-    skyPanel.Parent = skyGui
-
-    local staticImage = Instance.new("ImageLabel")
-    staticImage.Name = "SanoxStaticImage"
-    staticImage.AnchorPoint = Vector2.new(0.5, 0.5)
-    staticImage.Position = UDim2.fromScale(0.5, 0.56)
-    staticImage.Size = UDim2.fromScale(0.19, 0.48)
-    staticImage.BackgroundTransparency = 1
-    staticImage.Image = "rbxassetid://128047927855303"
-    staticImage.ScaleType = Enum.ScaleType.Fit
-    staticImage.ZIndex = 3
-    staticImage.Parent = skyPanel
+    local skyFolder = Instance.new("Folder")
+    skyFolder.Name = "MATRIXHUB_SKY_VISUAL"
+    skyFolder.Parent = WorkspaceSky
 
     local rngSky = Random.new()
     local rainColumns = {}
     local rainGlyphs = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
     local rainWords = { "MATRIX", "SANOX" }
+
+    local function makeSkyAnchor(name, offset)
+        local anchor = Instance.new("Part")
+        anchor.Name = name
+        anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+        anchor.Anchored = true
+        anchor.Transparency = 1
+        anchor.CanCollide = false
+        anchor.CanTouch = false
+        anchor.CanQuery = false
+        anchor.CastShadow = false
+        anchor.Parent = skyFolder
+        return { Part = anchor, Offset = offset }
+    end
+
+    -- Imagen fija en el cielo. Se estira deliberadamente para ocupar más espacio.
+    local imageAnchor = makeSkyAnchor("SanoxStaticImageAnchor", Vector3.new(0, 13, -180))
+    local imageBillboard = Instance.new("BillboardGui")
+    imageBillboard.Name = "SanoxStaticImageBillboard"
+    imageBillboard.Adornee = imageAnchor.Part
+    imageBillboard.Size = UDim2.fromOffset(300, 210)
+    imageBillboard.AlwaysOnTop = true
+    imageBillboard.LightInfluence = 0
+    imageBillboard.MaxDistance = 1000
+    imageBillboard.Parent = imageAnchor.Part
+
+    local staticImage = Instance.new("ImageLabel")
+    staticImage.Name = "SanoxStaticImage"
+    staticImage.Size = UDim2.fromScale(1, 1)
+    staticImage.BackgroundTransparency = 1
+    staticImage.Image = "rbxassetid://128047927855303"
+    staticImage.ScaleType = Enum.ScaleType.Stretch
+    staticImage.Parent = imageBillboard
+
+    -- Columnas 3D independientes: caen en el campo visual del cielo, sin panel negro.
     for i = 1, 14 do
+        local x = -48 + ((i - 1) / 13) * 96
+        local y = rngSky:NextNumber(8, 32)
+        local anchor = makeSkyAnchor("MatrixRainAnchor_" .. i, Vector3.new(x, y, -175))
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "MatrixRainBillboard_" .. i
+        billboard.Adornee = anchor.Part
+        billboard.Size = UDim2.fromOffset((i == 4 or i == 11) and 92 or 34, 220)
+        billboard.AlwaysOnTop = true
+        billboard.LightInfluence = 0
+        billboard.MaxDistance = 1000
+        billboard.Parent = anchor.Part
+
         local label = Instance.new("TextLabel")
-        label.Name = "MatrixRain_" .. i
+        label.Name = "MatrixRainText"
+        label.Size = UDim2.fromScale(1, 1)
         label.BackgroundTransparency = 1
         label.BorderSizePixel = 0
-        label.Size = UDim2.new(0, (i == 4 or i == 11) and 64 or 30, 0, 190)
-        local x = (i - 1) / 13
-        local y = rngSky:NextNumber(-0.9, 0.45)
-        label.Position = UDim2.new(x, 0, y, 0)
         label.Font = Enum.Font.Code
-        label.TextSize = rngSky:NextInteger(13, 18)
+        label.TextSize = rngSky:NextInteger(17, 22)
         label.TextColor3 = Color3.fromRGB(0, 220, 100)
-        label.TextTransparency = rngSky:NextNumber(0.12, 0.38)
+        label.TextTransparency = rngSky:NextNumber(0.12, 0.32)
         label.TextStrokeTransparency = 0.55
         label.TextStrokeColor3 = Color3.fromRGB(0, 35, 14)
         label.TextYAlignment = Enum.TextYAlignment.Top
         label.TextXAlignment = Enum.TextXAlignment.Center
-        label.ZIndex = 2
+        label.Parent = billboard
+
         local chars = {}
-        for n = 1, 12 do
+        for n = 1, 13 do
             chars[n] = rainGlyphs[rngSky:NextInteger(1, #rainGlyphs)]
         end
         if i == 4 or i == 11 then
-            chars[4] = rainWords[i == 4 and 1 or 2]
+            chars[5] = rainWords[i == 4 and 1 or 2]
         end
         label.Text = table.concat(chars, "\n")
-        label.Parent = skyPanel
+
         rainColumns[#rainColumns + 1] = {
-            Label = label,
+            Anchor = anchor,
             X = x,
             Y = y,
-            Speed = rngSky:NextNumber(0.12, 0.24)
+            Z = -175,
+            Speed = rngSky:NextNumber(5, 11)
         }
     end
 
     local skyConnection
     skyConnection = RunServiceSky.RenderStepped:Connect(function(dt)
-        if not skyGui.Parent then
+        if not skyFolder.Parent then
             if skyConnection then skyConnection:Disconnect() skyConnection = nil end
             return
         end
+        cameraSky = WorkspaceSky.CurrentCamera or cameraSky
+        if not cameraSky then return end
+
+        imageAnchor.Part.CFrame = cameraSky.CFrame * CFrame.new(imageAnchor.Offset)
+
         local step = math.min(dt, 0.05)
         for _, column in ipairs(rainColumns) do
-            column.Y = column.Y + column.Speed * step
-            if column.Y > 1 then
-                column.Y = rngSky:NextNumber(-0.65, -0.15)
+            column.Y = column.Y - column.Speed * step
+            if column.Y < -34 then
+                column.Y = rngSky:NextNumber(22, 42)
             end
-            column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
+            column.Anchor.Part.CFrame = cameraSky.CFrame * CFrame.new(column.X, column.Y, column.Z)
         end
     end)
 end
