@@ -676,6 +676,7 @@ local MATRIXHUB_CONFIG = {
     },
     UIScale = 1.08,
     AnimationSpeed = 1,
+    GunSlotSpamCPS = 8,
     AccentIntensity = 1,
     PanelTransparency = 0.24,
     GlowEnabled = true,
@@ -733,6 +734,8 @@ local function LoadMatrixHubConfig()
 
     if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
+    local savedSlot2CPS = tonumber(saved.GunSlotSpamCPS)
+    if savedSlot2CPS then MATRIXHUB_CONFIG.GunSlotSpamCPS = math.clamp(math.floor(savedSlot2CPS), 2, 15) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
@@ -3052,14 +3055,10 @@ do
         end)
 
     makeQuickButton("GunSlotSpam", "2", 5, Color3.fromRGB(255, 190, 70),
-        function()
-            return type(_G.MATRIXHUB_IsSlot2GunEquipped) == "function"
-                and _G.MATRIXHUB_IsSlot2GunEquipped() == true
-        end,
+        function() return _G.MATRIXHUB_SLOT2_SPAM_ENABLED == true end,
         function(enabled)
-            -- Un toque manual equipa la pistola una sola vez; nunca la activa ni la repite.
-            if enabled and type(_G.MATRIXHUB_EquipSlot2Once) == "function" then
-                _G.MATRIXHUB_EquipSlot2Once()
+            if type(_G.MATRIXHUB_SetSlot2Spam) == "function" then
+                _G.MATRIXHUB_SetSlot2Spam(enabled)
             end
         end)
 
@@ -3243,12 +3242,22 @@ do
         end
     })
 
-    -- SLOT 2 TÁCTIL // selección manual, sin inyectar teclas ni activar el arma.
-    Botones:Section({ Title = "SLOT 2 TÁCTIL", Icon = "mouse-pointer-click", Opened = true })
+    -- SLOT 2 TÁCTIL // alterna equipar/guardar la pistola; no simula teclas ni activa el arma.
+    Botones:Section({ Title = "AUTO SLOT 2 // TÁCTIL", Icon = "repeat", Opened = true })
+
+    local MATRIXHUB_CPS_MIN = 2
+    local MATRIXHUB_CPS_MAX = 15
+    local MATRIXHUB_CPS_VALUE = math.clamp(
+        math.floor(tonumber(MATRIXHUB_CONFIG.GunSlotSpamCPS) or 8),
+        MATRIXHUB_CPS_MIN,
+        MATRIXHUB_CPS_MAX
+    )
+    _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+    local MATRIXHUB_SLOT2_WORKER_ID = 0
 
     local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
-        Title = "BOTÓN MÓVIL // SLOT 2",
-        Desc = "ESTADO: BUSCANDO PISTOLA...\nMODO: TOQUE MANUAL\nUn toque equipa la pistola una vez. No activa ni repite disparos."
+        Title = "AUTO SLOT 2 // SIN DISPARO",
+        Desc = "ESTADO: OFF\\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\\nAlterna equipar/guardar la pistola. No la activa."
     })
 
     local function MATRIXHUB_IsPistolTool(tool)
@@ -3277,67 +3286,121 @@ do
         return nil
     end
 
-    _G.MATRIXHUB_IsSlot2GunEquipped = function()
-        local character = LocalPlayer.Character
-        if not character then return false end
-        for _, item in ipairs(character:GetChildren()) do
-            if MATRIXHUB_IsPistolTool(item) then return true end
-        end
-        return false
-    end
-
     local function MATRIXHUB_UpdateSlot2Info(message)
-        local equipped = _G.MATRIXHUB_IsSlot2GunEquipped()
-        local stateText = equipped and "PISTOLA EQUIPADA" or "LISTO PARA EQUIPAR"
-        local extra = message and ("\n" .. message) or ""
+        local stateText = _G.MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
+        local extra = message and ("\\n" .. message) or ""
         pcall(function()
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(
                 "ESTADO: " .. stateText ..
-                "\nMODO: TOQUE MANUAL" ..
-                "\nEl botón 2 equipa una vez; no simula teclas ni activa el arma." ..
+                "\\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS (2-15)" ..
+                "\\nAlterna equipar/guardar la pistola. No simula teclas ni llama Tool:Activate()." ..
                 extra
             )
         end)
+        MATRIXHUB_CONFIG.GunSlotSpamCPS = MATRIXHUB_CPS_VALUE
+        SaveMatrixHubConfig()
         if refreshQuickButtons then refreshQuickButtons() end
     end
 
-    _G.MATRIXHUB_EquipSlot2Once = function()
-        local character = LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if not character or not humanoid then
-            MATRIXHUB_UpdateSlot2Info("Personaje todavía no disponible.")
-            return false
-        end
-
-        local pistol = MATRIXHUB_FindSlot2Pistol()
-        if not pistol then
-            MATRIXHUB_UpdateSlot2Info("No se encontró una pistola en el inventario.")
-            warn("[Matrix Hub] No se encontró una pistola para equipar.")
-            return false
-        end
-
-        if pistol.Parent ~= character then
-            local ok, equipError = pcall(function()
-                humanoid:EquipTool(pistol)
-            end)
-            if not ok then
-                MATRIXHUB_UpdateSlot2Info("No se pudo equipar la pistola.")
-                warn("[Matrix Hub] Error al equipar Slot 2: " .. tostring(equipError))
-                return false
-            end
-        end
-
-        MATRIXHUB_UpdateSlot2Info("Pistola equipada manualmente.")
-        PlayMatrixUISound("Toggle")
-        return true
+    local function MATRIXHUB_SetGunSlotSpamCPS(value)
+        MATRIXHUB_CPS_VALUE = math.clamp(
+            math.floor(tonumber(value) or MATRIXHUB_CPS_MIN),
+            MATRIXHUB_CPS_MIN,
+            MATRIXHUB_CPS_MAX
+        )
+        MATRIXHUB_UpdateSlot2Info()
     end
 
-    Botones:Button({
-        Title = "EQUIPAR PISTOLA (UN TOQUE)",
-        Icon = "hand",
-        Callback = function()
-            _G.MATRIXHUB_EquipSlot2Once()
+    Botones:Slider({
+        Title = "VELOCIDAD AUTO SLOT 2",
+        Icon = "gauge",
+        Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
+        Callback = function(value)
+            MATRIXHUB_SetGunSlotSpamCPS(value)
         end
+    })
+
+    Botones:Button({
+        Title = "-  DISMINUIR CPS",
+        Icon = "minus",
+        Callback = function()
+            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE - 1)
+            PlayMatrixUISound("Click")
+        end
+    })
+
+    Botones:Button({
+        Title = "+  AUMENTAR CPS",
+        Icon = "plus",
+        Callback = function()
+            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE + 1)
+            PlayMatrixUISound("Click")
+        end
+    })
+
+    _G.MATRIXHUB_SetSlot2Spam = function(enabled)
+        enabled = enabled == true
+        if enabled == (_G.MATRIXHUB_SLOT2_SPAM_ENABLED == true) then return end
+
+        if enabled and not MATRIXHUB_FindSlot2Pistol() then
+            MATRIXHUB_UpdateSlot2Info("No se encontró la pistola en el inventario.")
+            warn("[Matrix Hub] Auto Slot 2: no se encontró una pistola.")
+            return
+        end
+
+        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = enabled
+        MATRIXHUB_SLOT2_WORKER_ID += 1
+        local workerId = MATRIXHUB_SLOT2_WORKER_ID
+
+        if enabled then
+            task.spawn(function()
+                while _G.MATRIXHUB_SLOT2_SPAM_ENABLED and workerId == MATRIXHUB_SLOT2_WORKER_ID do
+                    local character = LocalPlayer.Character
+                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                    local pistol = MATRIXHUB_FindSlot2Pistol()
+
+                    if not character or not humanoid then
+                        task.wait(0.15)
+                    elseif not pistol then
+                        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+                        MATRIXHUB_SLOT2_WORKER_ID += 1
+                        warn("[Matrix Hub] Auto Slot 2 detenido: la pistola ya no está en el inventario.")
+                        break
+                    else
+                        local ok, equipError = pcall(function()
+                            if pistol.Parent == character then
+                                humanoid:UnequipTools()
+                            else
+                                humanoid:EquipTool(pistol)
+                            end
+                        end)
+
+                        if not ok then
+                            _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+                            MATRIXHUB_SLOT2_WORKER_ID += 1
+                            RecordMatrixHubError("AUTO SLOT 2", equipError)
+                            warn("[Matrix Hub] Auto Slot 2 detenido por un error: " .. tostring(equipError))
+                            break
+                        end
+
+                        local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
+                        task.wait(1 / cps)
+                    end
+                end
+
+                MATRIXHUB_UpdateSlot2Info()
+            end)
+        end
+
+        MATRIXHUB_UpdateSlot2Info()
+        PlayMatrixUISound("Toggle")
+    end
+
+    Botones:Toggle({
+        Title = "AUTO SLOT 2 (SIN DISPARO)",
+        Icon = "repeat",
+        Value = false,
+        Callback = _G.MATRIXHUB_SetSlot2Spam
     })
 
     MATRIXHUB_UpdateSlot2Info()
