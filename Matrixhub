@@ -1447,6 +1447,8 @@ local Animaciones = MATRIXHUB:Tab({ Title = "PERSONAJE", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
+local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
+local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
  
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
