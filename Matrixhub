@@ -1447,10 +1447,9 @@ local Animaciones = MATRIXHUB:Tab({ Title = "PERSONAJE", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
-
-local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
-local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
-
+local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
+local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
+ 
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
 do
@@ -3422,67 +3421,188 @@ Movimiento:Toggle({
         local RunService = game:GetService("RunService")
         local lp = Players.LocalPlayer
         local PlayerGui = lp:WaitForChild("PlayerGui")
+
         if not state then
             local old = PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED")
             if old then old:Destroy() end
             if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
             if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
+            if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
             if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
                 lp.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.GettingUp)
             end
             return
         end
+
         if PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then
             PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED"):Destroy()
         end
+        if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
+        if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
+        if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
+
         local gui = Instance.new("ScreenGui")
         gui.Name = "MATRIXHUB_FLYSPEED"
         gui.ResetOnSpawn = false
+        gui.IgnoreGuiInset = true
+        gui.DisplayOrder = 1000000
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
         gui.Parent = PlayerGui
+
         local SPEED = 0.75
         local V_SPEED = 1.1
         local mov = {W=false,A=false,S=false,D=false,Up=false,Down=false}
         local presionando = false
-        local pad = Instance.new("Frame", gui)
-        pad.Name = "MATRIXHUB_FLYSPEED"
-        pad.Size = UDim2.fromOffset(128,185)
-        pad.AnchorPoint = Vector2.new(0.5,0.5)
-        pad.Position = UDim2.fromScale(0.5,0.65)
-        pad.BackgroundColor3 = Color3.fromRGB(3, 20, 12)
-        pad.BackgroundTransparency = 0.3
-        Instance.new("UICorner", pad).CornerRadius = UDim.new(0,16)
-        local stroke = Instance.new("UIStroke", pad)
-        stroke.Color = Color3.fromRGB(0, 220, 90)
-        stroke.Thickness = 2
+
+        local pad = Instance.new("Frame")
+        pad.Name = "MATRIXHUB_FLY_PANEL"
+        pad.Size = UDim2.fromOffset(260, 210)
+        pad.AnchorPoint = Vector2.new(0.5, 0.5)
+        pad.Position = UDim2.fromScale(0.5, 0.62)
+        pad.BackgroundColor3 = Color3.fromRGB(2, 10, 8)
+        pad.BackgroundTransparency = 0.08
+        pad.BorderSizePixel = 0
         pad.Active = true
         pad.Draggable = true
-        local function crearAzul(pos, txt, sx, sy, name)
-            local b = Instance.new("TextButton", pad)
-            b.Name = name
-            b.Size = UDim2.fromOffset(sx or 30, sy or 30)
-            b.Position = pos
-            b.Text = txt
-            b.TextScaled = true
-            b.Font = Enum.Font.Code
-            b.TextColor3 = Color3.new(1,1,1)
-            b.BackgroundColor3 = Color3.fromRGB(0, 45, 22)
-            b.AutoButtonColor = false
-            Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-            local grad = Instance.new("UIGradient", b)
-            grad.Color = ColorSequence.new(Color3.fromRGB(0, 190, 75), Color3.fromRGB(0, 75, 30))
-            grad.Rotation = 90
-            return b
+        pad.ClipsDescendants = true
+        pad.ZIndex = 1
+        pad.Parent = gui
+
+        local panelScale = Instance.new("UIScale")
+        panelScale.Scale = 0.82
+        panelScale.Parent = pad
+
+        Instance.new("UICorner", pad).CornerRadius = UDim.new(0, 17)
+        local panelStroke = Instance.new("UIStroke")
+        panelStroke.Color = Color3.fromRGB(0, 255, 130)
+        panelStroke.Thickness = 2
+        panelStroke.Transparency = 0.12
+        panelStroke.Parent = pad
+
+        local panelGradient = Instance.new("UIGradient")
+        panelGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(2, 25, 17)),
+            ColorSequenceKeypoint.new(0.55, Color3.fromRGB(1, 11, 9)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 5, 5))
+        })
+        panelGradient.Rotation = 135
+        panelGradient.Parent = pad
+
+        -- Lluvia Matrix: pocas columnas, actualizadas a intervalos para no cargar cada frame.
+        local rainRandom = Random.new()
+        local rainLabels = {}
+        for i = 1, 9 do
+            local rain = Instance.new("TextLabel")
+            rain.Name = "MATRIX_RAIN_" .. i
+            rain.BackgroundTransparency = 1
+            rain.BorderSizePixel = 0
+            rain.Size = UDim2.fromOffset(17, 112)
+            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 210), rainRandom:NextInteger(-125, 300))
+            rain.Font = Enum.Font.Code
+            rain.TextSize = 13
+            rain.TextWrapped = true
+            rain.Text = "0\n1\nM\n0\n1\n0"
+            rain.TextColor3 = Color3.fromRGB(0, 220, 105)
+            rain.TextTransparency = 0.58
+            rain.TextYAlignment = Enum.TextYAlignment.Top
+            rain.ZIndex = 1
+            rain.Parent = pad
+            table.insert(rainLabels, {Label = rain, Speed = rainRandom:NextNumber(22, 48)})
         end
-        local up = crearAzul(UDim2.fromOffset(49,8), "▲", 30, 30, "MATRIXHUB")
-        local left = crearAzul(UDim2.fromOffset(10,42), "◄", 30, 30, "MATRIXHUB")
-        local right = crearAzul(UDim2.fromOffset(88,42), "►", 30, 30, "MATRIXHUB")
-        local down = crearAzul(UDim2.fromOffset(49,76), "▼", 30, 30, "MATRIXHUB")
-        local upV = crearAzul(UDim2.fromOffset(10,110), "⬆", 30, 30, "MATRIXHUB")
-        local downV = crearAzul(UDim2.fromOffset(88,110), "⬇", 30, 30, "MATRIXHUB")
-        local bajar = crearAzul(UDim2.fromOffset(6,148), "BAJAR", 54, 28, "MATRIXHUB")
-        local subir = crearAzul(UDim2.fromOffset(68,148), "SUBIR", 54, 28, "MATRIXHUB")
-        bajar.BackgroundColor3 = Color3.fromRGB(0, 35, 18)
-        subir.BackgroundColor3 = Color3.fromRGB(0, 95, 38)
+
+        local headerLine = Instance.new("Frame")
+        headerLine.Position = UDim2.fromOffset(13, 48)
+        headerLine.Size = UDim2.new(1, -26, 0, 1)
+        headerLine.BackgroundColor3 = Color3.fromRGB(0, 255, 130)
+        headerLine.BackgroundTransparency = 0.25
+        headerLine.BorderSizePixel = 0
+        headerLine.ZIndex = 2
+        headerLine.Parent = pad
+
+        local logo = Instance.new("TextLabel")
+        logo.BackgroundTransparency = 1
+        logo.Position = UDim2.fromOffset(15, 7)
+        logo.Size = UDim2.fromOffset(34, 34)
+        logo.Text = "⟡"
+        logo.Font = Enum.Font.GothamBold
+        logo.TextSize = 30
+        logo.TextColor3 = Color3.fromRGB(0, 255, 145)
+        logo.ZIndex = 3
+        logo.Parent = pad
+
+        local title = Instance.new("TextLabel")
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(52, 8)
+        title.Size = UDim2.fromOffset(135, 32)
+        title.Text = "FLY V1"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 22
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.TextColor3 = Color3.fromRGB(75, 255, 170)
+        title.ZIndex = 3
+        title.Parent = pad
+
+        local anchored = true
+        pad.Draggable = false
+        local anchorButton = Instance.new("TextButton")
+        anchorButton.Name = "FLY_PANEL_ANCHOR"
+        anchorButton.Position = UDim2.fromOffset(216, 9)
+        anchorButton.Size = UDim2.fromOffset(30, 28)
+        anchorButton.Text = "📌"
+        anchorButton.Font = Enum.Font.GothamBold
+        anchorButton.TextSize = 17
+        anchorButton.TextColor3 = Color3.fromRGB(210, 255, 230)
+        anchorButton.BackgroundColor3 = Color3.fromRGB(0, 65, 40)
+        anchorButton.BackgroundTransparency = 0.08
+        anchorButton.AutoButtonColor = false
+        anchorButton.BorderSizePixel = 0
+        anchorButton.ZIndex = 5
+        anchorButton.Parent = pad
+        Instance.new("UICorner", anchorButton).CornerRadius = UDim.new(0, 7)
+        local anchorStroke = Instance.new("UIStroke")
+        anchorStroke.Color = Color3.fromRGB(0, 255, 130)
+        anchorStroke.Transparency = 0.2
+        anchorStroke.Parent = anchorButton
+        anchorButton.MouseButton1Click:Connect(function()
+            anchored = not anchored
+            pad.Draggable = not anchored
+            anchorButton.Text = anchored and "📌" or "↔"
+            anchorButton.BackgroundColor3 = anchored and Color3.fromRGB(0, 65, 40) or Color3.fromRGB(20, 75, 55)
+        end)
+
+        local function makeButton(pos, size, txt, name)
+            local button = Instance.new("TextButton")
+            button.Name = name or "MATRIX_FLY_BUTTON"
+            button.Position = pos
+            button.Size = size
+            button.Text = txt
+            button.Font = Enum.Font.GothamBold
+            button.TextSize = 21
+            button.TextColor3 = Color3.fromRGB(185, 255, 220)
+            button.BackgroundColor3 = Color3.fromRGB(0, 48, 30)
+            button.BackgroundTransparency = 0.08
+            button.AutoButtonColor = false
+            button.BorderSizePixel = 0
+            button.ZIndex = 4
+            button.Parent = pad
+            Instance.new("UICorner", button).CornerRadius = UDim.new(0, 9)
+            local outline = Instance.new("UIStroke")
+            outline.Color = Color3.fromRGB(0, 230, 125)
+            outline.Thickness = 1.2
+            outline.Transparency = 0.2
+            outline.Parent = button
+            return button
+        end
+
+        local up = makeButton(UDim2.fromOffset(49, 66), UDim2.fromOffset(42, 39), "▲", "FLY_FORWARD")
+        local left = makeButton(UDim2.fromOffset(5, 109), UDim2.fromOffset(42, 39), "◀", "FLY_LEFT")
+        local right = makeButton(UDim2.fromOffset(93, 109), UDim2.fromOffset(42, 39), "▶", "FLY_RIGHT")
+        local down = makeButton(UDim2.fromOffset(49, 152), UDim2.fromOffset(42, 39), "▼", "FLY_BACK")
+        local upV = makeButton(UDim2.fromOffset(158, 83), UDim2.fromOffset(88, 49), "⬆  SUBIR", "FLY_UP")
+        upV.TextSize = 15
+        local downV = makeButton(UDim2.fromOffset(158, 143), UDim2.fromOffset(88, 49), "⬇  BAJAR", "FLY_DOWN")
+        downV.TextSize = 15
+
         local function estaEnPartida()
             local rs = game:GetService("ReplicatedStorage")
             if rs:FindFirstChild("GameInProgress") or rs:FindFirstChild("InGame") then
@@ -3499,6 +3619,7 @@ Movimiento:Toggle({
             end
             return false
         end
+
         local rayParams = RaycastParams.new()
         rayParams.FilterType = Enum.RaycastFilterType.Exclude
         rayParams.IgnoreWater = true
@@ -3511,10 +3632,10 @@ Movimiento:Toggle({
             local dir = Vector3.new(0,0,0)
             if mov.W then dir += workspace.CurrentCamera.CFrame.LookVector end
             if mov.S then dir -= workspace.CurrentCamera.CFrame.LookVector end
-            if mov.A then dir -= workspace.CurrentCamera.CFrame.RightVector end
-            if mov.D then dir += workspace.CurrentCamera.CFrame.RightVector end
             if mov.Up then dir += Vector3.new(0,1,0) end
             if mov.Down then dir += Vector3.new(0,-1,0) end
+            if mov.A then dir -= workspace.CurrentCamera.CFrame.RightVector end
+            if mov.D then dir += workspace.CurrentCamera.CFrame.RightVector end
             if dir.Magnitude == 0 then return end
             local ray = workspace:Raycast(hrp.Position, dir.Unit * 4, rayParams)
             if ray and ray.Instance and ray.Instance.CanCollide then
@@ -3525,46 +3646,62 @@ Movimiento:Toggle({
                 end)
             end
         end
-        local function conectar(b, k)
-            b.MouseButton1Down:Connect(function()
-                mov[k] = true
+
+        local function conectar(button, key)
+            button.MouseButton1Down:Connect(function()
+                mov[key] = true
                 presionando = true
             end)
-            b.MouseButton1Up:Connect(function()
-                mov[k] = false
+            button.MouseButton1Up:Connect(function()
+                mov[key] = false
                 if not mov.W and not mov.A and not mov.S and not mov.D and not mov.Up and not mov.Down then
                     presionando = false
                 end
             end)
-            b.MouseLeave:Connect(function()
-                mov[k] = false
+            button.MouseLeave:Connect(function()
+                mov[key] = false
                 if not mov.W and not mov.A and not mov.S and not mov.D and not mov.Up and not mov.Down then
                     presionando = false
                 end
             end)
         end
-        conectar(up,"W")
-        conectar(left,"A")
-        conectar(right,"D")
-        conectar(down,"S")
-        conectar(upV,"Up")
-        conectar(downV,"Down")
-        bajar.MouseButton1Click:Connect(function()
-            SPEED = math.clamp(SPEED - 0.1, 0.2, 3)
-            V_SPEED = math.clamp(V_SPEED - 0.1, 0.2, 3)
+
+        conectar(up, "W")
+        conectar(left, "A")
+        conectar(right, "D")
+        conectar(down, "S")
+        conectar(upV, "Up")
+        conectar(downV, "Down")
+
+
+
+        local rainAccumulator = 0
+        _G.FlyRainCon = RunService.RenderStepped:Connect(function(dt)
+            if not pad.Parent then return end
+            rainAccumulator += dt
+            if rainAccumulator < 0.06 then return end
+            local step = rainAccumulator
+            rainAccumulator = 0
+            for _, item in ipairs(rainLabels) do
+                local label = item.Label
+                if label and label.Parent then
+                    local y = label.Position.Y.Offset + item.Speed * step
+                    if y > 210 then
+                        y = rainRandom:NextInteger(-125, -35)
+                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 238), y)
+                    else
+                        label.Position = UDim2.fromOffset(label.Position.X.Offset, y)
+                    end
+                end
+            end
         end)
-        subir.MouseButton1Click:Connect(function()
-            SPEED = math.clamp(SPEED + 0.1, 0.2, 3)
-            V_SPEED = math.clamp(V_SPEED + 0.1, 0.2, 3)
-        end)
-        if _G.FlyCon1 then _G.FlyCon1:Disconnect() end
-        if _G.FlyCon2 then _G.FlyCon2:Disconnect() end
+
         _G.FlyCon1 = RunService.RenderStepped:Connect(function()
             if not PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then return end
-            if not estaEnPartida() then
-                pad.Visible = false
-                return
-            end
+            -- Reforzar la visibilidad del panel y su ScreenGui.
+            if gui.Parent ~= PlayerGui then gui.Parent = PlayerGui end
+            gui.Enabled = true
+            gui.DisplayOrder = 1000000
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
@@ -3588,6 +3725,7 @@ Movimiento:Toggle({
             if mov.Up then hrp.CFrame = hrp.CFrame + Vector3.new(0, V_SPEED, 0) end
             if mov.Down then hrp.CFrame = hrp.CFrame - Vector3.new(0, V_SPEED, 0) end
         end)
+
         _G.FlyCon2 = RunService.Heartbeat:Connect(function()
             if not presionando then
                 local char = lp.Character
@@ -4135,39 +4273,25 @@ if LP.Character then
 end
 
 
--- MATRIXHUB_FAKE_AVATAR // LOCAL COSMETICS
--- Efectos visuales locales; no cambian el inventario ni los artículos de la cuenta.
+do -- MATRIXHUB_FAKE_AVATAR // SOLO FAKE HEADLESS
 local MATRIXHUB_FAKE_AVATAR = {
     Headless = false,
-    Korblox = false,
-    HeadOriginals = setmetatable({}, { __mode = "k" }),
-    LegOriginals = setmetatable({}, { __mode = "k" }),
-    FakeKorbloxModel = nil
+    HeadOriginals = setmetatable({}, { __mode = "k" })
 }
 
-local function MATRIXHUB_SaveAndHidePart(part, originals)
+local function MATRIXHUB_SaveAndHidePart(part)
     if not part or not part:IsA("BasePart") then return end
-    if originals[part] == nil then
-        originals[part] = part.LocalTransparencyModifier
+    if MATRIXHUB_FAKE_AVATAR.HeadOriginals[part] == nil then
+        MATRIXHUB_FAKE_AVATAR.HeadOriginals[part] = part.LocalTransparencyModifier
     end
     part.LocalTransparencyModifier = 1
-end
-
-local function MATRIXHUB_RestoreLocalParts(originals)
-    for object, original in pairs(originals) do
-        if object and object.Parent and object:IsA("BasePart") then
-            pcall(function() object.LocalTransparencyModifier = original end)
-        end
-        originals[object] = nil
-    end
 end
 
 local function MATRIXHUB_ApplyFakeHeadless(character)
     if not character then return end
     local head = character:FindFirstChild("Head")
     if not head then return end
-
-    MATRIXHUB_SaveAndHidePart(head, MATRIXHUB_FAKE_AVATAR.HeadOriginals)
+    MATRIXHUB_SaveAndHidePart(head)
     for _, object in ipairs(head:GetDescendants()) do
         if object:IsA("Decal") or object:IsA("Texture") then
             if MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] == nil then
@@ -4193,98 +4317,12 @@ local function MATRIXHUB_RestoreFakeHeadless()
     end
 end
 
-local function MATRIXHUB_RemoveFakeKorbloxModel()
-    local model = MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel
-    if model then
-        pcall(function() model:Destroy() end)
-        MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = nil
-    end
-end
-
-local function MATRIXHUB_ApplyFakeKorblox(character)
-    if not character then return end
-    MATRIXHUB_RemoveFakeKorbloxModel()
-
-    local anchor = character:FindFirstChild("LeftLowerLeg")
-        or character:FindFirstChild("Left Leg")
-        or character:FindFirstChild("LeftFoot")
-    if not anchor or not anchor:IsA("BasePart") then return end
-
-    for _, partName in ipairs({ "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "Left Leg" }) do
-        local part = character:FindFirstChild(partName)
-        if part and part:IsA("BasePart") then
-            MATRIXHUB_SaveAndHidePart(part, MATRIXHUB_FAKE_AVATAR.LegOriginals)
-        end
-    end
-
-    local model = Instance.new("Model")
-    model.Name = "MATRIXHUB_FAKE_KORBLOX_LOCAL"
-    model.Parent = character
-    MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = model
-
-    local baseHeight = math.max(anchor.Size.Y * 0.48, 0.28)
-    local baseWidth = math.max(math.min(anchor.Size.X, anchor.Size.Z) * 0.72, 0.18)
-
-    local stump = Instance.new("Part")
-    stump.Name = "KorbloxLocalStump"
-    stump.Shape = Enum.PartType.Cylinder
-    stump.Size = Vector3.new(baseWidth, baseHeight, baseWidth)
-    stump.CFrame = anchor.CFrame
-        * CFrame.new(0, -anchor.Size.Y * 0.24, 0)
-        * CFrame.Angles(0, 0, math.rad(90))
-    stump.Color = Color3.fromRGB(55, 58, 145)
-    stump.Material = Enum.Material.SmoothPlastic
-    stump.Anchored = false
-    stump.CanCollide = false
-    stump.CanTouch = false
-    stump.CanQuery = false
-    stump.Massless = true
-    stump.CastShadow = false
-    stump.Parent = model
-
-    local stumpWeld = Instance.new("WeldConstraint")
-    stumpWeld.Part0 = anchor
-    stumpWeld.Part1 = stump
-    stumpWeld.Parent = stump
-
-    local tip = Instance.new("WedgePart")
-    tip.Name = "KorbloxLocalPoint"
-    tip.Size = Vector3.new(baseWidth * 0.92, math.max(baseWidth * 0.62, 0.12), baseWidth * 0.92)
-    tip.CFrame = stump.CFrame
-        * CFrame.new(0, -(baseHeight * 0.5) - (tip.Size.Y * 0.35), 0)
-        * CFrame.Angles(math.rad(180), math.rad(90), 0)
-    tip.Color = Color3.fromRGB(119, 151, 255)
-    tip.Material = Enum.Material.SmoothPlastic
-    tip.Anchored = false
-    tip.CanCollide = false
-    tip.CanTouch = false
-    tip.CanQuery = false
-    tip.Massless = true
-    tip.CastShadow = false
-    tip.Parent = model
-
-    local tipWeld = Instance.new("WeldConstraint")
-    tipWeld.Part0 = anchor
-    tipWeld.Part1 = tip
-    tipWeld.Parent = tip
-end
-
 local function MATRIXHUB_SetFakeHeadless(enabled)
     MATRIXHUB_FAKE_AVATAR.Headless = enabled == true
     if MATRIXHUB_FAKE_AVATAR.Headless then
         MATRIXHUB_ApplyFakeHeadless(LP.Character)
     else
         MATRIXHUB_RestoreFakeHeadless()
-    end
-end
-
-local function MATRIXHUB_SetFakeKorblox(enabled)
-    MATRIXHUB_FAKE_AVATAR.Korblox = enabled == true
-    if MATRIXHUB_FAKE_AVATAR.Korblox then
-        MATRIXHUB_ApplyFakeKorblox(LP.Character)
-    else
-        MATRIXHUB_RemoveFakeKorbloxModel()
-        MATRIXHUB_RestoreLocalParts(MATRIXHUB_FAKE_AVATAR.LegOriginals)
     end
 end
 
@@ -4295,28 +4333,16 @@ Animaciones:Toggle({
     Value = false,
     Callback = MATRIXHUB_SetFakeHeadless
 })
-Animaciones:Toggle({
-    Title = "FAKE KORBLOX",
-    Icon = "footprints",
-    Value = false,
-    Callback = MATRIXHUB_SetFakeKorblox
-})
 
 LP.CharacterAdded:Connect(function(character)
-    task.spawn(function()
-        character:WaitForChild("Humanoid", 10)
-        task.wait(0.35)
-        MATRIXHUB_FAKE_AVATAR.HeadOriginals = setmetatable({}, { __mode = "k" })
-        MATRIXHUB_FAKE_AVATAR.LegOriginals = setmetatable({}, { __mode = "k" })
-        MATRIXHUB_FAKE_AVATAR.FakeKorbloxModel = nil
-        if MATRIXHUB_FAKE_AVATAR.Headless then
+    task.defer(function()
+        character:WaitForChild("Head", 10)
+        if LP.Character == character and MATRIXHUB_FAKE_AVATAR.Headless then
             MATRIXHUB_ApplyFakeHeadless(character)
-        end
-        if MATRIXHUB_FAKE_AVATAR.Korblox then
-            MATRIXHUB_ApplyFakeKorblox(character)
         end
     end)
 end)
+end -- FIN DEL ÁMBITO FAKE AVATAR
 
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
