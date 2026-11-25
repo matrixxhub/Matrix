@@ -1448,11 +1448,13 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
  
--- MATRIX SKY // elementos 3D colocados en la zona del cielo, relativos a la cámara.
+-- MATRIX SKY // imagen fija en el cielo del mundo, no es una interfaz de pantalla.
 do
+    local PlayersSky = game:GetService("Players")
     local RunServiceSky = game:GetService("RunService")
     local WorkspaceSky = game:GetService("Workspace")
-    local cameraSky = WorkspaceSky.CurrentCamera
+    local playerSky = PlayersSky.LocalPlayer
+
     local oldSkyFolder = WorkspaceSky:FindFirstChild("MATRIXHUB_SKY_VISUAL")
     if oldSkyFolder then oldSkyFolder:Destroy() end
 
@@ -1460,109 +1462,46 @@ do
     skyFolder.Name = "MATRIXHUB_SKY_VISUAL"
     skyFolder.Parent = WorkspaceSky
 
-    local rngSky = Random.new()
-    local rainColumns = {}
-    local rainGlyphs = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
-    local rainWords = { "MATRIX", "SANOX" }
+    local skyAnchor = Instance.new("Part")
+    skyAnchor.Name = "SanoxAnimeSkyAnchor"
+    skyAnchor.Size = Vector3.new(1, 1, 1)
+    skyAnchor.Anchored = true
+    skyAnchor.Transparency = 1
+    skyAnchor.CanCollide = false
+    skyAnchor.CanTouch = false
+    skyAnchor.CanQuery = false
+    skyAnchor.CastShadow = false
+    skyAnchor.Parent = skyFolder
 
-    local function makeSkyAnchor(name, offset)
-        local anchor = Instance.new("Part")
-        anchor.Name = name
-        anchor.Size = Vector3.new(0.2, 0.2, 0.2)
-        anchor.Anchored = true
-        anchor.Transparency = 1
-        anchor.CanCollide = false
-        anchor.CanTouch = false
-        anchor.CanQuery = false
-        anchor.CastShadow = false
-        anchor.Parent = skyFolder
-        return { Part = anchor, Offset = offset }
-    end
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "SanoxAnimeSkyBillboard"
+    billboard.Adornee = skyAnchor
+    billboard.Size = UDim2.fromOffset(460, 460)
+    billboard.AlwaysOnTop = false
+    billboard.LightInfluence = 0
+    billboard.MaxDistance = 10000
+    billboard.Parent = skyAnchor
 
-    -- Imagen fija en el cielo. Se estira deliberadamente para ocupar más espacio.
-    local imageAnchor = makeSkyAnchor("SanoxStaticImageAnchor", Vector3.new(0, 13, -180))
-    local imageBillboard = Instance.new("BillboardGui")
-    imageBillboard.Name = "SanoxStaticImageBillboard"
-    imageBillboard.Adornee = imageAnchor.Part
-    imageBillboard.Size = UDim2.fromOffset(300, 210)
-    imageBillboard.AlwaysOnTop = true
-    imageBillboard.LightInfluence = 0
-    imageBillboard.MaxDistance = 1000
-    imageBillboard.Parent = imageAnchor.Part
-
-    local staticImage = Instance.new("ImageLabel")
-    staticImage.Name = "SanoxStaticImage"
-    staticImage.Size = UDim2.fromScale(1, 1)
-    staticImage.BackgroundTransparency = 1
-    staticImage.Image = "rbxassetid://128047927855303"
-    staticImage.ScaleType = Enum.ScaleType.Stretch
-    staticImage.Parent = imageBillboard
-
-    -- Columnas 3D independientes: caen en el campo visual del cielo, sin panel negro.
-    for i = 1, 14 do
-        local x = -48 + ((i - 1) / 13) * 96
-        local y = rngSky:NextNumber(8, 32)
-        local anchor = makeSkyAnchor("MatrixRainAnchor_" .. i, Vector3.new(x, y, -175))
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "MatrixRainBillboard_" .. i
-        billboard.Adornee = anchor.Part
-        billboard.Size = UDim2.fromOffset((i == 4 or i == 11) and 92 or 34, 220)
-        billboard.AlwaysOnTop = true
-        billboard.LightInfluence = 0
-        billboard.MaxDistance = 1000
-        billboard.Parent = anchor.Part
-
-        local label = Instance.new("TextLabel")
-        label.Name = "MatrixRainText"
-        label.Size = UDim2.fromScale(1, 1)
-        label.BackgroundTransparency = 1
-        label.BorderSizePixel = 0
-        label.Font = Enum.Font.Code
-        label.TextSize = rngSky:NextInteger(17, 22)
-        label.TextColor3 = Color3.fromRGB(0, 220, 100)
-        label.TextTransparency = rngSky:NextNumber(0.12, 0.32)
-        label.TextStrokeTransparency = 0.55
-        label.TextStrokeColor3 = Color3.fromRGB(0, 35, 14)
-        label.TextYAlignment = Enum.TextYAlignment.Top
-        label.TextXAlignment = Enum.TextXAlignment.Center
-        label.Parent = billboard
-
-        local chars = {}
-        for n = 1, 13 do
-            chars[n] = rainGlyphs[rngSky:NextInteger(1, #rainGlyphs)]
-        end
-        if i == 4 or i == 11 then
-            chars[5] = rainWords[i == 4 and 1 or 2]
-        end
-        label.Text = table.concat(chars, "\n")
-
-        rainColumns[#rainColumns + 1] = {
-            Anchor = anchor,
-            X = x,
-            Y = y,
-            Z = -175,
-            Speed = rngSky:NextNumber(5, 11)
-        }
-    end
+    local image = Instance.new("ImageLabel")
+    image.Name = "SanoxAnimeImage"
+    image.Size = UDim2.fromScale(1, 1)
+    image.BackgroundTransparency = 1
+    image.Image = "rbxassetid://128047927855303"
+    image.ScaleType = Enum.ScaleType.Stretch
+    image.Parent = billboard
 
     local skyConnection
-    skyConnection = RunServiceSky.RenderStepped:Connect(function(dt)
+    skyConnection = RunServiceSky.Heartbeat:Connect(function()
         if not skyFolder.Parent then
             if skyConnection then skyConnection:Disconnect() skyConnection = nil end
             return
         end
-        cameraSky = WorkspaceSky.CurrentCamera or cameraSky
-        if not cameraSky then return end
 
-        imageAnchor.Part.CFrame = cameraSky.CFrame * CFrame.new(imageAnchor.Offset)
-
-        local step = math.min(dt, 0.05)
-        for _, column in ipairs(rainColumns) do
-            column.Y = column.Y - column.Speed * step
-            if column.Y < -34 then
-                column.Y = rngSky:NextNumber(22, 42)
-            end
-            column.Anchor.Part.CFrame = cameraSky.CFrame * CFrame.new(column.X, column.Y, column.Z)
+        local character = playerSky.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            -- La imagen queda en una posición elevada del mundo, no delante de la cámara.
+            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 190, -35))
         end
     end)
 end
