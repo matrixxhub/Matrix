@@ -2312,7 +2312,7 @@ silentAimManualEnabled = false
 silentAimFovEnabled = false
 silentAimTargetPart = "Cabeza"
 local espEnabled = false
-local espVisualState = { TracersEnabled = false, SkeletonEnabled = false }
+local espVisualState = { TracersEnabled = false, SkeletonEnabled = false, TracerOrigin = "CENTRO" }
 local espTools = {}
 local espColor = Color3.fromRGB(255, 0, 0)
 local activeESPs = {}
@@ -4031,6 +4031,14 @@ Visuales:Toggle({
         end
     end
 })
+Visuales:Dropdown({
+    Title = "POSICIÓN DE TRACERS",
+    Values = {"CENTRO", "ABAJO"},
+    Value = "CENTRO",
+    Callback = function(value)
+        espVisualState.TracerOrigin = value == "ABAJO" and "ABAJO" or "CENTRO"
+    end
+})
 Visuales:Toggle({
     Title = "SKELETON ESP",
     Value = false,
@@ -4041,6 +4049,61 @@ Visuales:Toggle({
         end
     end
 })
+
+-- FOV CAMERA // 0 en el slider equivale al FOV base de 70 grados.
+do
+    local fovEnabled = false
+    local fovOffset = 0
+    local originalFovByCamera = setmetatable({}, { __mode = "k" })
+
+    local function applyMatrixFov(camera)
+        if not camera or not fovEnabled then return end
+        if originalFovByCamera[camera] == nil then
+            originalFovByCamera[camera] = camera.FieldOfView
+        end
+        camera.FieldOfView = math.clamp(70 + fovOffset, 1, 120)
+    end
+
+    local function restoreMatrixFov(camera)
+        if not camera then return end
+        local original = originalFovByCamera[camera]
+        if original ~= nil then
+            camera.FieldOfView = original
+            originalFovByCamera[camera] = nil
+        end
+    end
+
+    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        local camera = workspace.CurrentCamera
+        if fovEnabled then applyMatrixFov(camera) end
+    end)
+
+    Visuales:Toggle({
+        Title = "FOV CAMERA",
+        Value = false,
+        Callback = function(enabled)
+            fovEnabled = enabled == true
+            local camera = workspace.CurrentCamera
+            if fovEnabled then
+                applyMatrixFov(camera)
+            else
+                for savedCamera in pairs(originalFovByCamera) do
+                    restoreMatrixFov(savedCamera)
+                end
+            end
+        end
+    })
+
+    Visuales:Slider({
+        Title = "AUMENTO DE FOV (0 = 70°)",
+        Step = 1,
+        Value = { Min = 0, Max = 50, Default = 0 },
+        Callback = function(value)
+            fovOffset = math.clamp(math.floor(tonumber(value) or 0), 0, 50)
+            if fovEnabled then applyMatrixFov(workspace.CurrentCamera) end
+        end
+    })
+end
 
 -- MATRIX RIPPLE // indicador visual del punto tocado. No modifica entradas ni camara.
 do
@@ -4259,7 +4322,7 @@ RunService.RenderStepped:Connect(function()
     local currentCamera = workspace.CurrentCamera
     if not currentCamera then return end
     local viewport = currentCamera.ViewportSize
-    local tracerOrigin = Vector2.new(viewport.X * 0.5, viewport.Y - 4)
+    local tracerOrigin = espVisualState.TracerOrigin == "ABAJO" and Vector2.new(viewport.X * 0.5, viewport.Y - 4) or Vector2.new(viewport.X * 0.5, viewport.Y * 0.5)
 
     for targetPlayer, data in pairs(activeESPs) do
         local char = data.Char
