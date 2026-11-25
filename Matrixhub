@@ -1494,7 +1494,7 @@ do
         label.Name = "MatrixRain_" .. i
         label.BackgroundTransparency = 1
         label.BorderSizePixel = 0
-        label.Size = UDim2.new(0, 30, 0, 190)
+        label.Size = UDim2.new(0, (i == 4 or i == 11) and 64 or 30, 0, 190)
         local x = (i - 1) / 13
         local y = rngSky:NextNumber(-0.9, 0.45)
         label.Position = UDim2.new(x, 0, y, 0)
@@ -1505,6 +1505,7 @@ do
         label.TextStrokeTransparency = 0.55
         label.TextStrokeColor3 = Color3.fromRGB(0, 35, 14)
         label.TextYAlignment = Enum.TextYAlignment.Top
+        label.TextXAlignment = Enum.TextXAlignment.Center
         label.ZIndex = 2
         local chars = {}
         for n = 1, 12 do
