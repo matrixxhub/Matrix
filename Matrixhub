@@ -3484,7 +3484,6 @@ Movimiento:Toggle({
         -- Lluvia Matrix: pocas columnas, actualizadas a intervalos para no cargar cada frame.
         local rainRandom = Random.new()
         local rainLabels = {}
-        local rainChars = "01アイウエオカキクケコサシスセソ"
         for i = 1, 9 do
             local rain = Instance.new("TextLabel")
             rain.Name = "MATRIX_RAIN_" .. i
@@ -3495,8 +3494,7 @@ Movimiento:Toggle({
             rain.Font = Enum.Font.Code
             rain.TextSize = 13
             rain.TextWrapped = true
-            rain.Text = string.sub(rainChars, rainRandom:NextInteger(1, #rainChars), rainRandom:NextInteger(2, #rainChars))
-            rain.Text = "0\n1\nM\n0\n1\n" .. string.sub(rainChars, rainRandom:NextInteger(1, #rainChars), rainRandom:NextInteger(1, #rainChars))
+            rain.Text = "0\n1\nM\n0\n1\n0"
             rain.TextColor3 = Color3.fromRGB(0, 220, 105)
             rain.TextTransparency = 0.58
             rain.TextYAlignment = Enum.TextYAlignment.Top
@@ -3657,7 +3655,7 @@ Movimiento:Toggle({
         local function setPanelMinimized(value)
             minimized = value
             for _, child in ipairs(pad:GetChildren()) do
-                if child ~= minimize and child ~= panelStroke and child ~= panelGradient and child ~= title and child ~= logo and child ~= headerLine then
+                if child:IsA("GuiObject") and child ~= minimize and child ~= title and child ~= logo and child ~= headerLine then
                     child.Visible = not minimized
                 end
             end
