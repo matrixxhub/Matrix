@@ -177,7 +177,7 @@ MATRIXHUB_UI:CreateWindow({
         Icon = "ghost",
         CornerRadius = UDim.new(0, 14),
         StrokeThickness = 1.1,
-        Enabled = false, -- Se activa cuando termina de construirse el panel.
+        Enabled = true,
         Draggable = true,
         Scale = 0.9,
         Color = ColorSequence.new(Color3.fromRGB(0, 35, 18), Color3.fromRGB(0, 0, 0))
@@ -186,8 +186,16 @@ MATRIXHUB_UI:CreateWindow({
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 
--- El OpenButton se mantiene desactivado durante la construcción.
--- Así no aparece antes de que estén listas todas las pestañas.
+-- WindUI abre la ventana automáticamente al crearla. Se cierra después de
+-- esa apertura inicial y se mantiene oculta mientras se construyen las pestañas.
+task.wait(0.12)
+pcall(function()
+    MATRIXHUB:Close()
+    MATRIXHUB.UIElements.Main.Visible = false
+    if MATRIXHUB.OpenButtonMain then
+        MATRIXHUB.OpenButtonMain:Visible(false)
+    end
+end)
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -5041,9 +5049,9 @@ Movimiento:Slider({
     end
 })
 
--- El botón flotante aparece únicamente después de construir el hub.
+-- Mostrar la ventana únicamente cuando todas las opciones estén listas.
 pcall(function()
-    MATRIXHUB:EditOpenButton({ Enabled = true })
+    MATRIXHUB:Open()
 end)
 task.wait()
 
