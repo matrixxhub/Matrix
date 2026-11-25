@@ -186,16 +186,9 @@ MATRIXHUB_UI:CreateWindow({
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 
--- WindUI abre la ventana automáticamente al crearla. Se cierra después de
--- esa apertura inicial y se mantiene oculta mientras se construyen las pestañas.
-task.wait(0.12)
-pcall(function()
-    MATRIXHUB:Close()
-    MATRIXHUB.UIElements.Main.Visible = false
-    if MATRIXHUB.OpenButtonMain then
-        MATRIXHUB.OpenButtonMain:Visible(false)
-    end
-end)
+-- La ventana se crea normalmente. El ScreenGui de inicio tiene DisplayOrder
+-- superior, así que cubre el panel hasta que termine la construcción sin
+-- llamar Close/Open ni alterar el estado interno de WindUI.
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -5049,11 +5042,7 @@ Movimiento:Slider({
     end
 })
 
--- Mostrar la ventana únicamente cuando todas las opciones estén listas.
-pcall(function()
-    MATRIXHUB:Open()
-end)
-task.wait()
+-- WindUI conserva su apertura normal; el splash la cubre durante la carga.
 
 end -- FIN DE launchMatrixHub
 
