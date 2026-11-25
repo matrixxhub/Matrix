@@ -4135,6 +4135,7 @@ if LP.Character then
 end
 
 
+do -- Aísla los locales del sistema Fake Avatar para reducir registros del ámbito principal.
 -- MATRIXHUB_FAKE_AVATAR // LOCAL COSMETICS
 -- Efectos visuales locales; no cambian el inventario ni los artículos de la cuenta.
 local MATRIXHUB_FAKE_AVATAR = {
@@ -4317,6 +4318,8 @@ LP.CharacterAdded:Connect(function(character)
         end
     end)
 end)
+
+end -- FIN DEL ÁMBITO FAKE AVATAR
 
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
