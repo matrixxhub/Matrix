@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local launchMatrixHub
+local MATRIXHUB
 
 local oldStartup = PlayerGui:FindFirstChild("MATRIXHUB_STARTUP")
 if oldStartup then oldStartup:Destroy() end
@@ -162,7 +163,7 @@ MATRIXHUB_UI:AddTheme({
     Button = Color3.fromRGB(105, 111, 108),    -- Estado inactivo
     Icon = Color3.fromRGB(210, 218, 213),
 })
-local  MATRIXHUB =
+MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
     Author = "SANOX",
@@ -184,6 +185,10 @@ MATRIXHUB_UI:CreateWindow({
     },
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
+-- Mantener la ventana oculta mientras se construyen todas las pestañas.
+pcall(function()
+    MATRIXHUB.UIElements.Main.Visible = false
+end)
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 
 -- La ventana se crea normalmente. El ScreenGui de inicio tiene DisplayOrder
@@ -5057,5 +5062,13 @@ task.spawn(function()
     if elapsed < minimumDisplayTime then
         task.wait(minimumDisplayTime - elapsed)
     end
+    -- Reforzar el ocultamiento justo antes de retirar el splash.
+    if MATRIXHUB then
+        pcall(function() MATRIXHUB.UIElements.Main.Visible = false end)
+    end
     closeMatrixStartup()
+    -- La ventana solo aparece cuando la pantalla de carga ya desapareció.
+    if ok and MATRIXHUB then
+        pcall(function() MATRIXHUB.UIElements.Main.Visible = true end)
+    end
 end)
