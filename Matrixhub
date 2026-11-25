@@ -185,6 +185,19 @@ MATRIXHUB_UI:CreateWindow({
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
+
+-- BLOQUEO DE APARICIÓN: la interfaz completa se mantiene oculta mientras
+-- se construyen las pestañas y controles. No cambia el diseño del splash.
+local MATRIXHUB_LOADING_SCREEN_GUI = nil
+pcall(function()
+    local mainElement = MATRIXHUB.UIElements and MATRIXHUB.UIElements.Main
+    if mainElement then
+        MATRIXHUB_LOADING_SCREEN_GUI = mainElement:FindFirstAncestorWhichIsA("ScreenGui")
+        if MATRIXHUB_LOADING_SCREEN_GUI then
+            MATRIXHUB_LOADING_SCREEN_GUI.Enabled = false
+        end
+    end
+end)
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -5037,6 +5050,12 @@ Movimiento:Slider({
         MATRIXHUB_speed = v
     end
 })
+
+-- La interfaz solo se habilita cuando ya terminó de construirse el hub.
+if MATRIXHUB_LOADING_SCREEN_GUI and MATRIXHUB_LOADING_SCREEN_GUI.Parent then
+    MATRIXHUB_LOADING_SCREEN_GUI.Enabled = true
+end
+task.wait()
 
 end -- FIN DE launchMatrixHub
 
