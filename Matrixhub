@@ -4206,12 +4206,14 @@ local function MATRIXHUB_ApplyFakeKorblox(character)
     if not character then return end
     MATRIXHUB_RemoveFakeKorbloxModel()
 
-    local anchor = character:FindFirstChild("LeftLowerLeg")
-        or character:FindFirstChild("Left Leg")
-        or character:FindFirstChild("LeftFoot")
+    -- Korblox Deathspeaker usa la pierna DERECHA.
+    local anchor = character:FindFirstChild("RightLowerLeg")
+        or character:FindFirstChild("Right Leg")
+        or character:FindFirstChild("RightFoot")
     if not anchor or not anchor:IsA("BasePart") then return end
 
-    for _, partName in ipairs({ "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "Left Leg" }) do
+    -- Oculta solo las piezas de la pierna derecha; conserva la izquierda.
+    for _, partName in ipairs({ "RightUpperLeg", "RightLowerLeg", "RightFoot", "Right Leg" }) do
         local part = character:FindFirstChild(partName)
         if part and part:IsA("BasePart") then
             MATRIXHUB_SaveAndHidePart(part, MATRIXHUB_FAKE_AVATAR.LegOriginals)
