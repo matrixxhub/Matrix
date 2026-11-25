@@ -1448,12 +1448,19 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
  
--- MATRIX SKY // imagen fija en el cielo del mundo, no es una interfaz de pantalla.
+-- MATRIX SKY // imagen fija en el cielo con selector de tres recursos.
 do
     local PlayersSky = game:GetService("Players")
     local RunServiceSky = game:GetService("RunService")
     local WorkspaceSky = game:GetService("Workspace")
     local playerSky = PlayersSky.LocalPlayer
+
+    local skyImages = {
+        ["IMAGEN 1"] = "76981839876175",
+        ["IMAGEN 2"] = "137163080514754",
+        ["IMAGEN 3"] = "128047927855303"
+    }
+    local selectedSkyImage = "IMAGEN 3"
 
     local oldSkyFolder = WorkspaceSky:FindFirstChild("MATRIXHUB_SKY_VISUAL")
     if oldSkyFolder then oldSkyFolder:Destroy() end
@@ -1486,9 +1493,22 @@ do
     image.Name = "SanoxAnimeImage"
     image.Size = UDim2.fromScale(1, 1)
     image.BackgroundTransparency = 1
-    image.Image = "rbxthumb://type=Asset&id=128047927855303&w=420&h=420"
+    image.Image = "rbxassetid://" .. skyImages[selectedSkyImage]
     image.ScaleType = Enum.ScaleType.Stretch
     image.Parent = billboard
+
+    Visuales:Section({ Title = "MATRIX SKY", Icon = "image", Opened = true })
+    Visuales:Dropdown({
+        Title = "SELECCIONAR IMAGEN DEL CIELO",
+        Values = { "IMAGEN 1", "IMAGEN 2", "IMAGEN 3" },
+        Value = selectedSkyImage,
+        Callback = function(selected)
+            local assetId = skyImages[selected]
+            if not assetId then return end
+            selectedSkyImage = selected
+            image.Image = "rbxassetid://" .. assetId
+        end
+    })
 
     local skyConnection
     skyConnection = RunServiceSky.Heartbeat:Connect(function()
