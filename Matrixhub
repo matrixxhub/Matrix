@@ -4777,7 +4777,16 @@ Animaciones:Button({
     end
 })
 
--- Seccion de creditos eliminada por rediseño de interfaz.
+-- MATRIXHUB // CREDITOS
+Animaciones:Section({ Title = "CREDITOS", Icon = "award", Opened = true })
+Animaciones:Paragraph({
+    Title = "SANOX // CREADOR PRINCIPAL",
+    Desc = "Creador y desarrollador principal de Matrix Hub. Responsable de la dirección del proyecto, sus modificaciones y su evolución."
+})
+Animaciones:Paragraph({
+    Title = "01ROXHUB // SUBCREADOR",
+    Desc = "Todo comenzó con una idea. Este panel nació de algo que existió antes, pero evolucionó hasta convertirse en Matrix Hub.\n\nCrédito a 01ROXHUB por la base e inspiración original."
+})
 
 AutoKills:Section({ Title = "HITBOX EXPANDER", Icon = "box" })
 
