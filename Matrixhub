@@ -1448,12 +1448,9 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
  
--- MATRIX SKY // imagen fija en el cielo con selector de tres recursos.
+-- MATRIX SKY // Skybox local con selector y activacion manual.
 do
-    local PlayersSky = game:GetService("Players")
-    local RunServiceSky = game:GetService("RunService")
-    local WorkspaceSky = game:GetService("Workspace")
-    local playerSky = PlayersSky.LocalPlayer
+    local LightingSky = game:GetService("Lighting")
 
     local skyImages = {
         ["IMAGEN 1"] = "76981839876175",
@@ -1461,67 +1458,98 @@ do
         ["IMAGEN 3"] = "128047927855303"
     }
     local selectedSkyImage = "IMAGEN 3"
+    local skyEnabled = false
+    local matrixSky = nil
+    local originalSkies = {}
 
-    local oldSkyFolder = WorkspaceSky:FindFirstChild("MATRIXHUB_SKY_VISUAL")
-    if oldSkyFolder then oldSkyFolder:Destroy() end
+    local skyFaces = {
+        "SkyboxBk",
+        "SkyboxDn",
+        "SkyboxFt",
+        "SkyboxLf",
+        "SkyboxRt",
+        "SkyboxUp"
+    }
 
-    local skyFolder = Instance.new("Folder")
-    skyFolder.Name = "MATRIXHUB_SKY_VISUAL"
-    skyFolder.Parent = WorkspaceSky
+    local function MATRIXHUB_ApplySkyImage()
+        if not matrixSky then return end
+        local assetId = skyImages[selectedSkyImage]
+        if not assetId then return end
 
-    local skyAnchor = Instance.new("Part")
-    skyAnchor.Name = "SanoxAnimeSkyAnchor"
-    skyAnchor.Size = Vector3.new(1, 1, 1)
-    skyAnchor.Anchored = true
-    skyAnchor.Transparency = 1
-    skyAnchor.CanCollide = false
-    skyAnchor.CanTouch = false
-    skyAnchor.CanQuery = false
-    skyAnchor.CastShadow = false
-    skyAnchor.Parent = skyFolder
+        local content = "rbxassetid://" .. assetId
+        for _, face in ipairs(skyFaces) do
+            pcall(function()
+                matrixSky[face] = content
+            end)
+        end
+    end
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "SanoxAnimeSkyBillboard"
-    billboard.Adornee = skyAnchor
-    billboard.Size = UDim2.fromOffset(460, 460)
-    billboard.AlwaysOnTop = true
-    billboard.LightInfluence = 0
-    billboard.MaxDistance = 10000
-    billboard.Parent = skyAnchor
+    local function MATRIXHUB_EnableSky()
+        if skyEnabled then return end
+        skyEnabled = true
 
-    local image = Instance.new("ImageLabel")
-    image.Name = "SanoxAnimeImage"
-    image.Size = UDim2.fromScale(1, 1)
-    image.BackgroundTransparency = 1
-    image.Image = "rbxassetid://" .. skyImages[selectedSkyImage]
-    image.ScaleType = Enum.ScaleType.Stretch
-    image.Parent = billboard
+        -- Aparta temporalmente los Sky existentes para poder restaurarlos al desactivar.
+        table.clear(originalSkies)
+        for _, child in ipairs(LightingSky:GetChildren()) do
+            if child:IsA("Sky") and child.Name ~= "MATRIXHUB_CUSTOM_SKY" then
+                table.insert(originalSkies, child)
+                child.Parent = nil
+            end
+        end
+
+        matrixSky = Instance.new("Sky")
+        matrixSky.Name = "MATRIXHUB_CUSTOM_SKY"
+        matrixSky.Parent = LightingSky
+        MATRIXHUB_ApplySkyImage()
+    end
+
+    local function MATRIXHUB_DisableSky()
+        if not skyEnabled then return end
+        skyEnabled = false
+
+        if matrixSky then
+            pcall(function() matrixSky:Destroy() end)
+            matrixSky = nil
+        end
+
+        -- Devuelve los cielos originales sin borrar ni alterar sus propiedades.
+        for _, originalSky in ipairs(originalSkies) do
+            if originalSky and originalSky.Parent == nil then
+                pcall(function()
+                    originalSky.Parent = LightingSky
+                end)
+            end
+        end
+        table.clear(originalSkies)
+    end
 
     Visuales:Section({ Title = "MATRIX SKY", Icon = "image", Opened = true })
+
+    Visuales:Toggle({
+        Title = "ACTIVAR MATRIX SKY",
+        Icon = "cloud",
+        Value = false,
+        Callback = function(enabled)
+            if enabled then
+                MATRIXHUB_EnableSky()
+            else
+                MATRIXHUB_DisableSky()
+            end
+        end
+    })
+
     Visuales:Dropdown({
         Title = "SELECCIONAR IMAGEN DEL CIELO",
         Values = { "IMAGEN 1", "IMAGEN 2", "IMAGEN 3" },
         Value = selectedSkyImage,
         Callback = function(selected)
-            local assetId = skyImages[selected]
-            if not assetId then return end
+            if not skyImages[selected] then return end
             selectedSkyImage = selected
-            image.Image = "rbxassetid://" .. assetId
+            if skyEnabled then
+                MATRIXHUB_ApplySkyImage()
+            end
         end
     })
-
-    local skyConnection
-    skyConnection = RunServiceSky.Heartbeat:Connect(function()
-        if not skyFolder.Parent then
-            if skyConnection then skyConnection:Disconnect() skyConnection = nil end
-            return
-        end
-        local character = playerSky.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if root then
-            skyAnchor.CFrame = CFrame.new(root.Position + Vector3.new(0, 65, 0))
-        end
-    end)
 end
 
 
