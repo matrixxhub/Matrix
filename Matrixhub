@@ -2314,7 +2314,7 @@ silentAimTargetPart = "Cabeza"
 local espEnabled = false
 local espVisualState = { TracersEnabled = false, SkeletonEnabled = false, TracerOrigin = "CENTRO" }
 local espTools = {}
-local espColor = Color3.fromRGB(255, 0, 0)
+local espColor = Color3.fromRGB(170, 0, 255)
 local activeESPs = {}
 local MAX_ESP_DISTANCE = 1500
 local serverDeadCharacters = setmetatable({}, { __mode = "k" })
@@ -4004,7 +4004,7 @@ Visuales:Toggle({
 })
 Visuales:Colorpicker({
     Title = "COLOR DEL ESP / TRACERS / SKELETON",
-    Default = Color3.fromRGB(255, 0, 0),
+    Default = Color3.fromRGB(170, 0, 255),
     Callback = function(color)
         espColor = color
         for _, data in pairs(activeESPs) do
@@ -4784,7 +4784,7 @@ AutoKills:Section({ Title = "HITBOX EXPANDER", Icon = "box" })
 local hitboxEnabled = false
 local hitboxInvisible = false
 local hitboxSize = 3.5
-local hitboxColor = Color3.fromRGB(255, 0, 0)
+local hitboxColor = Color3.fromRGB(170, 0, 255)
 
 local function limpiarHitboxes()
     for _, targetPlayer in ipairs(Players:GetPlayers()) do
@@ -4820,7 +4820,7 @@ AutoKills:Slider({
 
 AutoKills:Colorpicker({
     Title = "COLOR DE LA HITBOX",
-    Default = Color3.fromRGB(255, 0, 0),
+    Default = Color3.fromRGB(170, 0, 255),
     Callback = function(c) hitboxColor = c end
 })
 
