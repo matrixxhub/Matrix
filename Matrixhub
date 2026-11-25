@@ -665,17 +665,18 @@ local MATRIXHUB_CONFIG = {
     FPSBoost = false,
     AntiLag = false,
     StatusHud = false,
-    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false, Fly = false },
+    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false, Fly = false, GunSlotSpam = false },
     Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" },
     QuickButtonPositions = {
         Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
         Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
         AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
-        Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
+        Fly = { XS = 1, XO = -18, YS = 0, YO = 406 },
+        GunSlotSpam = { XS = 1, XO = -18, YS = 0, YO = 482 }
     },
     UIScale = 1.08,
     AnimationSpeed = 1,
-    AutoClickerCPS = 2,
+    GunSlotSpamCPS = 2,
     AccentIntensity = 1,
     PanelTransparency = 0.24,
     GlowEnabled = true,
@@ -733,8 +734,8 @@ local function LoadMatrixHubConfig()
 
     if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
-    local savedAutoClickerCPS = tonumber(saved.AutoClickerCPS) or tonumber(saved.CPSSelectorValue)
-    if savedAutoClickerCPS then MATRIXHUB_CONFIG.AutoClickerCPS = math.clamp(math.floor(savedAutoClickerCPS), 2, 15) end
+    local savedGunSlotSpamCPS = tonumber(saved.GunSlotSpamCPS) or tonumber(saved.AutoClickerCPS) or tonumber(saved.CPSSelectorValue)
+    if savedGunSlotSpamCPS then MATRIXHUB_CONFIG.GunSlotSpamCPS = math.clamp(math.floor(savedGunSlotSpamCPS), 2, 15) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
@@ -3053,6 +3054,12 @@ do
             if MATRIXHUB_KEY_ACTIONS.Fly then MATRIXHUB_KEY_ACTIONS.Fly() end
         end)
 
+    makeQuickButton("GunSlotSpam", "2", 5, Color3.fromRGB(255, 190, 70),
+        function() return _G.MATRIXHUB_SLOT2_SPAM_ENABLED == true end,
+        function(enabled)
+            if _G.MATRIXHUB_SetSlot2Spam then _G.MATRIXHUB_SetSlot2Spam(enabled) end
+        end)
+
     local viewportConnection
     local function reClampQuickButtons()
         for _, item in pairs(quickButtons) do
@@ -3102,7 +3109,8 @@ do
             Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
             Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
             AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
-            Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
+            Fly = { XS = 1, XO = -18, YS = 0, YO = 406 },
+            GunSlotSpam = { XS = 1, XO = -18, YS = 0, YO = 482 }
         }
         for id, item in pairs(quickButtons) do
             local pos = defaults[id]
@@ -3219,16 +3227,29 @@ do
         end
     })
 
+    Botones:Toggle({
+        Title = "MOSTRAR GUN SLOT SPAM",
+        Icon = "repeat",
+        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
+        Callback = function(enabled)
+            quickButtons.GunSlotSpam.Button.Visible = enabled == true
+            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
+            if refreshQuickButtons then refreshQuickButtons() end
+            SaveMatrixHubConfig()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
     -- GUN SLOT SPAM // control de repetición de la tecla 2.
     -- Comparte velocidad CPS entre el control y sus botones + / -.
     local MATRIXHUB_CPS_MIN = 2
     local MATRIXHUB_CPS_MAX = 15
     local MATRIXHUB_CPS_VALUE = math.clamp(
-        math.floor(tonumber(MATRIXHUB_CONFIG.AutoClickerCPS) or 2),
+        math.floor(tonumber(MATRIXHUB_CONFIG.GunSlotSpamCPS) or 2),
         MATRIXHUB_CPS_MIN,
         MATRIXHUB_CPS_MAX
     )
-    local MATRIXHUB_SLOT2_SPAM_ENABLED = false
+    _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
     local MATRIXHUB_SLOT2_SPAM_WORKER_ID = 0
     local MATRIXHUB_SLOT2_KEY_FUNCTION
 
@@ -3258,7 +3279,7 @@ do
     })
 
     local function MATRIXHUB_UpdateSlot2Info()
-        local stateText = MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
+        local stateText = _G.MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
         local apiStatus = MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE"
         pcall(function()
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(string.format(
@@ -3270,11 +3291,11 @@ do
                 MATRIXHUB_CPS_MAX
             ))
         end)
-        MATRIXHUB_CONFIG.AutoClickerCPS = MATRIXHUB_CPS_VALUE
+        MATRIXHUB_CONFIG.GunSlotSpamCPS = MATRIXHUB_CPS_VALUE
         SaveMatrixHubConfig()
     end
 
-    local function MATRIXHUB_SetAutoClickerCPS(value)
+    local function MATRIXHUB_SetGunSlotSpamCPS(value)
         MATRIXHUB_CPS_VALUE = math.clamp(
             math.floor(tonumber(value) or MATRIXHUB_CPS_MIN),
             MATRIXHUB_CPS_MIN,
@@ -3288,7 +3309,7 @@ do
         Icon = "gauge",
         Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
         Callback = function(value)
-            MATRIXHUB_SetAutoClickerCPS(value)
+            MATRIXHUB_SetGunSlotSpamCPS(value)
         end
     })
 
@@ -3296,7 +3317,7 @@ do
         Title = "-  DISMINUIR CPS",
         Icon = "minus",
         Callback = function()
-            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE - 1)
+            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE - 1)
             PlayMatrixUISound("Click")
         end
     })
@@ -3305,47 +3326,50 @@ do
         Title = "+  AUMENTAR CPS",
         Icon = "plus",
         Callback = function()
-            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE + 1)
+            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE + 1)
             PlayMatrixUISound("Click")
         end
     })
+
+    _G.MATRIXHUB_SetSlot2Spam = function(enabled)
+        if enabled and not MATRIXHUB_SLOT2_KEY_FUNCTION then
+            _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+            MATRIXHUB_UpdateSlot2Info()
+            warn("[Matrix Hub] Slot 2 Spam: no hay una API de teclado compatible.")
+            return
+        end
+
+        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = enabled == true
+        MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
+        local workerId = MATRIXHUB_SLOT2_SPAM_WORKER_ID
+
+        if _G.MATRIXHUB_SLOT2_SPAM_ENABLED then
+            task.spawn(function()
+                while _G.MATRIXHUB_SLOT2_SPAM_ENABLED and workerId == MATRIXHUB_SLOT2_SPAM_WORKER_ID do
+                    local ok, keyError = pcall(MATRIXHUB_SLOT2_KEY_FUNCTION)
+                    if not ok then
+                        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
+                        MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
+                        RecordMatrixHubError("GUN SLOT SPAM", keyError)
+                        warn("[Matrix Hub] Slot 2 Spam detenido por un error: " .. tostring(keyError))
+                        break
+                    end
+                    local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
+                    task.wait(1 / cps)
+                end
+            end)
+        end
+
+        MATRIXHUB_UpdateSlot2Info()
+        if refreshQuickButtons then refreshQuickButtons() end
+        PlayMatrixUISound("Toggle")
+    end
 
     Botones:Toggle({
         Title = "GUN SLOT SPAM (SLOT 2)",
         Icon = "repeat",
         Value = false,
-        Callback = function(enabled)
-            if enabled and not MATRIXHUB_SLOT2_KEY_FUNCTION then
-                MATRIXHUB_SLOT2_SPAM_ENABLED = false
-                MATRIXHUB_UpdateSlot2Info()
-                warn("[Matrix Hub] Slot 2 Spam: no hay una API de teclado compatible.")
-                return
-            end
-
-            MATRIXHUB_SLOT2_SPAM_ENABLED = enabled == true
-            MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
-            local workerId = MATRIXHUB_SLOT2_SPAM_WORKER_ID
-
-            if MATRIXHUB_SLOT2_SPAM_ENABLED then
-                task.spawn(function()
-                    while MATRIXHUB_SLOT2_SPAM_ENABLED and workerId == MATRIXHUB_SLOT2_SPAM_WORKER_ID do
-                        local ok, keyError = pcall(MATRIXHUB_SLOT2_KEY_FUNCTION)
-                        if not ok then
-                            MATRIXHUB_SLOT2_SPAM_ENABLED = false
-                            MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
-                            RecordMatrixHubError("GUN SLOT SPAM", keyError)
-                            warn("[Matrix Hub] Slot 2 Spam detenido por un error: " .. tostring(keyError))
-                            break
-                        end
-                        local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
-                        task.wait(1 / cps)
-                    end
-                end)
-            end
-
-            MATRIXHUB_UpdateSlot2Info()
-            PlayMatrixUISound("Toggle")
-        end
+        Callback = _G.MATRIXHUB_SetSlot2Spam
     })
 
     MATRIXHUB_UpdateSlot2Info()
