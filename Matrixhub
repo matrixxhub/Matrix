@@ -13,7 +13,7 @@ local startupGui = Instance.new("ScreenGui")
 startupGui.Name = "MATRIXHUB_STARTUP"
 startupGui.ResetOnSpawn = false
 startupGui.IgnoreGuiInset = true
-startupGui.DisplayOrder = 10000
+startupGui.DisplayOrder = 2000000000
 startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 startupGui.Parent = PlayerGui
 
@@ -3001,7 +3001,7 @@ Movimiento:Toggle({
         gui.Name = "MATRIXHUB_FLYSPEED"
         gui.ResetOnSpawn = false
         gui.IgnoreGuiInset = true
-        gui.DisplayOrder = 1000000
+        gui.DisplayOrder = 1000
         gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
         gui.Parent = PlayerGui
 
@@ -3012,7 +3012,7 @@ Movimiento:Toggle({
 
         local pad = Instance.new("Frame")
         pad.Name = "MATRIXHUB_FLY_PANEL"
-        pad.Size = UDim2.fromOffset(240, 175)
+        pad.Size = UDim2.fromOffset(190, 150)
         pad.AnchorPoint = Vector2.new(0.5, 0.5)
         pad.Position = UDim2.fromScale(0.5, 0.62)
         pad.BackgroundColor3 = Color3.fromRGB(7, 15, 12)
@@ -3043,7 +3043,7 @@ Movimiento:Toggle({
             rain.BackgroundTransparency = 1
             rain.BorderSizePixel = 0
             rain.Size = UDim2.fromOffset(17, 112)
-            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 218), rainRandom:NextInteger(-125, 210))
+            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 168), rainRandom:NextInteger(-125, 175))
             rain.Font = Enum.Font.Code
             rain.TextSize = 13
             rain.TextWrapped = true
@@ -3207,14 +3207,15 @@ Movimiento:Toggle({
             return button
         end
 
-        local up = makeButton(UDim2.fromOffset(43, 42), UDim2.fromOffset(36, 32), "▲", "FLY_FORWARD")
-        local left = makeButton(UDim2.fromOffset(5, 78), UDim2.fromOffset(36, 32), "◀", "FLY_LEFT")
-        local right = makeButton(UDim2.fromOffset(81, 78), UDim2.fromOffset(36, 32), "▶", "FLY_RIGHT")
-        local down = makeButton(UDim2.fromOffset(43, 114), UDim2.fromOffset(36, 32), "▼", "FLY_BACK")
-        local upV = makeButton(UDim2.fromOffset(142, 48), UDim2.fromOffset(90, 38), "⬆  SUBIR", "FLY_UP")
-        upV.TextSize = 15
-        local downV = makeButton(UDim2.fromOffset(142, 96), UDim2.fromOffset(90, 38), "⬇  BAJAR", "FLY_DOWN")
-        downV.TextSize = 15
+        local up = makeButton(UDim2.fromOffset(43, 38), UDim2.fromOffset(34, 30), "▲", "FLY_FORWARD")
+        local left = makeButton(UDim2.fromOffset(5, 70), UDim2.fromOffset(34, 30), "◀", "FLY_LEFT")
+        local right = makeButton(UDim2.fromOffset(81, 70), UDim2.fromOffset(34, 30), "▶", "FLY_RIGHT")
+        local down = makeButton(UDim2.fromOffset(43, 102), UDim2.fromOffset(34, 30), "▼", "FLY_BACK")
+        -- Controles verticales representados solo con stickers, sin etiquetas.
+        local upV = makeButton(UDim2.fromOffset(143, 49), UDim2.fromOffset(32, 30), "⬆️", "FLY_UP")
+        upV.TextSize = 19
+        local downV = makeButton(UDim2.fromOffset(143, 87), UDim2.fromOffset(32, 30), "⬇️", "FLY_DOWN")
+        downV.TextSize = 19
 
         local function estaEnPartida()
             local rs = game:GetService("ReplicatedStorage")
@@ -3299,9 +3300,9 @@ Movimiento:Toggle({
                 local label = item.Label
                 if label and label.Parent then
                     local y = label.Position.Y.Offset + item.Speed * step
-                    if y > 210 then
+                    if y > 175 then
                         y = rainRandom:NextInteger(-125, -35)
-                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 218), y)
+                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 168), y)
                     else
                         label.Position = UDim2.fromOffset(label.Position.X.Offset, y)
                     end
@@ -3314,7 +3315,7 @@ Movimiento:Toggle({
             -- Reforzar la visibilidad del panel y su ScreenGui.
             if gui.Parent ~= PlayerGui then gui.Parent = PlayerGui end
             gui.Enabled = true
-            gui.DisplayOrder = 1000000
+            gui.DisplayOrder = 1000
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
