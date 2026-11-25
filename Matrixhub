@@ -1448,79 +1448,129 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
  
--- MATRIX SKY // Skybox local con selector y activacion manual.
+-- MATRIX SKY // Cielo visual local con seis paneles interiores.
 do
-    local LightingSky = game:GetService("Lighting")
+    local RunService = game:GetService("RunService")
 
     local skyImages = {
         ["IMAGEN 1"] = "76981839876175",
         ["IMAGEN 2"] = "137163080514754",
         ["IMAGEN 3"] = "128047927855303"
     }
+
     local selectedSkyImage = "IMAGEN 3"
     local skyEnabled = false
-    local matrixSky = nil
-    local originalSkies = {}
+    local skyFolder = nil
+    local skyPanels = {}
+    local skyRenderConnection = nil
+    local SKY_RADIUS = 2500
+    local PANEL_SIZE = SKY_RADIUS * 2
 
-    local skyFaces = {
-        "SkyboxBk",
-        "SkyboxDn",
-        "SkyboxFt",
-        "SkyboxLf",
-        "SkyboxRt",
-        "SkyboxUp"
+    -- Cada panel mira hacia el centro; la cámara permanece dentro del cubo.
+    local panelDirections = {
+        { name = "FRONT", direction = Vector3.new(0, 0, -1), up = Vector3.new(0, 1, 0) },
+        { name = "BACK",  direction = Vector3.new(0, 0, 1),  up = Vector3.new(0, 1, 0) },
+        { name = "RIGHT", direction = Vector3.new(1, 0, 0),  up = Vector3.new(0, 1, 0) },
+        { name = "LEFT",  direction = Vector3.new(-1, 0, 0), up = Vector3.new(0, 1, 0) },
+        { name = "UP",    direction = Vector3.new(0, 1, 0),  up = Vector3.new(0, 0, -1) },
+        { name = "DOWN",  direction = Vector3.new(0, -1, 0), up = Vector3.new(0, 0, 1) }
     }
 
     local function MATRIXHUB_ApplySkyImage()
-        if not matrixSky then return end
         local assetId = skyImages[selectedSkyImage]
         if not assetId then return end
 
-        local content = "rbxassetid://" .. assetId
-        for _, face in ipairs(skyFaces) do
-            pcall(function()
-                matrixSky[face] = content
-            end)
+        local imageContent = "rbxassetid://" .. assetId
+        for _, panel in ipairs(skyPanels) do
+            local image = panel and panel:FindFirstChild("MATRIX_SKY_IMAGE")
+            if image and image:IsA("ImageLabel") then
+                image.Image = imageContent
+            end
         end
+    end
+
+    local function MATRIXHUB_DisableSky()
+        skyEnabled = false
+
+        if skyRenderConnection then
+            skyRenderConnection:Disconnect()
+            skyRenderConnection = nil
+        end
+
+        if skyFolder then
+            pcall(function() skyFolder:Destroy() end)
+            skyFolder = nil
+        end
+
+        table.clear(skyPanels)
     end
 
     local function MATRIXHUB_EnableSky()
         if skyEnabled then return end
         skyEnabled = true
 
-        -- Aparta temporalmente los Sky existentes para poder restaurarlos al desactivar.
-        table.clear(originalSkies)
-        for _, child in ipairs(LightingSky:GetChildren()) do
-            if child:IsA("Sky") and child.Name ~= "MATRIXHUB_CUSTOM_SKY" then
-                table.insert(originalSkies, child)
-                child.Parent = nil
+        local ok, err = pcall(function()
+            skyFolder = Instance.new("Folder")
+            skyFolder.Name = "MATRIXHUB_LOCAL_SKY"
+            skyFolder.Parent = workspace
+
+            for _, info in ipairs(panelDirections) do
+                local panel = Instance.new("Part")
+                panel.Name = "MATRIX_SKY_" .. info.name
+                panel.Anchored = true
+                panel.CanCollide = false
+                panel.CanTouch = false
+                panel.CanQuery = false
+                panel.CastShadow = false
+                panel.Transparency = 1
+                panel.Size = Vector3.new(PANEL_SIZE, PANEL_SIZE, 1)
+
+                local surface = Instance.new("SurfaceGui")
+                surface.Name = "MATRIX_SKY_SURFACE"
+                surface.Face = Enum.NormalId.Front
+                surface.AlwaysOnTop = false
+                surface.LightInfluence = 0
+                surface.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+                surface.CanvasSize = Vector2.new(1024, 1024)
+                surface.Parent = panel
+
+                local image = Instance.new("ImageLabel")
+                image.Name = "MATRIX_SKY_IMAGE"
+                image.BackgroundTransparency = 1
+                image.BorderSizePixel = 0
+                image.Size = UDim2.fromScale(1, 1)
+                image.Position = UDim2.fromScale(0, 0)
+                image.ScaleType = Enum.ScaleType.Stretch
+                image.Parent = surface
+
+                panel.Parent = skyFolder
+                surface.Adornee = panel
+                table.insert(skyPanels, panel)
             end
+
+            MATRIXHUB_ApplySkyImage()
+
+            skyRenderConnection = RunService.RenderStepped:Connect(function()
+                if not skyEnabled or not skyFolder then return end
+
+                local camera = workspace.CurrentCamera
+                if not camera then return end
+
+                local center = camera.CFrame.Position
+                for index, info in ipairs(panelDirections) do
+                    local panel = skyPanels[index]
+                    if panel and panel.Parent then
+                        local position = center + info.direction * SKY_RADIUS
+                        panel.CFrame = CFrame.lookAt(position, center, info.up)
+                    end
+                end
+            end)
+        end)
+
+        if not ok then
+            warn("[MATRIX HUB] MATRIX SKY no pudo iniciarse: " .. tostring(err))
+            MATRIXHUB_DisableSky()
         end
-
-        matrixSky = Instance.new("Sky")
-        matrixSky.Name = "MATRIXHUB_CUSTOM_SKY"
-        matrixSky.Parent = LightingSky
-        MATRIXHUB_ApplySkyImage()
-    end
-
-    local function MATRIXHUB_DisableSky()
-        if not skyEnabled then return end
-        skyEnabled = false
-
-        if matrixSky then
-            pcall(function() matrixSky:Destroy() end)
-            matrixSky = nil
-        end
-
-        -- Devuelve los cielos originales sin borrar ni alterar sus propiedades.
-        for _, originalSky in ipairs(originalSkies) do
-            if originalSky and originalSky.Parent == nil then
-                pcall(function()
-                    originalSky.Parent = LightingSky
-                end)
-            end
-        end
-        table.clear(originalSkies)
     end
 
     Visuales:Section({ Title = "MATRIX SKY", Icon = "image", Opened = true })
@@ -1551,7 +1601,6 @@ do
         end
     })
 end
-
 
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
