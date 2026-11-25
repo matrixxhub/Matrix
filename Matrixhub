@@ -4814,7 +4814,7 @@ AutoKills:Toggle({
 AutoKills:Slider({
     Title = "TAMAÑO",
     Step = 0.5,
-    Value = { Min = 1.0, Max = 18.0, Default = 3.5 },
+    Value = { Min = 1.0, Max = 32.0, Default = 3.5 },
     Callback = function(v) hitboxSize = v end
 })
 
