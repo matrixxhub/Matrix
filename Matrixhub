@@ -3469,7 +3469,7 @@ Movimiento:Toggle({
         pad.Parent = gui
 
         local panelScale = Instance.new("UIScale")
-        panelScale.Scale = 0.88
+        panelScale.Scale = 0.82
         panelScale.Parent = pad
 
         Instance.new("UICorner", pad).CornerRadius = UDim.new(0, 17)
@@ -3575,68 +3575,6 @@ Movimiento:Toggle({
         local downV = makeButton(UDim2.fromOffset(158, 143), UDim2.fromOffset(88, 49), "⬇  BAJAR", "FLY_DOWN")
         downV.TextSize = 15
 
-        local speedDivider = Instance.new("Frame")
-        speedDivider.Position = UDim2.fromOffset(13, 211)
-        speedDivider.Size = UDim2.new(1, -26, 0, 1)
-        speedDivider.BackgroundColor3 = Color3.fromRGB(0, 230, 120)
-        speedDivider.BackgroundTransparency = 0.35
-        speedDivider.BorderSizePixel = 0
-        speedDivider.ZIndex = 2
-        speedDivider.Parent = pad
-
-        local speedTitle = Instance.new("TextLabel")
-        speedTitle.BackgroundTransparency = 1
-        speedTitle.Position = UDim2.fromOffset(15, 218)
-        speedTitle.Size = UDim2.fromOffset(130, 22)
-        speedTitle.Text = "VELOCIDAD"
-        speedTitle.Font = Enum.Font.GothamBold
-        speedTitle.TextSize = 13
-        speedTitle.TextXAlignment = Enum.TextXAlignment.Left
-        speedTitle.TextColor3 = Color3.fromRGB(120, 255, 185)
-        speedTitle.ZIndex = 4
-        speedTitle.Parent = pad
-
-        local speedValue = Instance.new("TextLabel")
-        speedValue.BackgroundTransparency = 1
-        speedValue.Position = UDim2.fromOffset(158, 216)
-        speedValue.Size = UDim2.fromOffset(88, 24)
-        speedValue.Text = "0.75x"
-        speedValue.Font = Enum.Font.Code
-        speedValue.TextSize = 17
-        speedValue.TextXAlignment = Enum.TextXAlignment.Right
-        speedValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-        speedValue.ZIndex = 4
-        speedValue.Parent = pad
-
-        local minus = makeButton(UDim2.fromOffset(111, 250), UDim2.fromOffset(38, 38), "−", "SPEED_DOWN")
-        minus.TextSize = 25
-
-        local speedBars = {}
-        for i = 1, 8 do
-            local bar = Instance.new("Frame")
-            bar.Name = "SPEED_SEGMENT_" .. i
-            bar.Position = UDim2.fromOffset(59 + (i - 1) * 18, 260)
-            bar.Size = UDim2.fromOffset(12, 18 + (i % 3) * 5)
-            bar.AnchorPoint = Vector2.new(0, 0.5)
-            bar.BackgroundColor3 = Color3.fromRGB(0, 255, 125)
-            bar.BackgroundTransparency = 0.78
-            bar.BorderSizePixel = 0
-            bar.ZIndex = 4
-            bar.Parent = pad
-            Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 3)
-            table.insert(speedBars, bar)
-        end
-
-        local function refreshSpeed()
-            speedValue.Text = string.format("%.2fx", SPEED)
-            local progress = math.clamp((SPEED - 0.2) / 2.8, 0, 1)
-            local activeCount = math.ceil(progress * #speedBars)
-            for i, bar in ipairs(speedBars) do
-                bar.BackgroundTransparency = i <= activeCount and 0.08 or 0.78
-            end
-        end
-        refreshSpeed()
-
         local function estaEnPartida()
             local rs = game:GetService("ReplicatedStorage")
             if rs:FindFirstChild("GameInProgress") or rs:FindFirstChild("InGame") then
@@ -3670,7 +3608,7 @@ Movimiento:Toggle({
             if mov.Down then dir += Vector3.new(0,-1,0) end
             if mov.A then dir -= workspace.CurrentCamera.CFrame.RightVector end
             if mov.D then dir += workspace.CurrentCamera.CFrame.RightVector end
-                        if dir.Magnitude == 0 then return end
+            if dir.Magnitude == 0 then return end
             local ray = workspace:Raycast(hrp.Position, dir.Unit * 4, rayParams)
             if ray and ray.Instance and ray.Instance.CanCollide then
                 local pared = ray.Instance
@@ -3707,11 +3645,6 @@ Movimiento:Toggle({
         conectar(upV, "Up")
         conectar(downV, "Down")
 
-        minus.MouseButton1Click:Connect(function()
-            SPEED = math.clamp(SPEED - 0.1, 0.2, 3)
-            V_SPEED = math.clamp(V_SPEED - 0.1, 0.2, 3)
-            refreshSpeed()
-        end)
 
 
         local rainAccumulator = 0
@@ -3737,7 +3670,9 @@ Movimiento:Toggle({
 
         _G.FlyCon1 = RunService.RenderStepped:Connect(function()
             if not PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then return end
-            -- Mantener el panel visible también en lobby; el estado de partida no debe ocultar la interfaz.
+            -- Reforzar la visibilidad del panel y su ScreenGui.
+            if gui.Parent ~= PlayerGui then gui.Parent = PlayerGui end
+            gui.Enabled = true
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
