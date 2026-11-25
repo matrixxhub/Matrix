@@ -3257,7 +3257,7 @@ do
 
     local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
         Title = "AUTO SLOT 2 // SIN DISPARO",
-        Desc = "ESTADO: OFF\\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\\nAlterna equipar/guardar la pistola. No la activa."
+        Desc = "ESTADO: OFF\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\nAlterna equipar/guardar la pistola. No la activa."
     })
 
     local function MATRIXHUB_IsPistolTool(tool)
@@ -3288,12 +3288,12 @@ do
 
     local function MATRIXHUB_UpdateSlot2Info(message)
         local stateText = _G.MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
-        local extra = message and ("\\n" .. message) or ""
+        local extra = message and ("\n" .. message) or ""
         pcall(function()
             MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(
                 "ESTADO: " .. stateText ..
-                "\\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS (2-15)" ..
-                "\\nAlterna equipar/guardar la pistola. No simula teclas ni llama Tool:Activate()." ..
+                "\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS (2-15)" ..
+                "\nAlterna equipar/guardar la pistola. No simula teclas ni llama Tool:Activate()." ..
                 extra
             )
         end)
