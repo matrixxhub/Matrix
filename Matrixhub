@@ -3352,6 +3352,95 @@ do
     })
 
     MATRIXHUB_UpdateAutoClickerInfo()
+
+    -- GUN SLOT SPAM // repite únicamente la tecla del slot 2; no activa la herramienta ni dispara.
+    local MATRIXHUB_SLOT2_SPAM_ENABLED = false
+    local MATRIXHUB_SLOT2_SPAM_WORKER_ID = 0
+    local MATRIXHUB_SLOT2_KEY_FUNCTION
+
+    if type(keypress) == "function" and type(keyrelease) == "function" then
+        MATRIXHUB_SLOT2_KEY_FUNCTION = function()
+            keypress(0x32)
+            task.wait(0.015)
+            keyrelease(0x32)
+        end
+    else
+        local okInput, virtualInput = pcall(function()
+            return game:GetService("VirtualInputManager")
+        end)
+        if okInput and virtualInput then
+            MATRIXHUB_SLOT2_KEY_FUNCTION = function()
+                virtualInput:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+                task.wait(0.015)
+                virtualInput:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+            end
+        end
+    end
+
+    local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
+        Title = "GUN SLOT SPAM // SLOT 2",
+        Desc = "ESTADO: OFF\\nENVÍA únicamente la tecla 2. No llama Tool:Activate() ni Auto Shoot."
+    })
+
+    local function MATRIXHUB_UpdateSlot2Info()
+        local stateText = MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
+        local apiStatus = MATRIXHUB_SLOT2_KEY_FUNCTION and "LISTO" or "API DE TECLADO NO DISPONIBLE"
+        pcall(function()
+            MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(string.format(
+                "ESTADO: %s  |  MOTOR: %s\\nVELOCIDAD: %d CPS\\nEnvía la tecla 2; no activa ni dispara la herramienta.",
+                stateText,
+                apiStatus,
+                MATRIXHUB_CPS_VALUE
+            ))
+        end)
+    end
+
+    Botones:Toggle({
+        Title = "GUN SLOT SPAM (SLOT 2)",
+        Icon = "repeat",
+        Value = false,
+        Callback = function(enabled)
+            if enabled and not MATRIXHUB_SLOT2_KEY_FUNCTION then
+                MATRIXHUB_SLOT2_SPAM_ENABLED = false
+                MATRIXHUB_UpdateSlot2Info()
+                warn("[Matrix Hub] Slot 2 Spam: no hay una API de teclado compatible.")
+                return
+            end
+
+            MATRIXHUB_SLOT2_SPAM_ENABLED = enabled == true
+            MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
+            local workerId = MATRIXHUB_SLOT2_SPAM_WORKER_ID
+
+            if MATRIXHUB_SLOT2_SPAM_ENABLED then
+                task.spawn(function()
+                    while MATRIXHUB_SLOT2_SPAM_ENABLED and workerId == MATRIXHUB_SLOT2_SPAM_WORKER_ID do
+                        local ok, keyError = pcall(MATRIXHUB_SLOT2_KEY_FUNCTION)
+                        if not ok then
+                            MATRIXHUB_SLOT2_SPAM_ENABLED = false
+                            MATRIXHUB_SLOT2_SPAM_WORKER_ID += 1
+                            RecordMatrixHubError("GUN SLOT SPAM", keyError)
+                            warn("[Matrix Hub] Slot 2 Spam detenido por un error: " .. tostring(keyError))
+                            break
+                        end
+                        local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
+                        task.wait(1 / cps)
+                    end
+                end)
+            end
+
+            MATRIXHUB_UpdateSlot2Info()
+            PlayMatrixUISound("Toggle")
+        end
+    })
+
+    -- Mantiene el indicador sincronizado con el selector CPS compartido.
+    local MATRIXHUB_PREVIOUS_SET_CPS = MATRIXHUB_SetAutoClickerCPS
+    MATRIXHUB_SetAutoClickerCPS = function(value)
+        MATRIXHUB_PREVIOUS_SET_CPS(value)
+        MATRIXHUB_UpdateSlot2Info()
+    end
+    MATRIXHUB_UpdateSlot2Info()
+
 end
 
 Movimiento:Toggle({
