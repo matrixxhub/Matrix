@@ -5,6 +5,8 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local launchMatrixHub
+local startupWindowMain
+local startupWindowGuard
 local MATRIXHUB
 
 local oldStartup = PlayerGui:FindFirstChild("MATRIXHUB_STARTUP")
@@ -186,8 +188,14 @@ MATRIXHUB_UI:CreateWindow({
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
 -- Mantener la ventana oculta mientras se construyen todas las pestañas.
-pcall(function()
-    MATRIXHUB.UIElements.Main.Visible = false
+-- WindUI ejecuta Open() automáticamente; ocultarla una sola vez no basta.
+startupWindowMain = MATRIXHUB.UIElements.Main
+startupWindowMain.Visible = false
+if startupWindowGuard then startupWindowGuard:Disconnect() end
+startupWindowGuard = game:GetService("RunService").RenderStepped:Connect(function()
+    if startupWindowMain and startupWindowMain.Parent then
+        startupWindowMain.Visible = false
+    end
 end)
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
 
@@ -5062,13 +5070,18 @@ task.spawn(function()
     if elapsed < minimumDisplayTime then
         task.wait(minimumDisplayTime - elapsed)
     end
-    -- Reforzar el ocultamiento justo antes de retirar el splash.
-    if MATRIXHUB then
-        pcall(function() MATRIXHUB.UIElements.Main.Visible = false end)
+    -- Mantener la ventana oculta hasta que el splash haya desaparecido.
+    if startupWindowMain and startupWindowMain.Parent then
+        startupWindowMain.Visible = false
     end
     closeMatrixStartup()
-    -- La ventana solo aparece cuando la pantalla de carga ya desapareció.
-    if ok and MATRIXHUB then
-        pcall(function() MATRIXHUB.UIElements.Main.Visible = true end)
+
+    -- Liberar el guard y mostrar la ventana solo después de retirar el splash.
+    if startupWindowGuard then
+        startupWindowGuard:Disconnect()
+        startupWindowGuard = nil
+    end
+    if startupWindowMain and startupWindowMain.Parent then
+        startupWindowMain.Visible = true
     end
 end)
