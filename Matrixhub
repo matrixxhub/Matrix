@@ -3008,38 +3008,27 @@ Movimiento:Toggle({
 
         local pad = Instance.new("Frame")
         pad.Name = "MATRIXHUB_FLY_PANEL"
-        pad.Size = UDim2.fromOffset(280, 230)
+        pad.Size = UDim2.fromOffset(240, 175)
         pad.AnchorPoint = Vector2.new(0.5, 0.5)
         pad.Position = UDim2.fromScale(0.5, 0.62)
-        pad.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
-        pad.BackgroundTransparency = 0
-        pad.BorderColor3 = Color3.fromRGB(35, 35, 35)
-        pad.BorderSizePixel = 1
+        pad.BackgroundColor3 = Color3.fromRGB(7, 15, 12)
+        pad.BackgroundTransparency = 0.04
+        pad.BorderSizePixel = 0
         pad.Active = true
-        pad.Draggable = true
+        pad.Draggable = false
         pad.ClipsDescendants = true
         pad.ZIndex = 1
         pad.Parent = gui
 
-        local panelScale = Instance.new("UIScale")
-        panelScale.Scale = 0.9
-        panelScale.Parent = pad
+        local panelCorner = Instance.new("UICorner")
+        panelCorner.CornerRadius = UDim.new(0, 10)
+        panelCorner.Parent = pad
 
-        -- Panel cuadrado estilo Windows clásico, sin esquinas redondeadas.
         local panelStroke = Instance.new("UIStroke")
-        panelStroke.Color = Color3.fromRGB(70, 70, 70)
-        panelStroke.Thickness = 1
-        panelStroke.Transparency = 0
+        panelStroke.Color = Color3.fromRGB(0, 190, 95)
+        panelStroke.Thickness = 1.4
+        panelStroke.Transparency = 0.12
         panelStroke.Parent = pad
-
-        local panelGradient = Instance.new("UIGradient")
-        panelGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(205, 205, 205)),
-            ColorSequenceKeypoint.new(0.55, Color3.fromRGB(192, 192, 192)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(175, 175, 175))
-        })
-        panelGradient.Rotation = 90
-        panelGradient.Parent = pad
 
         -- Lluvia Matrix: pocas columnas, actualizadas a intervalos para no cargar cada frame.
         local rainRandom = Random.new()
@@ -3050,7 +3039,7 @@ Movimiento:Toggle({
             rain.BackgroundTransparency = 1
             rain.BorderSizePixel = 0
             rain.Size = UDim2.fromOffset(17, 112)
-            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 210), rainRandom:NextInteger(-125, 300))
+            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 218), rainRandom:NextInteger(-125, 210))
             rain.Font = Enum.Font.Code
             rain.TextSize = 13
             rain.TextWrapped = true
@@ -3063,77 +3052,130 @@ Movimiento:Toggle({
             table.insert(rainLabels, {Label = rain, Speed = rainRandom:NextNumber(22, 48)})
         end
 
-        local windowsTitleBar = Instance.new("Frame")
-        windowsTitleBar.Name = "WindowsTitleBar"
-        windowsTitleBar.Position = UDim2.fromOffset(4, 4)
-        windowsTitleBar.Size = UDim2.new(1, -8, 0, 27)
-        windowsTitleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 128)
-        windowsTitleBar.BorderSizePixel = 1
-        windowsTitleBar.BorderColor3 = Color3.fromRGB(255, 255, 255)
-        windowsTitleBar.ZIndex = 2
-        windowsTitleBar.Parent = pad
-        local windowsTitleGradient = Instance.new("UIGradient")
-        windowsTitleGradient.Color = ColorSequence.new(Color3.fromRGB(0, 0, 128), Color3.fromRGB(20, 120, 190))
-        windowsTitleGradient.Parent = windowsTitleBar
+        local headerBar = Instance.new("Frame")
+        headerBar.Name = "MatrixFlyHeader"
+        headerBar.Position = UDim2.fromOffset(1, 1)
+        headerBar.Size = UDim2.new(1, -2, 0, 29)
+        headerBar.BackgroundColor3 = Color3.fromRGB(0, 48, 28)
+        headerBar.BorderSizePixel = 0
+        headerBar.Active = true
+        headerBar.ZIndex = 3
+        headerBar.Parent = pad
+        local headerCorner = Instance.new("UICorner")
+        headerCorner.CornerRadius = UDim.new(0, 9)
+        headerCorner.Parent = headerBar
 
         local headerLine = Instance.new("Frame")
-        headerLine.Position = UDim2.fromOffset(5, 33)
-        headerLine.Size = UDim2.new(1, -10, 0, 2)
-        headerLine.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        headerLine.BackgroundTransparency = 0
+        headerLine.Position = UDim2.new(0, 0, 1, -1)
+        headerLine.Size = UDim2.new(1, 0, 0, 1)
+        headerLine.BackgroundColor3 = Color3.fromRGB(0, 210, 105)
         headerLine.BorderSizePixel = 0
-        headerLine.ZIndex = 2
-        headerLine.Parent = pad
+        headerLine.ZIndex = 4
+        headerLine.Parent = headerBar
 
         local logo = Instance.new("TextLabel")
         logo.BackgroundTransparency = 1
-        logo.Position = UDim2.fromOffset(12, 5)
-        logo.Size = UDim2.fromOffset(20, 20)
+        logo.Position = UDim2.fromOffset(9, 3)
+        logo.Size = UDim2.fromOffset(20, 22)
         logo.Text = "M"
-        logo.Font = Enum.Font.GothamBold
-        logo.TextSize = 17
-        logo.TextColor3 = Color3.fromRGB(255, 255, 255)
-        logo.ZIndex = 3
-        logo.Parent = pad
+        logo.Font = Enum.Font.GothamBlack
+        logo.TextSize = 16
+        logo.TextColor3 = Color3.fromRGB(105, 255, 165)
+        logo.ZIndex = 4
+        logo.Parent = headerBar
 
         local title = Instance.new("TextLabel")
         title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(37, 5)
-        title.Size = UDim2.fromOffset(165, 23)
+        title.Position = UDim2.fromOffset(31, 3)
+        title.Size = UDim2.fromOffset(130, 22)
         title.Text = "FLY V1"
         title.Font = Enum.Font.GothamBlack
-        title.TextSize = 17
+        title.TextSize = 14
         title.TextXAlignment = Enum.TextXAlignment.Left
-        title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.ZIndex = 3
-        title.Parent = pad
+        title.TextColor3 = Color3.fromRGB(235, 255, 242)
+        title.ZIndex = 4
+        title.Parent = headerBar
 
         local anchored = true
-        pad.Draggable = false
         local anchorButton = Instance.new("TextButton")
         anchorButton.Name = "FLY_PANEL_ANCHOR"
-        anchorButton.Position = UDim2.fromOffset(244, 4)
-        anchorButton.Size = UDim2.fromOffset(29, 25)
+        anchorButton.Position = UDim2.new(1, -29, 0, 2)
+        anchorButton.Size = UDim2.fromOffset(25, 24)
         anchorButton.Text = "📌"
         anchorButton.Font = Enum.Font.GothamBold
-        anchorButton.TextSize = 17
-        anchorButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-        anchorButton.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
-        anchorButton.BackgroundTransparency = 0.08
+        anchorButton.TextSize = 15
+        anchorButton.TextColor3 = Color3.fromRGB(190, 255, 215)
+        anchorButton.BackgroundColor3 = Color3.fromRGB(0, 75, 43)
+        anchorButton.BackgroundTransparency = 0.05
         anchorButton.AutoButtonColor = false
         anchorButton.BorderSizePixel = 0
         anchorButton.ZIndex = 5
-        anchorButton.Parent = pad
-        Instance.new("UICorner", anchorButton).CornerRadius = UDim.new(0, 7)
+        anchorButton.Parent = headerBar
+        Instance.new("UICorner", anchorButton).CornerRadius = UDim.new(0, 6)
         local anchorStroke = Instance.new("UIStroke")
-        anchorStroke.Color = Color3.fromRGB(80, 80, 80)
-        anchorStroke.Transparency = 0.2
+        anchorStroke.Color = Color3.fromRGB(0, 210, 105)
+        anchorStroke.Transparency = 0.3
         anchorStroke.Parent = anchorButton
+
+        -- Arrastre protegido: el panel nunca entra en la franja de ocultación de Delta.
+        local UserInputService = game:GetService("UserInputService")
+        local draggingPanel = false
+        local panelDragStart
+        local panelStartPosition
+        local panelDragInput
+        local function clampFlyPanel()
+            local camera = workspace.CurrentCamera
+            local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+            local halfW = pad.AbsoluteSize.X * 0.5
+            local halfH = pad.AbsoluteSize.Y * 0.5
+            local margin = 34
+            local p = pad.Position
+            local x = p.X.Scale * viewport.X + p.X.Offset
+            local y = p.Y.Scale * viewport.Y + p.Y.Offset
+            x = math.clamp(x, halfW + margin, viewport.X - halfW - margin)
+            y = math.clamp(y, halfH + margin, viewport.Y - halfH - margin)
+            pad.Position = UDim2.fromOffset(x, y)
+        end
+        headerBar.InputBegan:Connect(function(input)
+            if anchored then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                draggingPanel = true
+                panelDragStart = input.Position
+                panelStartPosition = pad.Position
+                panelDragInput = input
+            end
+        end)
+        headerBar.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch then
+                panelDragInput = input
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if draggingPanel and panelDragInput and input == panelDragInput
+                and panelDragStart and panelStartPosition then
+                local delta = input.Position - panelDragStart
+                pad.Position = UDim2.new(
+                    panelStartPosition.X.Scale, panelStartPosition.X.Offset + delta.X,
+                    panelStartPosition.Y.Scale, panelStartPosition.Y.Offset + delta.Y
+                )
+                clampFlyPanel()
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                draggingPanel = false
+                panelDragInput = nil
+            end
+        end)
+        task.defer(clampFlyPanel)
+
         anchorButton.MouseButton1Click:Connect(function()
             anchored = not anchored
-            pad.Draggable = not anchored
             anchorButton.Text = anchored and "📌" or "↔"
-            anchorButton.BackgroundColor3 = anchored and Color3.fromRGB(0, 65, 40) or Color3.fromRGB(20, 75, 55)
+            anchorButton.BackgroundColor3 = anchored and Color3.fromRGB(0, 75, 43) or Color3.fromRGB(0, 115, 65)
         end)
 
         local function makeButton(pos, size, txt, name)
@@ -3161,13 +3203,13 @@ Movimiento:Toggle({
             return button
         end
 
-        local up = makeButton(UDim2.fromOffset(49, 66), UDim2.fromOffset(42, 39), "▲", "FLY_FORWARD")
-        local left = makeButton(UDim2.fromOffset(5, 109), UDim2.fromOffset(42, 39), "◀", "FLY_LEFT")
-        local right = makeButton(UDim2.fromOffset(93, 109), UDim2.fromOffset(42, 39), "▶", "FLY_RIGHT")
-        local down = makeButton(UDim2.fromOffset(49, 152), UDim2.fromOffset(42, 39), "▼", "FLY_BACK")
-        local upV = makeButton(UDim2.fromOffset(158, 83), UDim2.fromOffset(88, 49), "⬆  SUBIR", "FLY_UP")
+        local up = makeButton(UDim2.fromOffset(43, 42), UDim2.fromOffset(36, 32), "▲", "FLY_FORWARD")
+        local left = makeButton(UDim2.fromOffset(5, 78), UDim2.fromOffset(36, 32), "◀", "FLY_LEFT")
+        local right = makeButton(UDim2.fromOffset(81, 78), UDim2.fromOffset(36, 32), "▶", "FLY_RIGHT")
+        local down = makeButton(UDim2.fromOffset(43, 114), UDim2.fromOffset(36, 32), "▼", "FLY_BACK")
+        local upV = makeButton(UDim2.fromOffset(142, 48), UDim2.fromOffset(90, 38), "⬆  SUBIR", "FLY_UP")
         upV.TextSize = 15
-        local downV = makeButton(UDim2.fromOffset(158, 143), UDim2.fromOffset(88, 49), "⬇  BAJAR", "FLY_DOWN")
+        local downV = makeButton(UDim2.fromOffset(142, 96), UDim2.fromOffset(90, 38), "⬇  BAJAR", "FLY_DOWN")
         downV.TextSize = 15
 
         local function estaEnPartida()
@@ -3255,7 +3297,7 @@ Movimiento:Toggle({
                     local y = label.Position.Y.Offset + item.Speed * step
                     if y > 210 then
                         y = rainRandom:NextInteger(-125, -35)
-                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 238), y)
+                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 218), y)
                     else
                         label.Position = UDim2.fromOffset(label.Position.X.Offset, y)
                     end
@@ -4993,9 +5035,16 @@ Movimiento:Slider({
 
 end -- FIN DE launchMatrixHub
 
--- El splash permanece visible mientras se construye el menú; después se desvanece.
+-- El splash permanece durante la carga real y tiene una duración mínima visible.
+-- No se muestra porcentaje, barra ni contador: solo la lluvia digital.
 task.spawn(function()
+    local startupStartedAt = os.clock()
     local ok, err = pcall(launchMatrixHub)
     if not ok then warn("[MATRIXHUB] Error al iniciar: " .. tostring(err)) end
+    local elapsed = os.clock() - startupStartedAt
+    local minimumDisplayTime = 3.5
+    if elapsed < minimumDisplayTime then
+        task.wait(minimumDisplayTime - elapsed)
+    end
     closeMatrixStartup()
 end)
