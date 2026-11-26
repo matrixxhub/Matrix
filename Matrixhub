@@ -3882,6 +3882,106 @@ do
         RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION = RippleConnection
     end
 
+-- MATRIX SKYBOX // Selector local de cielos
+-- Cada preset usa una imagen en las seis caras. No crea conexiones ni bucles.
+do
+    local LightingService = game:GetService("Lighting")
+    local SKYBOX_IMAGES = {
+        ["IMAGEN 1"] = "rbxassetid://76981839876175",
+        ["IMAGEN 2"] = "rbxassetid://137163080514754",
+        ["IMAGEN 3"] = "rbxassetid://128047927855303",
+        ["NEGRO"] = nil
+    }
+    local skyboxNames = {"IMAGEN 1", "IMAGEN 2", "IMAGEN 3", "NEGRO"}
+    local selectedSkybox = "IMAGEN 1"
+    local activeSkybox = nil
+    local originalSkyObjects = nil
+
+    local function saveOriginalSky()
+        if originalSkyObjects ~= nil then return end
+        originalSkyObjects = {}
+        for _, object in ipairs(LightingService:GetChildren()) do
+            if object:IsA("Sky") then
+                table.insert(originalSkyObjects, {
+                    Instance = object,
+                    Parent = object.Parent
+                })
+                object.Parent = nil
+            end
+        end
+    end
+
+    local function restoreOriginalSky()
+        if activeSkybox then
+            pcall(function() activeSkybox:Destroy() end)
+            activeSkybox = nil
+        end
+        if originalSkyObjects then
+            for _, saved in ipairs(originalSkyObjects) do
+                if saved.Instance then
+                    pcall(function()
+                        saved.Instance.Parent = saved.Parent or LightingService
+                    end)
+                end
+            end
+            originalSkyObjects = nil
+        end
+    end
+
+    local function applySelectedSky()
+        saveOriginalSky()
+        if activeSkybox then
+            pcall(function() activeSkybox:Destroy() end)
+            activeSkybox = nil
+        end
+
+        local imageId = SKYBOX_IMAGES[selectedSkybox]
+        local sky = Instance.new("Sky")
+        sky.Name = "MATRIXHUB_LOCAL_SKYBOX"
+        local faces = {"SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp"}
+        for _, face in ipairs(faces) do
+            sky[face] = imageId or ""
+        end
+        sky.Parent = LightingService
+        activeSkybox = sky
+    end
+
+    Visuales:Section({ Title = "MATRIX SKYBOX", Icon = "cloud-sun", Opened = true })
+    Visuales:Dropdown({
+        Title = "SELECCIONAR CIELO",
+        Values = skyboxNames,
+        Value = selectedSkybox,
+        Callback = function(value)
+            if SKYBOX_IMAGES[value] ~= nil or value == "NEGRO" then
+                selectedSkybox = value
+                if activeSkybox then applySelectedSky() end
+            end
+        end
+    })
+    Visuales:Button({
+        Title = "APLICAR CIELO",
+        Icon = "check",
+        Callback = applySelectedSky
+    })
+    Visuales:Toggle({
+        Title = "ACTIVAR MATRIX SKYBOX",
+        Icon = "cloud",
+        Value = false,
+        Callback = function(enabled)
+            if enabled then
+                applySelectedSky()
+            else
+                restoreOriginalSky()
+            end
+        end
+    })
+    Visuales:Button({
+        Title = "RESTAURAR CIELO ORIGINAL",
+        Icon = "rotate-ccw",
+        Callback = restoreOriginalSky
+    })
+end
+
     Visuales:Section({ Title = "TOUCH EFFECTS", Icon = "mouse-pointer-2", Opened = true })
     Visuales:Toggle({
         Title = "MATRIX RIPPLE",
