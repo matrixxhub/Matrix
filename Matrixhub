@@ -4670,6 +4670,171 @@ Otros:Input({
     end
 })
 
+
+-- PROTECCIÓN DE OTROS JUGADORES // etiquetas locales, independientes del modo streamer.
+-- Solo cambia lo que ve este cliente. No modifica nombres ni datos del servidor.
+local protectOthersEnabled = false
+local protectOthersPlayerAddedConnection = nil
+local protectOthersPlayerRemovingConnection = nil
+local protectOthersCharacterConnections = {}
+local protectOthersStates = {}
+local protectOthersNumbers = {}
+local protectOthersNumberOwners = {}
+
+local function getProtectOthersNumber(targetPlayer)
+    if targetPlayer == LocalPlayer then return nil end
+    local existing = protectOthersNumbers[targetPlayer]
+    if existing then return existing end
+
+    for number = 1, 29 do
+        if not protectOthersNumberOwners[number] then
+            protectOthersNumbers[targetPlayer] = number
+            protectOthersNumberOwners[number] = targetPlayer
+            return number
+        end
+    end
+    return nil
+end
+
+local function cleanupProtectOthersPlayer(targetPlayer)
+    local saved = protectOthersStates[targetPlayer]
+    if not saved then return end
+
+    if saved.Billboard and saved.Billboard.Parent then
+        saved.Billboard:Destroy()
+    end
+    if saved.Humanoid and saved.OriginalDisplayDistanceType ~= nil then
+        pcall(function()
+            saved.Humanoid.DisplayDistanceType = saved.OriginalDisplayDistanceType
+        end)
+    end
+    protectOthersStates[targetPlayer] = nil
+end
+
+local function applyProtectOthersPlayer(targetPlayer, character)
+    local number = getProtectOthersNumber(targetPlayer)
+    if not number or not character then return end
+
+    task.spawn(function()
+        local humanoid = character:WaitForChild("Humanoid", 10)
+        local head = character:WaitForChild("Head", 10)
+        if not protectOthersEnabled or targetPlayer.Character ~= character
+            or not humanoid or not head then
+            return
+        end
+
+        cleanupProtectOthersPlayer(targetPlayer)
+
+        local originalDisplayDistanceType = humanoid.DisplayDistanceType
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "MATRIXHUB_OTHER_PLAYER_TAG"
+        billboard.Adornee = head
+        billboard.Size = UDim2.fromOffset(150, 30)
+        billboard.StudsOffset = Vector3.new(0, 2.7, 0)
+        billboard.AlwaysOnTop = true
+        billboard.LightInfluence = 0
+        billboard.MaxDistance = 150
+
+        local label = Instance.new("TextLabel")
+        label.Name = "PlayerLabel"
+        label.BackgroundTransparency = 1
+        label.BorderSizePixel = 0
+        label.Size = UDim2.fromScale(1, 1)
+        label.Font = Enum.Font.GothamBold
+        label.Text = "Matrix Hub " .. tostring(number)
+        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(120, 255, 175)
+        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        label.TextStrokeTransparency = 0.3
+        label.Parent = billboard
+
+        billboard.Parent = PlayerGui
+        protectOthersStates[targetPlayer] = {
+            Character = character,
+            Humanoid = humanoid,
+            OriginalDisplayDistanceType = originalDisplayDistanceType,
+            Billboard = billboard
+        }
+
+        pcall(function()
+            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        end)
+    end)
+end
+
+local function hookProtectOthersPlayer(targetPlayer)
+    if targetPlayer == LocalPlayer then return end
+    getProtectOthersNumber(targetPlayer)
+
+    if not protectOthersCharacterConnections[targetPlayer] then
+        protectOthersCharacterConnections[targetPlayer] = targetPlayer.CharacterAdded:Connect(function(character)
+            cleanupProtectOthersPlayer(targetPlayer)
+            applyProtectOthersPlayer(targetPlayer, character)
+        end)
+    end
+
+    if targetPlayer.Character then
+        applyProtectOthersPlayer(targetPlayer, targetPlayer.Character)
+    end
+end
+
+local function stopProtectOthers()
+    if protectOthersPlayerAddedConnection then
+        protectOthersPlayerAddedConnection:Disconnect()
+        protectOthersPlayerAddedConnection = nil
+    end
+    if protectOthersPlayerRemovingConnection then
+        protectOthersPlayerRemovingConnection:Disconnect()
+        protectOthersPlayerRemovingConnection = nil
+    end
+
+    for targetPlayer, connection in pairs(protectOthersCharacterConnections) do
+        if connection then connection:Disconnect() end
+        protectOthersCharacterConnections[targetPlayer] = nil
+    end
+    for targetPlayer in pairs(protectOthersStates) do
+        cleanupProtectOthersPlayer(targetPlayer)
+    end
+
+    table.clear(protectOthersNumbers)
+    table.clear(protectOthersNumberOwners)
+end
+
+Otros:Toggle({
+    Title = "PROTECCIÓN DE OTROS JUGADORES",
+    Value = false,
+    Callback = function(state)
+        state = state == true
+        if state == protectOthersEnabled then return end
+        protectOthersEnabled = state
+
+        if not state then
+            stopProtectOthers()
+            return
+        end
+
+        protectOthersPlayerAddedConnection = Players.PlayerAdded:Connect(hookProtectOthersPlayer)
+        protectOthersPlayerRemovingConnection = Players.PlayerRemoving:Connect(function(targetPlayer)
+            local connection = protectOthersCharacterConnections[targetPlayer]
+            if connection then
+                connection:Disconnect()
+                protectOthersCharacterConnections[targetPlayer] = nil
+            end
+            cleanupProtectOthersPlayer(targetPlayer)
+
+            local number = protectOthersNumbers[targetPlayer]
+            if number then
+                protectOthersNumbers[targetPlayer] = nil
+                protectOthersNumberOwners[number] = nil
+            end
+        end)
+
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            hookProtectOthersPlayer(targetPlayer)
+        end
+    end
+})
+
 local KillSoundEnabled = MATRIXHUB_CONFIG.KillSoundEnabled == true
 local SelectedKillSound = MATRIXHUB_CONFIG.SelectedKillSound or "ES HACKER"
 local KillSoundVolume = math.clamp(tonumber(MATRIXHUB_CONFIG.KillSoundVolume) or 1, 1, 3)
