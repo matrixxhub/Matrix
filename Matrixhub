@@ -3883,7 +3883,7 @@ do
     end
 
 -- MATRIX SKYBOX // Selector local de cielos
--- Cada preset usa una imagen en las seis caras. No crea conexiones ni bucles.
+-- El selector solo elige; APLICAR CIELO hace el cambio y RESTAURAR devuelve el original.
 do
     local LightingService = game:GetService("Lighting")
     local SKYBOX_IMAGES = {
@@ -3897,11 +3897,21 @@ do
     local activeSkybox = nil
     local originalSkyObjects = nil
 
+    local skyboxFaces = {
+        "SkyboxBk",
+        "SkyboxDn",
+        "SkyboxFt",
+        "SkyboxLf",
+        "SkyboxRt",
+        "SkyboxUp"
+    }
+
     local function saveOriginalSky()
         if originalSkyObjects ~= nil then return end
+
         originalSkyObjects = {}
         for _, object in ipairs(LightingService:GetChildren()) do
-            if object:IsA("Sky") then
+            if object:IsA("Sky") and object.Name ~= "MATRIXHUB_LOCAL_SKYBOX" then
                 table.insert(originalSkyObjects, {
                     Instance = object,
                     Parent = object.Parent
@@ -3913,9 +3923,20 @@ do
 
     local function restoreOriginalSky()
         if activeSkybox then
-            pcall(function() activeSkybox:Destroy() end)
+            pcall(function()
+                activeSkybox:Destroy()
+            end)
             activeSkybox = nil
         end
+
+        -- Limpia una instancia MATRIX residual de una ejecución anterior.
+        local leftover = LightingService:FindFirstChild("MATRIXHUB_LOCAL_SKYBOX")
+        if leftover then
+            pcall(function()
+                leftover:Destroy()
+            end)
+        end
+
         if originalSkyObjects then
             for _, saved in ipairs(originalSkyObjects) do
                 if saved.Instance then
@@ -3929,20 +3950,39 @@ do
     end
 
     local function applySelectedSky()
+        local imageId = SKYBOX_IMAGES[selectedSkybox]
+        if imageId == nil and selectedSkybox ~= "NEGRO" then
+            warn("MATRIX SKYBOX: selección no válida: " .. tostring(selectedSkybox))
+            return
+        end
+
         saveOriginalSky()
+
         if activeSkybox then
-            pcall(function() activeSkybox:Destroy() end)
+            pcall(function()
+                activeSkybox:Destroy()
+            end)
             activeSkybox = nil
         end
 
-        local imageId = SKYBOX_IMAGES[selectedSkybox]
         local sky = Instance.new("Sky")
         sky.Name = "MATRIXHUB_LOCAL_SKYBOX"
-        local faces = {"SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp"}
-        for _, face in ipairs(faces) do
-            sky[face] = imageId or ""
+
+        local ok, err = pcall(function()
+            for _, face in ipairs(skyboxFaces) do
+                sky[face] = imageId or ""
+            end
+            sky.Parent = LightingService
+        end)
+
+        if not ok then
+            pcall(function()
+                sky:Destroy()
+            end)
+            warn("MATRIX SKYBOX: no se pudo aplicar el cielo: " .. tostring(err))
+            return
         end
-        sky.Parent = LightingService
+
         activeSkybox = sky
     end
 
@@ -3954,7 +3994,6 @@ do
         Callback = function(value)
             if SKYBOX_IMAGES[value] ~= nil or value == "NEGRO" then
                 selectedSkybox = value
-                if activeSkybox then applySelectedSky() end
             end
         end
     })
@@ -3962,18 +4001,6 @@ do
         Title = "APLICAR CIELO",
         Icon = "check",
         Callback = applySelectedSky
-    })
-    Visuales:Toggle({
-        Title = "ACTIVAR MATRIX SKYBOX",
-        Icon = "cloud",
-        Value = false,
-        Callback = function(enabled)
-            if enabled then
-                applySelectedSky()
-            else
-                restoreOriginalSky()
-            end
-        end
     })
     Visuales:Button({
         Title = "RESTAURAR CIELO ORIGINAL",
