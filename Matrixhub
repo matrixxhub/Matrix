@@ -4569,8 +4569,6 @@ local function escapeRichText(str)
     escaped = escaped:gsub("&", "&amp;")
     escaped = escaped:gsub("<", "&lt;")
     escaped = escaped:gsub(">", "&gt;")
-    escaped = escaped:gsub('"', "&quot;")
-    escaped = escaped:gsub("'", "&apos;")
     return escaped
 end
 
@@ -5021,6 +5019,7 @@ local MATRIXHUB_flyConn = nil
 local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
 local MATRIXHUB_flyDownEnabled = false
+local MATRIXHUB_flyHeightEnabled = false
 local MATRIXHUB_flyDownBaseY = 0
 local MATRIXHUB_flyDownDepth = 50
 local MATRIXHUB_speed = 1.2
@@ -5166,7 +5165,12 @@ Movimiento:Toggle({
     Icon = "rocket",
     Value = false,
     Callback = function(state)
-        if state then MATRIXHUB_StartFly() else MATRIXHUB_StopFly() end
+        MATRIXHUB_flyHeightEnabled = state == true
+        if MATRIXHUB_flyHeightEnabled then
+            MATRIXHUB_StartFly()
+        elseif not MATRIXHUB_flyDownEnabled then
+            MATRIXHUB_StopFly()
+        end
     end
 })
 
@@ -5190,6 +5194,14 @@ Movimiento:Toggle({
             end
             MATRIXHUB_flyDownBaseY = root.Position.Y
             MATRIXHUB_StartFly()
+        elseif MATRIXHUB_flyHeightEnabled then
+            local char = MATRIXHUB_LP.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                MATRIXHUB_baseY = root.Position.Y
+            else
+                MATRIXHUB_StopFly()
+            end
         else
             MATRIXHUB_StopFly()
         end
