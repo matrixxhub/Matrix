@@ -1,13 +1,29 @@
--- MATRIXHUB // SPLASH DE INICIO: LLUVIA DIGITAL
+-- MATRIX-HUB // STARTUP SCREEN - WINDOWS CLASICO
+-- El estilo Windows 98/2000 se limita a esta pantalla de entrada.
+-- El menu principal conserva Matrix Green, glass/acrylic y lluvia digital.
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local launchMatrixHub
-local startupWindowMain
-local startupWindowGuard
-local MATRIXHUB
+local startupExecutionCount = 1
+do
+    if type(readfile) == "function" then
+        for _, path in ipairs({ "MATRIXHUB/MatrixHubConfig.json", "MatrixHubConfig.json" }) do
+            local okRead, raw = pcall(readfile, path)
+            if okRead and type(raw) == "string" and raw ~= "" then
+                local okDecode, saved = pcall(function()
+                    return game:GetService("HttpService"):JSONDecode(raw)
+                end)
+                if okDecode and type(saved) == "table" then
+                    startupExecutionCount = math.max(0, math.floor(tonumber(saved.ExecutionCount) or 0)) + 1
+                    break
+                end
+            end
+        end
+    end
+end
 
 local oldStartup = PlayerGui:FindFirstChild("MATRIXHUB_STARTUP")
 if oldStartup then oldStartup:Destroy() end
@@ -16,138 +32,586 @@ local startupGui = Instance.new("ScreenGui")
 startupGui.Name = "MATRIXHUB_STARTUP"
 startupGui.ResetOnSpawn = false
 startupGui.IgnoreGuiInset = true
-startupGui.DisplayOrder = 2000000000
-startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+startupGui.DisplayOrder = 10000
+startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 startupGui.Parent = PlayerGui
 
-local startupBackground = Instance.new("Frame")
-startupBackground.Name = "MatrixBackground"
-startupBackground.Size = UDim2.fromScale(1, 1)
-startupBackground.BackgroundColor3 = Color3.fromRGB(1, 7, 5)
-startupBackground.BorderSizePixel = 0
-startupBackground.ClipsDescendants = true
-startupBackground.Parent = startupGui
+local background = Instance.new("Frame")
+background.Name = "Background"
+background.Size = UDim2.fromScale(1, 1)
+background.BackgroundColor3 = Color3.fromRGB(2, 7, 8)
+background.BorderSizePixel = 0
+background.ClipsDescendants = true
+background.Parent = startupGui
 
-local startupGradient = Instance.new("UIGradient")
-startupGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 12, 8)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(2, 20, 12)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 5, 8))
+local backgroundGradient = Instance.new("UIGradient")
+backgroundGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(1, 8, 7)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3, 18, 12)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 5, 8))
 })
-startupGradient.Rotation = 35
-startupGradient.Parent = startupBackground
+backgroundGradient.Rotation = 35
+backgroundGradient.Parent = background
 
--- Columnas digitales: se actualizan a intervalos para mantener bajo el consumo.
-local startupRandom = Random.new()
-local startupGlyphs = { "0", "1", "M", "X", "H", "7", "9", "ア", "カ", "ネ" }
-local startupRain = {}
-for i = 1, 26 do
-    local depth = startupRandom:NextNumber(0.65, 1.2)
-    local rain = Instance.new("TextLabel")
-    rain.Name = "MatrixCode_" .. i
-    rain.BackgroundTransparency = 1
-    rain.BorderSizePixel = 0
-    rain.Size = UDim2.fromOffset(22 * depth, 190 * depth)
-    local x = (i - 1) / 25
-    local y = startupRandom:NextNumber(-1.4, 0)
-    rain.Position = UDim2.new(x, 0, y, 0)
-    rain.Font = Enum.Font.Code
-    rain.TextSize = math.floor(16 * depth)
-    rain.TextColor3 = Color3.fromRGB(0, 120, 60)
-    rain.TextTransparency = startupRandom:NextNumber(0.22, 0.52)
-    rain.TextStrokeTransparency = 0.65
-    rain.TextYAlignment = Enum.TextYAlignment.Top
-    rain.Text = "0\n1\nM\n0\nX\n1\nH\n0\n1"
-    rain.ZIndex = 2
-    rain.Parent = startupBackground
-    startupRain[#startupRain + 1] = {
-        Label = rain,
-        X = x,
-        Y = y,
-        Speed = startupRandom:NextNumber(0.16, 0.34) * depth
-    }
+-- La lluvia Matrix sigue detrás de la ventana, sin competir con el texto.
+local rng = Random.new()
+local glyphs = {"0", "1"}
+local identityWords = {"SANOX", "MATRIX-HUB", "GHOST"}
+local rainLabels = {}
+local wordLabels = {}
+local rainAccumulator = 0
+local rainStep = 1 / 18
+
+for i = 1, 11 do
+    local depth = rng:NextNumber(0.55, 1.25)
+    local label = Instance.new("TextLabel")
+    label.Name = "StartupRain_" .. i
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Size = UDim2.new(0, 24 * depth, 0, 168 * depth)
+    local x = (i - 1) / 10
+    local y = rng:NextNumber(-1, 0)
+    label.Position = UDim2.new(x, 0, y, 0)
+    label.Font = Enum.Font.Code
+    label.TextSize = math.floor(14 * depth)
+    label.TextColor3 = Color3.fromRGB(0, 220, 112)
+    label.TextTransparency = 0.28 + (1.25 - depth) * 0.36
+    label.TextStrokeColor3 = Color3.fromRGB(0, 25, 12)
+    label.TextStrokeTransparency = 0.5
+    label.TextYAlignment = Enum.TextYAlignment.Top
+    local chars = {}
+    for n = 1, 10 do chars[n] = glyphs[rng:NextInteger(1, #glyphs)] end
+    label.Text = table.concat(chars, "\n")
+    label.ZIndex = 2
+    label.Parent = background
+    rainLabels[#rainLabels + 1] = {Label = label, X = x, Y = y, Speed = rng:NextNumber(0.12, 0.26) * depth}
 end
 
-local startupTitle = Instance.new("TextLabel")
-startupTitle.Name = "MatrixHubTitle"
-startupTitle.AnchorPoint = Vector2.new(0.5, 0.5)
-startupTitle.Position = UDim2.fromScale(0.5, 0.5)
-startupTitle.Size = UDim2.new(0.94, 0, 0, 78)
-startupTitle.BackgroundTransparency = 1
-startupTitle.Font = Enum.Font.GothamBlack
-startupTitle.Text = "MATRIXHUB"
-startupTitle.TextColor3 = Color3.fromRGB(120, 255, 175)
-startupTitle.TextSize = 48
-startupTitle.TextScaled = true
-startupTitle.TextStrokeColor3 = Color3.fromRGB(0, 55, 25)
-startupTitle.TextStrokeTransparency = 0.18
-startupTitle.ZIndex = 5
-startupTitle.Parent = startupBackground
+for i = 1, 5 do
+    local depth = rng:NextNumber(0.65, 1.1)
+    local label = Instance.new("TextLabel")
+    label.Name = "StartupIdentity_" .. i
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Size = UDim2.fromOffset(150 * depth, 25 * depth)
+    local x = rng:NextNumber(0.03, 0.78)
+    local y = rng:NextNumber(-1, 0)
+    label.Position = UDim2.new(x, 0, y, 0)
+    label.Font = Enum.Font.Code
+    label.Text = identityWords[((i - 1) % #identityWords) + 1]
+    label.TextSize = math.floor(12 * depth)
+    label.TextColor3 = Color3.fromRGB(100, 255, 165)
+    label.TextTransparency = 0.42
+    label.TextStrokeColor3 = Color3.fromRGB(0, 30, 14)
+    label.TextStrokeTransparency = 0.4
+    label.ZIndex = 3
+    label.Parent = background
+    wordLabels[#wordLabels + 1] = {Label = label, X = x, Y = y, Speed = rng:NextNumber(0.08, 0.17) * depth}
+end
 
-local titleConstraint = Instance.new("UITextSizeConstraint")
-titleConstraint.MinTextSize = 25
-titleConstraint.MaxTextSize = 48
-titleConstraint.Parent = startupTitle
+-- Ventana clásica: bordes rectos, cuerpo gris y barra azul activa.
+local panelShadow = Instance.new("Frame")
+panelShadow.Name = "WindowsPanelShadow"
+panelShadow.AnchorPoint = Vector2.new(0.5, 0.5)
+panelShadow.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(7, 8)
+panelShadow.Size = UDim2.new(0.92, 0, 0, 398)
+panelShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+panelShadow.BackgroundTransparency = 0.32
+panelShadow.BorderSizePixel = 0
+panelShadow.ZIndex = 4
+panelShadow.Parent = background
+local shadowScale = Instance.new("UIScale")
+shadowScale.Name = "ResponsiveShadowScale"
+shadowScale.Scale = 1
+shadowScale.Parent = panelShadow
 
-local startupSubtitle = Instance.new("TextLabel")
-startupSubtitle.AnchorPoint = Vector2.new(0.5, 0.5)
-startupSubtitle.Position = UDim2.fromScale(0.5, 0.59)
-startupSubtitle.Size = UDim2.new(0.9, 0, 0, 22)
-startupSubtitle.BackgroundTransparency = 1
-startupSubtitle.Font = Enum.Font.Code
-startupSubtitle.Text = "S A N O X   //   INITIALIZING"
-startupSubtitle.TextColor3 = Color3.fromRGB(0, 205, 105)
-startupSubtitle.TextSize = 13
-startupSubtitle.TextTransparency = 0.12
-startupSubtitle.ZIndex = 5
-startupSubtitle.Parent = startupBackground
+local panel = Instance.new("Frame")
+panel.Name = "Windows98Window"
+panel.AnchorPoint = Vector2.new(0.5, 0.5)
+panel.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 24)
+panel.Size = UDim2.new(0.92, 0, 0, 398)
+panel.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+panel.BorderColor3 = Color3.fromRGB(20, 20, 20)
+panel.BorderSizePixel = 1
+panel.ZIndex = 5
+panel.Parent = background
 
-local startupRainConnection
-local startupRainAccumulator = 0
-startupRainConnection = RunService.Heartbeat:Connect(function(dt)
+local panelConstraint = Instance.new("UISizeConstraint")
+panelConstraint.MaxSize = Vector2.new(440, 398)
+panelConstraint.Parent = panel
+
+local panelScale = Instance.new("UIScale")
+panelScale.Name = "ResponsiveScale"
+panelScale.Scale = 1
+panelScale.Parent = panel
+
+local function updateStartupScale()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local viewport = camera.ViewportSize
+    local baseWidth = math.min(440, viewport.X * 0.92)
+    local scale = math.clamp(math.min(1, (viewport.X - 24) / math.max(baseWidth, 1), (viewport.Y - 24) / 398), 0.72, 1)
+    panelScale.Scale = scale
+    shadowScale.Scale = scale
+end
+updateStartupScale()
+local cameraConnection
+if workspace.CurrentCamera then
+    cameraConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateStartupScale)
+end
+
+-- Bordes en relieve tipo Windows 98.
+local function edge(name, position, size, color, zindex)
+    local item = Instance.new("Frame")
+    item.Name = name
+    item.Position = position
+    item.Size = size
+    item.BackgroundColor3 = color
+    item.BorderSizePixel = 0
+    item.ZIndex = zindex or 6
+    item.Parent = panel
+    return item
+end
+edge("BevelTop", UDim2.new(0, 1, 0, 1), UDim2.new(1, -2, 0, 2), Color3.fromRGB(255, 255, 255))
+edge("BevelLeft", UDim2.new(0, 1, 0, 1), UDim2.new(0, 2, 1, -2), Color3.fromRGB(255, 255, 255))
+edge("BevelBottom", UDim2.new(0, 1, 1, -3), UDim2.new(1, -2, 0, 2), Color3.fromRGB(80, 80, 80))
+edge("BevelRight", UDim2.new(1, -3, 0, 1), UDim2.new(0, 2, 1, -2), Color3.fromRGB(80, 80, 80))
+
+local titleBar = Instance.new("Frame")
+titleBar.Name = "WindowsTitleBar"
+titleBar.Position = UDim2.fromOffset(4, 4)
+titleBar.Size = UDim2.new(1, -8, 0, 27)
+titleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 128)
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 7
+titleBar.Parent = panel
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new(Color3.fromRGB(0, 0, 128), Color3.fromRGB(16, 132, 208))
+titleGradient.Parent = titleBar
+
+local appIcon = Instance.new("TextLabel")
+appIcon.Name = "WindowIcon"
+appIcon.Position = UDim2.fromOffset(5, 4)
+appIcon.Size = UDim2.fromOffset(18, 18)
+appIcon.BackgroundColor3 = Color3.fromRGB(0, 35, 20)
+appIcon.BorderColor3 = Color3.fromRGB(255, 255, 255)
+appIcon.BorderSizePixel = 1
+appIcon.Font = Enum.Font.Code
+appIcon.Text = "M"
+appIcon.Active = true
+appIcon.TextColor3 = Color3.fromRGB(0, 255, 120)
+appIcon.TextSize = 14
+appIcon.ZIndex = 8
+appIcon.Parent = titleBar
+
+
+local windowTitle = Instance.new("TextButton")
+windowTitle.Name = "WindowTitle"
+windowTitle.BackgroundTransparency = 1
+windowTitle.Position = UDim2.fromOffset(28, 2)
+windowTitle.Size = UDim2.new(1, -112, 1, -4)
+windowTitle.Font = Enum.Font.ArialBold
+windowTitle.Text = "Matrix Hub - Centro de información"
+windowTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+windowTitle.TextSize = 13
+windowTitle.TextXAlignment = Enum.TextXAlignment.Left
+windowTitle.AutoButtonColor = false
+windowTitle.Active = true
+windowTitle.ZIndex = 8
+windowTitle.Parent = titleBar
+
+-- Controles compactos: minimizar y maximizar quedan solo decorativos.
+-- La X es el único control activo y cancela el inicio/cierra la interfaz.
+local matrixStartupClosed = false
+local function titleControl(symbol, x, isClose)
+    local control = Instance.new(isClose and "TextButton" or "TextLabel")
+    control.Position = UDim2.new(1, x, 0, 5)
+    control.Size = UDim2.fromOffset(14, 14)
+    control.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+    control.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    control.BorderSizePixel = 1
+    control.Font = Enum.Font.ArialBold
+    control.Text = symbol
+    control.TextColor3 = Color3.fromRGB(0, 0, 0)
+    control.TextSize = 10
+    control.ZIndex = 8
+    control.Parent = titleBar
+    if isClose then
+        control.AutoButtonColor = false
+        control.Activated:Connect(function()
+            if matrixStartupClosed then return end
+            matrixStartupClosed = true
+            _G.MATRIXHUB_UNLOAD_REQUESTED = true
+            if startupGui and startupGui.Parent then startupGui:Destroy() end
+        end)
+    end
+    return control
+end
+titleControl("_", -52, false)
+titleControl("□", -35, false)
+titleControl("×", -18, true)
+
+local heading = Instance.new("TextLabel")
+heading.Name = "StartupHeading"
+heading.BackgroundTransparency = 1
+heading.Position = UDim2.fromOffset(12, 37)
+heading.Size = UDim2.new(1, -24, 0, 18)
+heading.Font = Enum.Font.ArialBold
+heading.Text = "MATRIX HUB // INFORME DE INICIO"
+heading.TextColor3 = Color3.fromRGB(20, 20, 20)
+heading.TextSize = 13
+heading.TextXAlignment = Enum.TextXAlignment.Left
+heading.ZIndex = 7
+heading.Parent = panel
+
+local warningPanel = Instance.new("Frame")
+warningPanel.Name = "BanDisclaimer"
+warningPanel.Position = UDim2.fromOffset(12, 60)
+warningPanel.Size = UDim2.new(1, -24, 0, 61)
+warningPanel.BackgroundColor3 = Color3.fromRGB(216, 216, 216)
+warningPanel.BorderColor3 = Color3.fromRGB(128, 128, 128)
+warningPanel.BorderSizePixel = 1
+warningPanel.ZIndex = 7
+warningPanel.Parent = panel
+
+local warningTitle = Instance.new("TextLabel")
+warningTitle.BackgroundTransparency = 1
+warningTitle.Position = UDim2.fromOffset(7, 4)
+warningTitle.Size = UDim2.new(1, -14, 0, 16)
+warningTitle.Font = Enum.Font.ArialBold
+warningTitle.Text = "AVISO IMPORTANTE"
+warningTitle.TextColor3 = Color3.fromRGB(128, 0, 0)
+warningTitle.TextSize = 12
+warningTitle.TextXAlignment = Enum.TextXAlignment.Left
+warningTitle.ZIndex = 8
+warningTitle.Parent = warningPanel
+
+local warningText = Instance.new("TextLabel")
+warningText.BackgroundTransparency = 1
+warningText.Position = UDim2.fromOffset(7, 21)
+warningText.Size = UDim2.new(1, -14, 1, -25)
+warningText.Font = Enum.Font.Arial
+warningText.Text = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
+warningText.TextColor3 = Color3.fromRGB(25, 25, 25)
+warningText.TextSize = 11
+warningText.TextWrapped = true
+warningText.TextXAlignment = Enum.TextXAlignment.Left
+warningText.TextYAlignment = Enum.TextYAlignment.Top
+warningText.ZIndex = 8
+warningText.Parent = warningPanel
+
+local notesHeading = Instance.new("TextLabel")
+notesHeading.Name = "ReleaseNotesHeading"
+notesHeading.BackgroundTransparency = 1
+notesHeading.Position = UDim2.fromOffset(12, 127)
+notesHeading.Size = UDim2.new(1, -24, 0, 18)
+notesHeading.Font = Enum.Font.ArialBold
+notesHeading.Text = "NOVEDADES Y CORRECCIONES"
+notesHeading.TextColor3 = Color3.fromRGB(20, 20, 20)
+notesHeading.TextSize = 12
+notesHeading.TextXAlignment = Enum.TextXAlignment.Left
+notesHeading.ZIndex = 7
+notesHeading.Parent = panel
+
+local notesBox = Instance.new("ScrollingFrame")
+notesBox.Name = "ReleaseNotes"
+notesBox.Position = UDim2.fromOffset(12, 148)
+notesBox.Size = UDim2.new(1, -24, 0, 137)
+notesBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+notesBox.BorderColor3 = Color3.fromRGB(128, 128, 128)
+notesBox.BorderSizePixel = 1
+notesBox.ScrollBarThickness = 7
+notesBox.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+notesBox.CanvasSize = UDim2.new(0, 0, 0, 0)
+notesBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+notesBox.ScrollingDirection = Enum.ScrollingDirection.Y
+notesBox.ZIndex = 7
+notesBox.Parent = panel
+
+local notesText = Instance.new("TextLabel")
+notesText.Name = "ReleaseNotesText"
+notesText.BackgroundTransparency = 1
+notesText.Position = UDim2.fromOffset(7, 6)
+notesText.Size = UDim2.new(1, -17, 0, 0)
+notesText.AutomaticSize = Enum.AutomaticSize.Y
+notesText.Font = Enum.Font.Arial
+notesText.TextColor3 = Color3.fromRGB(20, 20, 20)
+notesText.TextSize = 11
+notesText.TextWrapped = true
+notesText.TextXAlignment = Enum.TextXAlignment.Left
+notesText.TextYAlignment = Enum.TextYAlignment.Top
+notesText.ZIndex = 8
+notesText.Text = table.concat({
+    "DISEÑO E INTERFAZ",
+    "• Tema Matrix Green con panel glass/acrílico y lluvia digital detrás del menú principal.",
+    "• Pantalla de entrada estilo ventana clásica de Windows 98/2000.",
+    "• Menú reorganizado; la sección BOTONES queda en una posición intermedia.",
+    "• Estados visuales unificados: gris cuando una opción está apagada y verde cuando está activa.",
+    "",
+    "FUNCIONES DEL HUB",
+    "• CHEATS: Silent Aim, FOV, Auto Shoot normal/agresivo, Alto Fire, Auto Sacar Arma, God Mode, Spin, VOIN Walk y ajustes asociados.",
+    "• AUTO KILL: opciones de Auto Kill e Hitbox Expander.",
+    "• VISUAL ENGINE: ESP Highlight y herramientas visuales.",
+    "• AUTOMATION: Auto Farm de evento integrado desde Random.",
+    "• MOVILIDAD: Fly Speed, Fly Altura, Speed CFrame, Invisible V6 y apartado Anti Cheats V2.",
+    "• PERSONAJE: paquetes de animaciones, mezclador, restaurar animaciones y herramientas de avatar.",
+    "• OTROS: modo streamer, reconectar sesión y cambiar de instancia.",
+    "",
+    "SISTEMAS E INTERFAZ",
+    "• Botones flotantes HUD movibles, con visibilidad y posición guardadas.",
+    "• STATUS compacto: FPS, ping, jugadores y errores; rendimiento en vivo dentro de OVERVIEW.",
+    "• Diez temas, escala de interfaz, velocidad de animación, transparencia, intensidad Matrix Green y brillo.",
+    "• FPS Boost, Anti-Lag y Anti-AFK.",
+    "• Sonidos de muerte configurables, ID personalizado, volumen y vista previa.",
+    "• Sonidos de interfaz con control de volumen y protección contra dobles reproducciones.",
+    "• Configuración persistente, guardado manual, restablecer personalización y registro de errores.",
+    "• Diez Easter Eggs: mensajes de alguien atrapado dentro de Matrix, con probabilidades del 30% al 5%.",
+    "• El aviso de uso y el resumen informativo también aparecen al principio de OVERVIEW.",
+    "",
+    "CORRECCIONES Y ESTABILIDAD",
+    "• Auto Farm usa un único ciclo de trabajo y vuelve a buscar el evento si aún no está disponible.",
+    "• Los botones flotantes guardan su posición y arrastrarlos no activa accidentalmente la opción.",
+    "• El color de los botones refleja el estado real de cada función.",
+    "• FPS Boost y Anti-Lag mantienen estados separados y restauran valores gráficos al desactivarse.",
+    "• Restaurar Default recupera los AnimationId originales sin destruir el script Animate.",
+    "• La restauración reactiva el controlador de animación y devuelve al Humanoid al estado Running.",
+    "• Se limita la repetición rápida del sonido de interfaz para evitar dobles clics audibles.",
+    "• Los errores de lectura y escritura de configuración quedan registrados para diagnóstico."
+}, "\n")
+notesText.Parent = notesBox
+
+local function makeClassicButton(name, text, position, size)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Position = position
+    button.Size = size
+    button.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
+    button.BorderColor3 = Color3.fromRGB(40, 40, 40)
+    button.BorderSizePixel = 1
+    button.AutoButtonColor = false
+    button.Font = Enum.Font.ArialBold
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(10, 10, 10)
+    button.TextSize = 12
+    button.ZIndex = 8
+    button.Parent = panel
+
+    local top = Instance.new("Frame")
+    top.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    top.BorderSizePixel = 0
+    top.Position = UDim2.fromOffset(1, 1)
+    top.Size = UDim2.new(1, -2, 0, 1)
+    top.ZIndex = 9
+    top.Parent = button
+
+    local left = Instance.new("Frame")
+    left.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    left.BorderSizePixel = 0
+    left.Position = UDim2.fromOffset(1, 1)
+    left.Size = UDim2.new(0, 1, 1, -2)
+    left.ZIndex = 9
+    left.Parent = button
+
+    local bottom = Instance.new("Frame")
+    bottom.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    bottom.BorderSizePixel = 0
+    bottom.Position = UDim2.new(0, 1, 1, -2)
+    bottom.Size = UDim2.new(1, -2, 0, 1)
+    bottom.ZIndex = 9
+    bottom.Parent = button
+
+    local right = Instance.new("Frame")
+    right.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    right.BorderSizePixel = 0
+    right.Position = UDim2.new(1, -2, 0, 1)
+    right.Size = UDim2.new(0, 1, 1, -2)
+    right.ZIndex = 9
+    right.Parent = button
+
+    button.MouseButton1Down:Connect(function()
+        button.Position = position + UDim2.fromOffset(1, 1)
+    end)
+    local function resetPosition()
+        button.Position = position
+    end
+    button.MouseButton1Up:Connect(resetPosition)
+    button.MouseLeave:Connect(resetPosition)
+    return button
+end
+
+local startButton = makeClassicButton("StartMatrix", "INICIAR MATRIX HUB", UDim2.new(0, 12, 0, 293), UDim2.new(1, -24, 0, 31))
+local discordButton = makeClassicButton("JoinDiscord", "DISCORD COMMUNITY", UDim2.new(0, 12, 0, 331), UDim2.new(1, -24, 0, 27))
+
+local status = Instance.new("TextLabel")
+status.Name = "StartupStatus"
+status.BackgroundTransparency = 1
+status.Position = UDim2.new(0, 12, 1, -22)
+status.Size = UDim2.new(1, -24, 0, 15)
+status.Font = Enum.Font.Arial
+status.Text = string.format("SANOX // MATRIX HUB READY    EJECUCIONES: %d", startupExecutionCount)
+status.TextColor3 = Color3.fromRGB(40, 40, 40)
+status.TextSize = 10
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.ZIndex = 8
+status.Parent = panel
+
+local discordInvite = "https://discord.gg/Uq6m3RNDX"
+discordButton.Activated:Connect(function()
+    local opened = pcall(function()
+        game:GetService("GuiService"):OpenBrowserWindow(discordInvite)
+    end)
+    if not opened then
+        local copied = pcall(function()
+            setclipboard(discordInvite)
+        end)
+        status.Text = copied and "INVITACION COPIADA AL PORTAPAPELES" or "discord.gg/Uq6m3RNDX"
+    end
+end)
+
+-- Entrada de ventana clásica: aparece con una breve elevación y escala.
+panel.Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, 24)
+panel.BackgroundTransparency = 1
+local targetStartupScale = panelScale.Scale
+panelScale.Scale = targetStartupScale * 0.94
+panelShadow.BackgroundTransparency = 1
+TweenService:Create(panel, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 0
+}):Play()
+TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Scale = targetStartupScale
+}):Play()
+TweenService:Create(panelShadow, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0.32
+}):Play()
+
+local loading = false
+local rainConnection
+rainConnection = RunService.Heartbeat:Connect(function(dt)
     if not startupGui.Parent then
-        if startupRainConnection then startupRainConnection:Disconnect() startupRainConnection = nil end
+        if rainConnection then rainConnection:Disconnect() end
+        if cameraConnection then cameraConnection:Disconnect() end
         return
     end
-    startupRainAccumulator += dt
-    if startupRainAccumulator < 1 / 20 then return end
-    local step = math.min(startupRainAccumulator, 0.12)
-    startupRainAccumulator = 0
-    for _, column in ipairs(startupRain) do
+
+    rainAccumulator += dt
+    if rainAccumulator < rainStep then return end
+    local step = math.min(rainAccumulator, 0.12)
+    rainAccumulator = 0
+
+    for _, column in ipairs(rainLabels) do
+        column.Y += step * column.Speed
+        if column.Y > 1.05 then
+            column.Y = -0.35
+            local chars = {}
+            for n = 1, 10 do chars[n] = glyphs[rng:NextInteger(1, #glyphs)] end
+            column.Label.Text = table.concat(chars, "\n")
+        end
+        column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
+    end
+
+    for _, column in ipairs(wordLabels) do
         column.Y += step * column.Speed
         if column.Y > 1.08 then
-            column.Y = startupRandom:NextNumber(-0.8, -0.2)
-            local chars = {}
-            for n = 1, 9 do
-                chars[n] = startupGlyphs[startupRandom:NextInteger(1, #startupGlyphs)]
-            end
-            column.Label.Text = table.concat(chars, "\n")
+            column.Y = -0.22
+            column.Label.Text = identityWords[rng:NextInteger(1, #identityWords)]
         end
         column.Label.Position = UDim2.new(column.X, 0, column.Y, 0)
     end
 end)
 
-local function closeMatrixStartup()
-    if not startupGui or not startupGui.Parent then return end
-    if startupRainConnection then startupRainConnection:Disconnect() startupRainConnection = nil end
-    local fadeInfo = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-    TweenService:Create(startupTitle, fadeInfo, {
-        TextTransparency = 1,
-        TextStrokeTransparency = 1,
-        Position = UDim2.fromScale(0.5, 0.46)
+local launchMatrixHub
+startButton.Activated:Connect(function()
+    if loading then return end
+    loading = true
+    startButton.Active = false
+    discordButton.Active = false
+    startButton.Visible = false
+    discordButton.Visible = false
+    notesBox.Visible = false
+    notesHeading.Visible = false
+    warningPanel.Visible = false
+    heading.Text = "MATRIX HUB // CARGANDO COMPONENTES"
+    status.Text = "INICIALIZANDO INTERFAZ..."
+
+    local progressText = Instance.new("TextLabel")
+    progressText.Name = "LoadingPercent"
+    progressText.BackgroundTransparency = 1
+    progressText.Position = UDim2.new(0, 12, 0, 150)
+    progressText.Size = UDim2.new(1, -24, 0, 28)
+    progressText.Font = Enum.Font.ArialBold
+    progressText.Text = "0%"
+    progressText.TextColor3 = Color3.fromRGB(0, 80, 35)
+    progressText.TextSize = 22
+    progressText.ZIndex = 8
+    progressText.Parent = panel
+
+    local barBack = Instance.new("Frame")
+    barBack.Name = "ProgressBackground"
+    barBack.Position = UDim2.new(0, 12, 0, 187)
+    barBack.Size = UDim2.new(1, -24, 0, 15)
+    barBack.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    barBack.BorderColor3 = Color3.fromRGB(90, 90, 90)
+    barBack.BorderSizePixel = 1
+    barBack.ZIndex = 8
+    barBack.Parent = panel
+
+    local bar = Instance.new("Frame")
+    bar.Name = "ProgressBar"
+    bar.Position = UDim2.fromOffset(2, 2)
+    bar.Size = UDim2.new(0, 0, 1, -4)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 130, 55)
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 9
+    bar.Parent = barBack
+
+    for value = 1, 100 do
+        if matrixStartupClosed or _G.MATRIXHUB_UNLOAD_REQUESTED or not startupGui.Parent then return end
+        progressText.Text = tostring(value) .. "%"
+        bar.Size = UDim2.new(value / 100, -4, 1, -4)
+        if value < 30 then
+            status.Text = "INICIALIZANDO COMPONENTES..."
+        elseif value < 65 then
+            status.Text = "CARGANDO INTERFAZ..."
+        elseif value < 90 then
+            status.Text = "PREPARANDO MODULOS..."
+        else
+            status.Text = "FINALIZANDO..."
+        end
+        task.wait(0.025)
+    end
+
+    task.wait(0.12)
+    local exitInfo = TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    TweenService:Create(panel, exitInfo, {
+        Position = UDim2.fromScale(0.5, 0.5) + UDim2.fromOffset(0, -18),
+        BackgroundTransparency = 1
     }):Play()
-    TweenService:Create(startupSubtitle, fadeInfo, { TextTransparency = 1 }):Play()
-    for _, column in ipairs(startupRain) do
-        if column.Label and column.Label.Parent then
-            TweenService:Create(column.Label, fadeInfo, { TextTransparency = 1 }):Play()
+    TweenService:Create(panelScale, exitInfo, {Scale = panelScale.Scale * 0.96}):Play()
+    TweenService:Create(panelShadow, exitInfo, {BackgroundTransparency = 1}):Play()
+    for _, obj in ipairs(panel:GetDescendants()) do
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            TweenService:Create(obj, exitInfo, {TextTransparency = 1}):Play()
+        elseif obj:IsA("Frame") then
+            TweenService:Create(obj, exitInfo, {BackgroundTransparency = 1}):Play()
         end
     end
-    TweenService:Create(startupBackground, fadeInfo, { BackgroundTransparency = 1 }):Play()
-    task.wait(0.58)
-    if startupGui and startupGui.Parent then startupGui:Destroy() end
-end
+    for _, column in ipairs(rainLabels) do
+        TweenService:Create(column.Label, exitInfo, {TextTransparency = 1}):Play()
+    end
+    for _, column in ipairs(wordLabels) do
+        TweenService:Create(column.Label, exitInfo, {TextTransparency = 1}):Play()
+    end
 
+    task.wait(0.34)
+    if rainConnection then rainConnection:Disconnect() rainConnection = nil end
+    if cameraConnection then cameraConnection:Disconnect() cameraConnection = nil end
+    startupGui:Destroy()
+    if launchMatrixHub and not matrixStartupClosed and not _G.MATRIXHUB_UNLOAD_REQUESTED then
+        task.spawn(launchMatrixHub)
+    end
+end)
 
+-- FIN DE LA PANTALLA DE INICIO
 
 launchMatrixHub = function()
 local _version = "1.6.66"
@@ -165,7 +629,7 @@ MATRIXHUB_UI:AddTheme({
     Button = Color3.fromRGB(105, 111, 108),    -- Estado inactivo
     Icon = Color3.fromRGB(210, 218, 213),
 })
-MATRIXHUB =
+local  MATRIXHUB =
 MATRIXHUB_UI:CreateWindow({
     Title = "matrix-hub",
     Author = "SANOX",
@@ -187,21 +651,7 @@ MATRIXHUB_UI:CreateWindow({
     },
     Topbar = { Height = 44, ButtonsType = "Default" }
 })
--- Mantener la ventana oculta mientras se construyen todas las pestañas.
--- WindUI ejecuta Open() automáticamente; ocultarla una sola vez no basta.
-startupWindowMain = MATRIXHUB.UIElements.Main
-startupWindowMain.Visible = false
-if startupWindowGuard then startupWindowGuard:Disconnect() end
-startupWindowGuard = game:GetService("RunService").RenderStepped:Connect(function()
-    if startupWindowMain and startupWindowMain.Parent then
-        startupWindowMain.Visible = false
-    end
-end)
 MATRIXHUB:SetSize(UDim2.fromOffset(560, 430))
-
--- La ventana se crea normalmente. El ScreenGui de inicio tiene DisplayOrder
--- superior, así que cubre el panel hasta que termine la construcción sin
--- llamar Close/Open ni alterar el estado interno de WindUI.
 -- CONFIGURACION PERSISTENTE
 -- Si el ejecutor ofrece readfile/writefile, Matrix Hub conserva preferencias de interfaz.
 -- Las funciones de juego no se reactivan automaticamente al volver a ejecutar el script.
@@ -215,18 +665,17 @@ local MATRIXHUB_CONFIG = {
     FPSBoost = false,
     AntiLag = false,
     StatusHud = false,
-    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false, Fly = false, GunSlotSpam = false },
+    ButtonVisibility = { Fantasma = false, Silent = false, AutoShoot = false, Fly = false },
     Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" },
     QuickButtonPositions = {
         Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
         Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
         AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
-        Fly = { XS = 1, XO = -18, YS = 0, YO = 406 },
-        GunSlotSpam = { XS = 1, XO = -18, YS = 0, YO = 482 }
+        Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
     },
     UIScale = 1.08,
     AnimationSpeed = 1,
-    GunSlotSpamCPS = 8,
+    AutoClickerCPS = 2,
     AccentIntensity = 1,
     PanelTransparency = 0.24,
     GlowEnabled = true,
@@ -284,8 +733,8 @@ local function LoadMatrixHubConfig()
 
     if type(saved.ExecutionCount) == "number" then MATRIXHUB_CONFIG.ExecutionCount = math.max(0, math.floor(saved.ExecutionCount)) end
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
-    local savedSlot2CPS = tonumber(saved.GunSlotSpamCPS)
-    if savedSlot2CPS then MATRIXHUB_CONFIG.GunSlotSpamCPS = math.clamp(math.floor(savedSlot2CPS), 2, 15) end
+    local savedAutoClickerCPS = tonumber(saved.AutoClickerCPS) or tonumber(saved.CPSSelectorValue)
+    if savedAutoClickerCPS then MATRIXHUB_CONFIG.AutoClickerCPS = math.clamp(math.floor(savedAutoClickerCPS), 2, 15) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
@@ -986,8 +1435,9 @@ MATRIXHUB_KEY_ACTIONS.Menu = function()
     MATRIXHUB:Toggle()
 end
 
--- PESTANAS PRINCIPALES: HOME se crea primero para abrir como pantalla inicial.
-local Home = MATRIXHUB:Tab({ Title = "HOME", Icon = "house" })
+-- PESTANAS PRINCIPALES: BOTONES queda en la zona media, no al final.
+local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
+local MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = nil
 local Cheats = MATRIXHUB:Tab({ Title = "CHEATS", Icon = "crosshair" })
 local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Botones = MATRIXHUB:Tab({ Title = "BOTONES", Icon = "app-window" })
@@ -996,25 +1446,9 @@ local Animaciones = MATRIXHUB:Tab({ Title = "PERSONAJE", Icon = "footprints" })
 local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
-local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
-local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
-local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
- 
--- MATRIXHUB // CREDITOS
-Creditos:Section({ Title = "CRÉDITOS", Icon = "crown", Opened = true })
 
-Creditos:Paragraph({
-    Title = "SANOX // CREADOR PRINCIPAL",
-    Desc = '<font color="#7DFFAF">[CREADOR PRINCIPAL]</font>\nCreador y desarrollador principal de Matrix Hub. Responsable de la dirección del proyecto, sus modificaciones y su evolución.',
-    ImageSize = 90
-})
-
-Creditos:Paragraph({
-    Title = "01ROXHUB // SUBCREADOR",
-    Desc = '<font color="#7DFFAF">[SUBCREADOR]</font>\nTodo comenzó con una idea. Este panel nació de algo que existió antes, pero evolucionó hasta convertirse en Matrix Hub.\n\nCrédito a 01ROXHUB por la base e inspiración original.',
-    Image = "rbxassetid://76111147434526",
-    ImageSize = 90
-})
+local Sonidos = MATRIXHUB:Tab({ Title = "SONIDO", Icon = "volume-2" })
+local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "ellipsis" })
 
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
@@ -1788,6 +2222,15 @@ do
             "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
             fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
         )
+        if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
+            local homeText = string.format(
+                "▣ FPS  %d      ◈ PING  %s\n▤ MEMORIA  %s      ♟ JUGADORES  %d/%d\n\nFPS HISTORY  %s",
+                fps, pingText, memoryText, playersNow, maxPlayers, fpsGraph
+            )
+            pcall(function()
+                MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH:SetDesc(homeText)
+            end)
+        end
         if performanceAlert then
             hudStroke.Color = Color3.fromRGB(255, 175, 65)
             header.TextColor3 = Color3.fromRGB(255, 205, 125)
@@ -1869,9 +2312,7 @@ silentAimManualEnabled = false
 silentAimFovEnabled = false
 silentAimTargetPart = "Cabeza"
 local espEnabled = false
-local espVisualState = { TracersEnabled = false, SkeletonEnabled = false, TracerOrigin = "CENTRO" }
-local espTools = {}
-local espColor = Color3.fromRGB(170, 0, 255)
+local espColor = Color3.fromRGB(255, 0, 0)
 local activeESPs = {}
 local MAX_ESP_DISTANCE = 1500
 local serverDeadCharacters = setmetatable({}, { __mode = "k" })
@@ -2109,48 +2550,25 @@ AutoKills:Toggle({
     end
 })
 
--- HOME: acceso prioritario a la comunidad y avisos generales.
-local MATRIXHUB_DISCORD_INVITE = "https://discord.gg/vuXmpnQuX"
-local MATRIXHUB_COMMUNITY_STATUS = Home:Paragraph({
-    Title = "MATRIX COMMUNITY",
-    Desc = "Únete a nuestra comunidad para recibir novedades y compartir sugerencias."
-})
-Home:Button({
-    Title = "ÚNETE A NUESTRA COMUNIDAD",
-    Icon = "users",
-    Callback = function()
-        local copied = false
-        if type(setclipboard) == "function" then
-            copied = pcall(setclipboard, MATRIXHUB_DISCORD_INVITE)
-        elseif type(toclipboard) == "function" then
-            copied = pcall(toclipboard, MATRIXHUB_DISCORD_INVITE)
-        elseif type(writeclipboard) == "function" then
-            copied = pcall(writeclipboard, MATRIXHUB_DISCORD_INVITE)
-        end
-        if copied then
-            pcall(function()
-                MATRIXHUB_COMMUNITY_STATUS:SetDesc("¡Enlace de Discord copiado! Pégalo para unirte: " .. MATRIXHUB_DISCORD_INVITE)
-            end)
-        else
-            pcall(function()
-                MATRIXHUB_COMMUNITY_STATUS:SetDesc("Tu ejecutor no ofrece función de copiar. Enlace: " .. MATRIXHUB_DISCORD_INVITE)
-            end)
-        end
-    end
-})
+-- INICIO: aviso, panel de rendimiento en vivo e información general.
 Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
 Home:Paragraph({
     Title = "AVISO DE BANEOS",
     Desc = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
 })
+Home:Section({ Title = "MATRIX // PERFORMANCE", Icon = "activity", Opened = true })
+MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
+    Title = "◈ RENDIMIENTO EN TIEMPO REAL",
+    Desc = "▣ FPS  --      ◈ PING  --\n▤ MEMORIA  --      ♟ JUGADORES  --/--\n\nFPS HISTORY  --"
+})
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
-    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla."
+    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla y monitor principal integrado en OVERVIEW."
 })
 -- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
 setSilentAimQuick = function(enabled)
@@ -2322,7 +2740,7 @@ local function MatrixHub_CreatePlatformButton()
     button.Position = UDim2.new(0.5, 0, 0.45, 0)
     button.Size = UDim2.fromOffset(132, 42)
     button.BackgroundColor3 = Color3.fromRGB(12, 28, 22)
-    button.BackgroundTransparency = 0
+    button.BackgroundTransparency = 0.08
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     button.Font = Enum.Font.GothamBold
@@ -2635,14 +3053,6 @@ do
             if MATRIXHUB_KEY_ACTIONS.Fly then MATRIXHUB_KEY_ACTIONS.Fly() end
         end)
 
-    makeQuickButton("GunSlotSpam", "2", 5, Color3.fromRGB(255, 190, 70),
-        function() return _G.MATRIXHUB_SLOT2_SPAM_ENABLED == true end,
-        function(enabled)
-            if type(_G.MATRIXHUB_SetSlot2Spam) == "function" then
-                _G.MATRIXHUB_SetSlot2Spam(enabled)
-            end
-        end)
-
     local viewportConnection
     local function reClampQuickButtons()
         for _, item in pairs(quickButtons) do
@@ -2692,8 +3102,7 @@ do
             Fantasma = { XS = 1, XO = -18, YS = 0, YO = 178 },
             Silent = { XS = 1, XO = -18, YS = 0, YO = 254 },
             AutoShoot = { XS = 1, XO = -18, YS = 0, YO = 330 },
-            Fly = { XS = 1, XO = -18, YS = 0, YO = 406 },
-            GunSlotSpam = { XS = 1, XO = -18, YS = 0, YO = 482 }
+            Fly = { XS = 1, XO = -18, YS = 0, YO = 406 }
         }
         for id, item in pairs(quickButtons) do
             local pos = defaults[id]
@@ -2732,6 +3141,32 @@ do
         refreshQuickButtons()
     end
     MATRIXHUB_RefreshKeybindSummary()
+
+    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
+    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
+    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
+        Title = "ASIGNACIONES ACTUALES",
+        Desc = MATRIXHUB_GetKeybindSummary()
+    })
+    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
+        Botones:Button({
+            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
+            Icon = "keyboard",
+            Callback = function()
+                MATRIXHUB_BeginKeybindCapture(actionName)
+            end
+        })
+    end
+    Botones:Button({
+        Title = "RESTABLECER TECLAS PREDETERMINADAS",
+        Icon = "rotate-ccw",
+        Callback = function()
+            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
+            MATRIXHUB_KEYBIND_PENDING = nil
+            SaveMatrixHubConfig()
+            MATRIXHUB_RefreshKeybindSummary()
+        end
+    })
 
     -- Controles de visibilidad agrupados en la pestaña BOTONES.
     Botones:Section({ Title = "BOTONES FLOTANTES", Icon = "app-window", Opened = true })
@@ -2784,123 +3219,74 @@ do
         end
     })
 
-    Botones:Toggle({
-        Title = "MOSTRAR BOTÓN SLOT 2 TÁCTIL",
-        Icon = "repeat",
-        Value = MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam == true,
-        Callback = function(enabled)
-            quickButtons.GunSlotSpam.Button.Visible = enabled == true
-            MATRIXHUB_CONFIG.ButtonVisibility.GunSlotSpam = enabled == true
-            if refreshQuickButtons then refreshQuickButtons() end
-            SaveMatrixHubConfig()
-            PlayMatrixUISound("Toggle")
-        end
-    })
-
-    -- EDITOR DE TECLAS // asignaciones para PC, conservando controles táctiles.
-    Botones:Section({ Title = "MODIFICAR TECLAS // PC", Icon = "keyboard", Opened = true })
-    MATRIXHUB_KEYBIND_PARAGRAPH = Botones:Paragraph({
-        Title = "ASIGNACIONES ACTUALES",
-        Desc = MATRIXHUB_GetKeybindSummary()
-    })
-    for _, actionName in ipairs({ "Menu", "Fly", "Fantasma", "Silent", "AutoShoot" }) do
-        Botones:Button({
-            Title = "CAMBIAR: " .. MATRIXHUB_KEY_ACTION_TITLES[actionName],
-            Icon = "keyboard",
-            Callback = function()
-                MATRIXHUB_BeginKeybindCapture(actionName)
-            end
-        })
-    end
-    Botones:Button({
-        Title = "RESTABLECER TECLAS PREDETERMINADAS",
-        Icon = "rotate-ccw",
-        Callback = function()
-            MATRIXHUB_CONFIG.Keybinds = { Menu = "RightControl", Fly = "F", Fantasma = "Z", Silent = "X", AutoShoot = "C" }
-            MATRIXHUB_KEYBIND_PENDING = nil
-            SaveMatrixHubConfig()
-            MATRIXHUB_RefreshKeybindSummary()
-        end
-    })
-
-
-
--- AUTO CLICKER // alterna equipar y guardar la pistola en el inventario.
-    Botones:Section({ Title = "AUTO CLICKER // SLOT 2", Icon = "repeat", Opened = true })
-
+    -- AUTO CLICKER // clic izquierdo genérico en la posición actual del cursor.
+    -- No selecciona herramientas, no cambia slots y no contiene lógica de armas.
     local MATRIXHUB_CPS_MIN = 2
     local MATRIXHUB_CPS_MAX = 15
     local MATRIXHUB_CPS_VALUE = math.clamp(
-        math.floor(tonumber(MATRIXHUB_CONFIG.GunSlotSpamCPS) or 8),
+        math.floor(tonumber(MATRIXHUB_CONFIG.AutoClickerCPS) or 2),
         MATRIXHUB_CPS_MIN,
         MATRIXHUB_CPS_MAX
     )
-    _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
-    local MATRIXHUB_SLOT2_WORKER_ID = 0
+    local MATRIXHUB_AUTO_CLICKER_ENABLED = false
+    local MATRIXHUB_AUTO_CLICKER_WORKER_ID = 0
 
-    local MATRIXHUB_SLOT2_PARAGRAPH = Botones:Paragraph({
+    local MATRIXHUB_AUTO_CLICK_FUNCTION
+    if type(mouse1click) == "function" then
+        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
+            mouse1click()
+        end
+    elseif type(mouse1press) == "function" and type(mouse1release) == "function" then
+        MATRIXHUB_AUTO_CLICK_FUNCTION = function()
+            mouse1press()
+            task.wait(0.01)
+            mouse1release()
+        end
+    end
+
+    Botones:Section({ Title = "AUTO CLICKER // CONTROL", Icon = "mouse-pointer-click", Opened = true })
+    local MATRIXHUB_CPS_PARAGRAPH = Botones:Paragraph({
         Title = "AUTO CLICKER",
-        Desc = "ESTADO: OFF\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS\nAlterna equipar y guardar la pistola."
+        Desc = string.format(
+            "ESTADO: OFF\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
+            MATRIXHUB_CPS_VALUE,
+            MATRIXHUB_CPS_MIN,
+            MATRIXHUB_CPS_MAX
+        )
     })
 
-    local function MATRIXHUB_IsPistolTool(tool)
-        if not tool or not tool:IsA("Tool") then return false end
-        if type(esPistola) == "function" then
-            local ok, result = pcall(esPistola, tool)
-            if ok then return result == true end
-        end
-        return tool:FindFirstChild("showBeam") ~= nil
-    end
-
-    local function MATRIXHUB_FindSlot2Pistol()
-        local character = LocalPlayer.Character
-        if character then
-            for _, item in ipairs(character:GetChildren()) do
-                if MATRIXHUB_IsPistolTool(item) then return item end
-            end
-        end
-
-        local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-        if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do
-                if MATRIXHUB_IsPistolTool(item) then return item end
-            end
-        end
-        return nil
-    end
-
-    local function MATRIXHUB_UpdateSlot2Info(message)
-        local stateText = _G.MATRIXHUB_SLOT2_SPAM_ENABLED and "ON" or "OFF"
-        local extra = message and ("\n" .. message) or ""
+    local function MATRIXHUB_UpdateAutoClickerInfo()
+        local apiStatus = MATRIXHUB_AUTO_CLICK_FUNCTION and "LISTO" or "API DE CLIC NO DISPONIBLE"
+        local stateText = MATRIXHUB_AUTO_CLICKER_ENABLED and "ON" or "OFF"
         pcall(function()
-            MATRIXHUB_SLOT2_PARAGRAPH:SetDesc(
-                "ESTADO: " .. stateText ..
-                "\nVELOCIDAD: " .. tostring(MATRIXHUB_CPS_VALUE) .. " CPS (2-15)" ..
-                "\nAlterna equipar y guardar la pistola." ..
-                extra
-            )
+            MATRIXHUB_CPS_PARAGRAPH:SetDesc(string.format(
+                "ESTADO: %s  |  MOTOR: %s\nVELOCIDAD: %d CPS  |  LÍMITE: %d-%d\nClic izquierdo en la posición actual del cursor.",
+                stateText,
+                apiStatus,
+                MATRIXHUB_CPS_VALUE,
+                MATRIXHUB_CPS_MIN,
+                MATRIXHUB_CPS_MAX
+            ))
         end)
-        MATRIXHUB_CONFIG.GunSlotSpamCPS = MATRIXHUB_CPS_VALUE
+        MATRIXHUB_CONFIG.AutoClickerCPS = MATRIXHUB_CPS_VALUE
         SaveMatrixHubConfig()
-        if refreshQuickButtons then refreshQuickButtons() end
     end
 
-    local function MATRIXHUB_SetGunSlotSpamCPS(value)
+    local function MATRIXHUB_SetAutoClickerCPS(value)
         MATRIXHUB_CPS_VALUE = math.clamp(
             math.floor(tonumber(value) or MATRIXHUB_CPS_MIN),
             MATRIXHUB_CPS_MIN,
             MATRIXHUB_CPS_MAX
         )
-        MATRIXHUB_UpdateSlot2Info()
+        MATRIXHUB_UpdateAutoClickerInfo()
     end
 
     Botones:Slider({
-        Title = "VELOCIDAD AUTO CLICKER (2-15 CPS)",
+        Title = "VELOCIDAD AUTO CLICKER",
         Icon = "gauge",
-        Step = 1,
         Value = { Min = MATRIXHUB_CPS_MIN, Max = MATRIXHUB_CPS_MAX, Default = MATRIXHUB_CPS_VALUE },
         Callback = function(value)
-            MATRIXHUB_SetGunSlotSpamCPS(value)
+            MATRIXHUB_SetAutoClickerCPS(value)
         end
     })
 
@@ -2908,7 +3294,7 @@ do
         Title = "-  DISMINUIR CPS",
         Icon = "minus",
         Callback = function()
-            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE - 1)
+            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE - 1)
             PlayMatrixUISound("Click")
         end
     })
@@ -2917,82 +3303,55 @@ do
         Title = "+  AUMENTAR CPS",
         Icon = "plus",
         Callback = function()
-            MATRIXHUB_SetGunSlotSpamCPS(MATRIXHUB_CPS_VALUE + 1)
+            MATRIXHUB_SetAutoClickerCPS(MATRIXHUB_CPS_VALUE + 1)
             PlayMatrixUISound("Click")
         end
     })
 
-    _G.MATRIXHUB_SetSlot2Spam = function(enabled)
-        enabled = enabled == true
-        if enabled == (_G.MATRIXHUB_SLOT2_SPAM_ENABLED == true) then return end
+    Botones:Toggle({
+        Title = "AUTO CLICKER (ON/OFF)",
+        Icon = "mouse-pointer-click",
+        Value = false,
+        Callback = function(enabled)
+            if enabled and not MATRIXHUB_AUTO_CLICK_FUNCTION then
+                MATRIXHUB_AUTO_CLICKER_ENABLED = false
+                RecordMatrixHubError("AUTO CLICKER", "El ejecutor no ofrece mouse1click ni mouse1press/mouse1release")
+                MATRIXHUB_UpdateAutoClickerInfo()
+                warn("[Matrix Hub] Auto Clicker: esta API de clic no está disponible en este ejecutor.")
+                return
+            end
 
-        if enabled and not MATRIXHUB_FindSlot2Pistol() then
-            MATRIXHUB_UpdateSlot2Info("No se encontró la pistola en el inventario.")
-            warn("[Matrix Hub] Auto Slot 2: no se encontró una pistola.")
-            return
-        end
+            MATRIXHUB_AUTO_CLICKER_ENABLED = enabled == true
+            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
+            local workerId = MATRIXHUB_AUTO_CLICKER_WORKER_ID
 
-        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = enabled
-        MATRIXHUB_SLOT2_WORKER_ID += 1
-        local workerId = MATRIXHUB_SLOT2_WORKER_ID
-
-        if enabled then
-            task.spawn(function()
-                while _G.MATRIXHUB_SLOT2_SPAM_ENABLED and workerId == MATRIXHUB_SLOT2_WORKER_ID do
-                    local character = LocalPlayer.Character
-                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                    local pistol = MATRIXHUB_FindSlot2Pistol()
-
-                    if not character or not humanoid then
-                        task.wait(0.15)
-                    elseif not pistol then
-                        _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
-                        MATRIXHUB_SLOT2_WORKER_ID += 1
-                        warn("[Matrix Hub] Auto Slot 2 detenido: la pistola ya no está en el inventario.")
-                        break
-                    else
-                        local ok, equipError = pcall(function()
-                            if pistol.Parent == character then
-                                humanoid:UnequipTools()
-                            else
-                                humanoid:EquipTool(pistol)
-                            end
-                        end)
-
+            if MATRIXHUB_AUTO_CLICKER_ENABLED then
+                task.spawn(function()
+                    -- Pausa breve para permitir mover el cursor fuera del control ON/OFF.
+                    task.wait(0.45)
+                    while MATRIXHUB_AUTO_CLICKER_ENABLED and workerId == MATRIXHUB_AUTO_CLICKER_WORKER_ID do
+                        local ok, clickError = pcall(MATRIXHUB_AUTO_CLICK_FUNCTION)
                         if not ok then
-                            _G.MATRIXHUB_SLOT2_SPAM_ENABLED = false
-                            MATRIXHUB_SLOT2_WORKER_ID += 1
-                            RecordMatrixHubError("AUTO SLOT 2", equipError)
-                            warn("[Matrix Hub] Auto Slot 2 detenido por un error: " .. tostring(equipError))
+                            MATRIXHUB_AUTO_CLICKER_ENABLED = false
+                            MATRIXHUB_AUTO_CLICKER_WORKER_ID += 1
+                            RecordMatrixHubError("AUTO CLICKER", clickError)
+                            MATRIXHUB_UpdateAutoClickerInfo()
+                            warn("[Matrix Hub] Auto Clicker detenido por un error: " .. tostring(clickError))
                             break
                         end
 
                         local cps = math.clamp(MATRIXHUB_CPS_VALUE, MATRIXHUB_CPS_MIN, MATRIXHUB_CPS_MAX)
                         task.wait(1 / cps)
                     end
-                end
+                end)
+            end
 
-                MATRIXHUB_UpdateSlot2Info()
-            end)
+            MATRIXHUB_UpdateAutoClickerInfo()
+            PlayMatrixUISound("Toggle")
         end
-
-        MATRIXHUB_UpdateSlot2Info()
-        PlayMatrixUISound("Toggle")
-    end
-
-    Botones:Toggle({
-        Title = "AUTO CLICKER",
-        Icon = "repeat",
-        Value = false,
-        Callback = _G.MATRIXHUB_SetSlot2Spam
     })
 
-    MATRIXHUB_UpdateSlot2Info()
-
-
-
-
-
+    MATRIXHUB_UpdateAutoClickerInfo()
 end
 
 Movimiento:Toggle({
@@ -3003,250 +3362,67 @@ Movimiento:Toggle({
         local RunService = game:GetService("RunService")
         local lp = Players.LocalPlayer
         local PlayerGui = lp:WaitForChild("PlayerGui")
-
         if not state then
             local old = PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED")
             if old then old:Destroy() end
             if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
             if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
-            if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
-            if _G.FlyPanelDragCon1 then _G.FlyPanelDragCon1:Disconnect() _G.FlyPanelDragCon1 = nil end
-            if _G.FlyPanelDragCon2 then _G.FlyPanelDragCon2:Disconnect() _G.FlyPanelDragCon2 = nil end
             if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
                 lp.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.GettingUp)
             end
             return
         end
-
         if PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then
             PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED"):Destroy()
         end
-        if _G.FlyCon1 then _G.FlyCon1:Disconnect() _G.FlyCon1 = nil end
-        if _G.FlyCon2 then _G.FlyCon2:Disconnect() _G.FlyCon2 = nil end
-        if _G.FlyRainCon then _G.FlyRainCon:Disconnect() _G.FlyRainCon = nil end
-        if _G.FlyPanelDragCon1 then _G.FlyPanelDragCon1:Disconnect() _G.FlyPanelDragCon1 = nil end
-        if _G.FlyPanelDragCon2 then _G.FlyPanelDragCon2:Disconnect() _G.FlyPanelDragCon2 = nil end
-
         local gui = Instance.new("ScreenGui")
         gui.Name = "MATRIXHUB_FLYSPEED"
         gui.ResetOnSpawn = false
-        gui.IgnoreGuiInset = true
-        gui.DisplayOrder = 1000
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
         gui.Parent = PlayerGui
-
         local SPEED = 0.75
         local V_SPEED = 1.1
         local mov = {W=false,A=false,S=false,D=false,Up=false,Down=false}
         local presionando = false
-
-        local pad = Instance.new("Frame")
-        pad.Name = "MATRIXHUB_FLY_PANEL"
-        pad.Size = UDim2.fromOffset(190, 150)
-        pad.AnchorPoint = Vector2.new(0.5, 0.5)
-        pad.Position = UDim2.fromScale(0.5, 0.62)
-        pad.BackgroundColor3 = Color3.fromRGB(7, 15, 12)
-        pad.BackgroundTransparency = 0.04
-        pad.BorderSizePixel = 0
+        local pad = Instance.new("Frame", gui)
+        pad.Name = "MATRIXHUB_FLYSPEED"
+        pad.Size = UDim2.fromOffset(128,185)
+        pad.AnchorPoint = Vector2.new(0.5,0.5)
+        pad.Position = UDim2.fromScale(0.5,0.65)
+        pad.BackgroundColor3 = Color3.fromRGB(3, 20, 12)
+        pad.BackgroundTransparency = 0.3
+        Instance.new("UICorner", pad).CornerRadius = UDim.new(0,16)
+        local stroke = Instance.new("UIStroke", pad)
+        stroke.Color = Color3.fromRGB(0, 220, 90)
+        stroke.Thickness = 2
         pad.Active = true
-        pad.Draggable = false
-        pad.ClipsDescendants = true
-        pad.ZIndex = 1
-        pad.Parent = gui
-
-        local panelCorner = Instance.new("UICorner")
-        panelCorner.CornerRadius = UDim.new(0, 10)
-        panelCorner.Parent = pad
-
-        local panelStroke = Instance.new("UIStroke")
-        panelStroke.Color = Color3.fromRGB(0, 190, 95)
-        panelStroke.Thickness = 1.4
-        panelStroke.Transparency = 0.12
-        panelStroke.Parent = pad
-
-        -- Lluvia Matrix: pocas columnas, actualizadas a intervalos para no cargar cada frame.
-        local rainRandom = Random.new()
-        local rainLabels = {}
-        for i = 1, 9 do
-            local rain = Instance.new("TextLabel")
-            rain.Name = "MATRIX_RAIN_" .. i
-            rain.BackgroundTransparency = 1
-            rain.BorderSizePixel = 0
-            rain.Size = UDim2.fromOffset(17, 112)
-            rain.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 168), rainRandom:NextInteger(-125, 175))
-            rain.Font = Enum.Font.Code
-            rain.TextSize = 13
-            rain.TextWrapped = true
-            rain.Text = "0\n1\nM\n0\n1\n0"
-            rain.TextColor3 = Color3.fromRGB(0, 220, 105)
-            rain.TextTransparency = 0.82
-            rain.TextYAlignment = Enum.TextYAlignment.Top
-            rain.ZIndex = 1
-            rain.Parent = pad
-            table.insert(rainLabels, {Label = rain, Speed = rainRandom:NextNumber(22, 48)})
+        pad.Draggable = true
+        local function crearAzul(pos, txt, sx, sy, name)
+            local b = Instance.new("TextButton", pad)
+            b.Name = name
+            b.Size = UDim2.fromOffset(sx or 30, sy or 30)
+            b.Position = pos
+            b.Text = txt
+            b.TextScaled = true
+            b.Font = Enum.Font.Code
+            b.TextColor3 = Color3.new(1,1,1)
+            b.BackgroundColor3 = Color3.fromRGB(0, 45, 22)
+            b.AutoButtonColor = false
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+            local grad = Instance.new("UIGradient", b)
+            grad.Color = ColorSequence.new(Color3.fromRGB(0, 190, 75), Color3.fromRGB(0, 75, 30))
+            grad.Rotation = 90
+            return b
         end
-
-        local headerBar = Instance.new("Frame")
-        headerBar.Name = "MatrixFlyHeader"
-        headerBar.Position = UDim2.fromOffset(1, 1)
-        headerBar.Size = UDim2.new(1, -2, 0, 29)
-        headerBar.BackgroundColor3 = Color3.fromRGB(0, 48, 28)
-        headerBar.BorderSizePixel = 0
-        headerBar.Active = true
-        headerBar.ZIndex = 3
-        headerBar.Parent = pad
-        local headerCorner = Instance.new("UICorner")
-        headerCorner.CornerRadius = UDim.new(0, 9)
-        headerCorner.Parent = headerBar
-
-        local headerLine = Instance.new("Frame")
-        headerLine.Position = UDim2.new(0, 0, 1, -1)
-        headerLine.Size = UDim2.new(1, 0, 0, 1)
-        headerLine.BackgroundColor3 = Color3.fromRGB(0, 210, 105)
-        headerLine.BorderSizePixel = 0
-        headerLine.ZIndex = 4
-        headerLine.Parent = headerBar
-
-        local logo = Instance.new("TextLabel")
-        logo.BackgroundTransparency = 1
-        logo.Position = UDim2.fromOffset(9, 3)
-        logo.Size = UDim2.fromOffset(20, 22)
-        logo.Text = "M"
-        logo.Font = Enum.Font.GothamBlack
-        logo.TextSize = 16
-        logo.TextColor3 = Color3.fromRGB(105, 255, 165)
-        logo.ZIndex = 4
-        logo.Parent = headerBar
-
-        local title = Instance.new("TextLabel")
-        title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(31, 3)
-        title.Size = UDim2.fromOffset(130, 22)
-        title.Text = "FLY V1"
-        title.Font = Enum.Font.GothamBlack
-        title.TextSize = 14
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.TextColor3 = Color3.fromRGB(235, 255, 242)
-        title.ZIndex = 4
-        title.Parent = headerBar
-
-        local anchored = true
-        local anchorButton = Instance.new("TextButton")
-        anchorButton.Name = "FLY_PANEL_ANCHOR"
-        anchorButton.Position = UDim2.new(1, -29, 0, 2)
-        anchorButton.Size = UDim2.fromOffset(25, 24)
-        anchorButton.Text = "📌"
-        anchorButton.Font = Enum.Font.GothamBold
-        anchorButton.TextSize = 15
-        anchorButton.TextColor3 = Color3.fromRGB(190, 255, 215)
-        anchorButton.BackgroundColor3 = Color3.fromRGB(0, 75, 43)
-        anchorButton.BackgroundTransparency = 0.05
-        anchorButton.AutoButtonColor = false
-        anchorButton.BorderSizePixel = 0
-        anchorButton.ZIndex = 5
-        anchorButton.Parent = headerBar
-        Instance.new("UICorner", anchorButton).CornerRadius = UDim.new(0, 6)
-        local anchorStroke = Instance.new("UIStroke")
-        anchorStroke.Color = Color3.fromRGB(0, 210, 105)
-        anchorStroke.Transparency = 0.3
-        anchorStroke.Parent = anchorButton
-
-        -- Arrastre protegido: el panel nunca entra en la franja de ocultación de Delta.
-        local UserInputService = game:GetService("UserInputService")
-        local draggingPanel = false
-        local panelDragStart
-        local panelStartPosition
-        local panelDragInput
-        local function clampFlyPanel()
-            local camera = workspace.CurrentCamera
-            local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-            local halfW = pad.AbsoluteSize.X * 0.5
-            local halfH = pad.AbsoluteSize.Y * 0.5
-            local margin = 34
-            local p = pad.Position
-            local x = p.X.Scale * viewport.X + p.X.Offset
-            local y = p.Y.Scale * viewport.Y + p.Y.Offset
-            x = math.clamp(x, halfW + margin, viewport.X - halfW - margin)
-            y = math.clamp(y, halfH + margin, viewport.Y - halfH - margin)
-            pad.Position = UDim2.fromOffset(x, y)
-        end
-        headerBar.InputBegan:Connect(function(input)
-            if anchored then return end
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                draggingPanel = true
-                panelDragStart = input.Position
-                panelStartPosition = pad.Position
-                panelDragInput = input
-            end
-        end)
-        headerBar.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement
-                or input.UserInputType == Enum.UserInputType.Touch then
-                panelDragInput = input
-            end
-        end)
-        _G.FlyPanelDragCon1 = UserInputService.InputChanged:Connect(function(input)
-            if draggingPanel and panelDragInput and input == panelDragInput
-                and panelDragStart and panelStartPosition then
-                local delta = input.Position - panelDragStart
-                pad.Position = UDim2.new(
-                    panelStartPosition.X.Scale, panelStartPosition.X.Offset + delta.X,
-                    panelStartPosition.Y.Scale, panelStartPosition.Y.Offset + delta.Y
-                )
-                clampFlyPanel()
-            end
-        end)
-        _G.FlyPanelDragCon2 = UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                draggingPanel = false
-                panelDragInput = nil
-            end
-        end)
-        task.defer(clampFlyPanel)
-
-        anchorButton.MouseButton1Click:Connect(function()
-            anchored = not anchored
-            anchorButton.Text = anchored and "📌" or "↔"
-            anchorButton.BackgroundColor3 = anchored and Color3.fromRGB(0, 75, 43) or Color3.fromRGB(0, 115, 65)
-        end)
-
-        local function makeButton(pos, size, txt, name)
-            local button = Instance.new("TextButton")
-            button.Name = name or "MATRIX_FLY_BUTTON"
-            button.Position = pos
-            button.Size = size
-            button.Text = txt
-            button.Font = Enum.Font.GothamBold
-            button.TextSize = 21
-            button.TextColor3 = Color3.fromRGB(15, 15, 15)
-            button.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
-            button.BackgroundTransparency = 0.08
-            button.AutoButtonColor = false
-            button.BorderSizePixel = 0
-            button.ZIndex = 4
-            button.Parent = pad
-            button.BorderColor3 = Color3.fromRGB(65, 65, 65)
-            button.BorderSizePixel = 1
-            local outline = Instance.new("UIStroke")
-            outline.Color = Color3.fromRGB(255, 255, 255)
-            outline.Thickness = 1
-            outline.Transparency = 0
-            outline.Parent = button
-            return button
-        end
-
-        local up = makeButton(UDim2.fromOffset(43, 38), UDim2.fromOffset(34, 30), "▲", "FLY_FORWARD")
-        local left = makeButton(UDim2.fromOffset(5, 70), UDim2.fromOffset(34, 30), "◀", "FLY_LEFT")
-        local right = makeButton(UDim2.fromOffset(81, 70), UDim2.fromOffset(34, 30), "▶", "FLY_RIGHT")
-        local down = makeButton(UDim2.fromOffset(43, 102), UDim2.fromOffset(34, 30), "▼", "FLY_BACK")
-        -- Controles verticales representados solo con stickers, sin etiquetas.
-        local upV = makeButton(UDim2.fromOffset(143, 49), UDim2.fromOffset(32, 30), "⬆️", "FLY_UP")
-        upV.TextSize = 19
-        local downV = makeButton(UDim2.fromOffset(143, 87), UDim2.fromOffset(32, 30), "⬇️", "FLY_DOWN")
-        downV.TextSize = 19
-
+        local up = crearAzul(UDim2.fromOffset(49,8), "▲", 30, 30, "MATRIXHUB")
+        local left = crearAzul(UDim2.fromOffset(10,42), "◄", 30, 30, "MATRIXHUB")
+        local right = crearAzul(UDim2.fromOffset(88,42), "►", 30, 30, "MATRIXHUB")
+        local down = crearAzul(UDim2.fromOffset(49,76), "▼", 30, 30, "MATRIXHUB")
+        local upV = crearAzul(UDim2.fromOffset(10,110), "⬆", 30, 30, "MATRIXHUB")
+        local downV = crearAzul(UDim2.fromOffset(88,110), "⬇", 30, 30, "MATRIXHUB")
+        local bajar = crearAzul(UDim2.fromOffset(6,148), "BAJAR", 54, 28, "MATRIXHUB")
+        local subir = crearAzul(UDim2.fromOffset(68,148), "SUBIR", 54, 28, "MATRIXHUB")
+        bajar.BackgroundColor3 = Color3.fromRGB(0, 35, 18)
+        subir.BackgroundColor3 = Color3.fromRGB(0, 95, 38)
         local function estaEnPartida()
             local rs = game:GetService("ReplicatedStorage")
             if rs:FindFirstChild("GameInProgress") or rs:FindFirstChild("InGame") then
@@ -3263,7 +3439,6 @@ Movimiento:Toggle({
             end
             return false
         end
-
         local rayParams = RaycastParams.new()
         rayParams.FilterType = Enum.RaycastFilterType.Exclude
         rayParams.IgnoreWater = true
@@ -3276,10 +3451,10 @@ Movimiento:Toggle({
             local dir = Vector3.new(0,0,0)
             if mov.W then dir += workspace.CurrentCamera.CFrame.LookVector end
             if mov.S then dir -= workspace.CurrentCamera.CFrame.LookVector end
-            if mov.Up then dir += Vector3.new(0,1,0) end
-            if mov.Down then dir += Vector3.new(0,-1,0) end
             if mov.A then dir -= workspace.CurrentCamera.CFrame.RightVector end
             if mov.D then dir += workspace.CurrentCamera.CFrame.RightVector end
+            if mov.Up then dir += Vector3.new(0,1,0) end
+            if mov.Down then dir += Vector3.new(0,-1,0) end
             if dir.Magnitude == 0 then return end
             local ray = workspace:Raycast(hrp.Position, dir.Unit * 4, rayParams)
             if ray and ray.Instance and ray.Instance.CanCollide then
@@ -3290,62 +3465,46 @@ Movimiento:Toggle({
                 end)
             end
         end
-
-        local function conectar(button, key)
-            button.MouseButton1Down:Connect(function()
-                mov[key] = true
+        local function conectar(b, k)
+            b.MouseButton1Down:Connect(function()
+                mov[k] = true
                 presionando = true
             end)
-            button.MouseButton1Up:Connect(function()
-                mov[key] = false
+            b.MouseButton1Up:Connect(function()
+                mov[k] = false
                 if not mov.W and not mov.A and not mov.S and not mov.D and not mov.Up and not mov.Down then
                     presionando = false
                 end
             end)
-            button.MouseLeave:Connect(function()
-                mov[key] = false
+            b.MouseLeave:Connect(function()
+                mov[k] = false
                 if not mov.W and not mov.A and not mov.S and not mov.D and not mov.Up and not mov.Down then
                     presionando = false
                 end
             end)
         end
-
-        conectar(up, "W")
-        conectar(left, "A")
-        conectar(right, "D")
-        conectar(down, "S")
-        conectar(upV, "Up")
-        conectar(downV, "Down")
-
-
-
-        local rainAccumulator = 0
-        _G.FlyRainCon = RunService.RenderStepped:Connect(function(dt)
-            if not pad.Parent then return end
-            rainAccumulator += dt
-            if rainAccumulator < 0.06 then return end
-            local step = rainAccumulator
-            rainAccumulator = 0
-            for _, item in ipairs(rainLabels) do
-                local label = item.Label
-                if label and label.Parent then
-                    local y = label.Position.Y.Offset + item.Speed * step
-                    if y > 175 then
-                        y = rainRandom:NextInteger(-125, -35)
-                        label.Position = UDim2.fromOffset(rainRandom:NextInteger(4, 168), y)
-                    else
-                        label.Position = UDim2.fromOffset(label.Position.X.Offset, y)
-                    end
-                end
-            end
+        conectar(up,"W")
+        conectar(left,"A")
+        conectar(right,"D")
+        conectar(down,"S")
+        conectar(upV,"Up")
+        conectar(downV,"Down")
+        bajar.MouseButton1Click:Connect(function()
+            SPEED = math.clamp(SPEED - 0.1, 0.2, 3)
+            V_SPEED = math.clamp(V_SPEED - 0.1, 0.2, 3)
         end)
-
+        subir.MouseButton1Click:Connect(function()
+            SPEED = math.clamp(SPEED + 0.1, 0.2, 3)
+            V_SPEED = math.clamp(V_SPEED + 0.1, 0.2, 3)
+        end)
+        if _G.FlyCon1 then _G.FlyCon1:Disconnect() end
+        if _G.FlyCon2 then _G.FlyCon2:Disconnect() end
         _G.FlyCon1 = RunService.RenderStepped:Connect(function()
             if not PlayerGui:FindFirstChild("MATRIXHUB_FLYSPEED") then return end
-            -- Reforzar la visibilidad del panel y su ScreenGui.
-            if gui.Parent ~= PlayerGui then gui.Parent = PlayerGui end
-            gui.Enabled = true
-            gui.DisplayOrder = 1000
+            if not estaEnPartida() then
+                pad.Visible = false
+                return
+            end
             pad.Visible = true
             if not presionando then return end
             local char = lp.Character
@@ -3369,7 +3528,6 @@ Movimiento:Toggle({
             if mov.Up then hrp.CFrame = hrp.CFrame + Vector3.new(0, V_SPEED, 0) end
             if mov.Down then hrp.CFrame = hrp.CFrame - Vector3.new(0, V_SPEED, 0) end
         end)
-
         _G.FlyCon2 = RunService.Heartbeat:Connect(function()
             if not presionando then
                 local char = lp.Character
@@ -3506,107 +3664,8 @@ task.spawn(function()
         end
     end
 end)
-espTools.destroyLine = function(line)
-    if line then
-        line.Visible = false
-        line:Destroy()
-    end
-end
-
 local function cleanESP(targetPlayer)
-    local data = activeESPs[targetPlayer]
-    if not data then return end
-    if data.Highlight then data.Highlight:Destroy() end
-    espTools.destroyLine(data.Tracer)
-    if data.SkeletonLines then
-        for _, line in ipairs(data.SkeletonLines) do
-            espTools.destroyLine(line)
-        end
-    end
-    activeESPs[targetPlayer] = nil
-end
-
-espTools.createLine = function(name)
-    local line = Instance.new("Frame")
-    line.Name = name
-    line.AnchorPoint = Vector2.new(0.5, 0.5)
-    line.BackgroundColor3 = espColor
-    line.BorderSizePixel = 0
-    line.Size = UDim2.fromOffset(1, 2)
-    line.Visible = false
-    line.ZIndex = 10
-    -- Las líneas GUI van directamente al ScreenGui para que Roblox las renderice.
-    line.Parent = screenGui
-    return line
-end
-
-espTools.updateLine = function(line, fromPosition, toPosition, color)
-    if not line then return end
-    local delta = toPosition - fromPosition
-    local length = delta.Magnitude
-    if length < 1 then
-        line.Visible = false
-        return
-    end
-    line.BackgroundColor3 = color
-    line.Position = UDim2.fromOffset((fromPosition.X + toPosition.X) * 0.5, (fromPosition.Y + toPosition.Y) * 0.5)
-    line.Size = UDim2.fromOffset(length, 2)
-    line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
-    line.Visible = true
-end
-
-espTools.R6Skeleton = {
-    {"Head", "Torso"},
-    {"Torso", "Left Arm"},
-    {"Torso", "Right Arm"},
-    {"Torso", "Left Leg"},
-    {"Torso", "Right Leg"}
-}
-espTools.R15Skeleton = {
-    {"Head", "UpperTorso"},
-    {"UpperTorso", "LowerTorso"},
-    {"LowerTorso", "HumanoidRootPart"},
-    {"UpperTorso", "LeftUpperArm"},
-    {"LeftUpperArm", "LeftLowerArm"},
-    {"LeftLowerArm", "LeftHand"},
-    {"UpperTorso", "RightUpperArm"},
-    {"RightUpperArm", "RightLowerArm"},
-    {"RightLowerArm", "RightHand"},
-    {"LowerTorso", "LeftUpperLeg"},
-    {"LeftUpperLeg", "LeftLowerLeg"},
-    {"LeftLowerLeg", "LeftFoot"},
-    {"LowerTorso", "RightUpperLeg"},
-    {"RightUpperLeg", "RightLowerLeg"},
-    {"RightLowerLeg", "RightFoot"}
-}
-
-espTools.projectPart = function(part, currentCamera)
-    if not part or not part:IsA("BasePart") then return nil end
-    local point, onScreen = currentCamera:WorldToViewportPoint(part.Position)
-    if not onScreen or point.Z <= 0 then return nil end
-    return Vector2.new(point.X, point.Y)
-end
-
-espTools.clearHighlight = function(data)
-    if data and data.Highlight then
-        data.Highlight:Destroy()
-        data.Highlight = nil
-    end
-end
-
-espTools.clearTracer = function(data)
-    if data and data.Tracer then
-        espTools.destroyLine(data.Tracer)
-        data.Tracer = nil
-    end
-end
-
-espTools.clearSkeleton = function(data)
-    if not data or not data.SkeletonLines then return end
-    for _, line in ipairs(data.SkeletonLines) do
-        espTools.destroyLine(line)
-    end
-    data.SkeletonLines = nil
+    if activeESPs[targetPlayer] then if activeESPs[targetPlayer].Highlight then activeESPs[targetPlayer].Highlight:Destroy() end activeESPs[targetPlayer] = nil end
 end
 local function WatchServerDeath(char)
     if not char then return end
@@ -3619,133 +3678,8 @@ end
 for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then if p.Character then WatchServerDeath(p.Character) end p.CharacterAdded:Connect(function(c) WatchServerDeath(c) end) end end
 Players.PlayerAdded:Connect(function(p) if p ~= LP then if p.Character then WatchServerDeath(p.Character) end p.CharacterAdded:Connect(function(c) WatchServerDeath(c) end) end end)
 Visuales:Section({ Title = "VISUAL ENGINE", Icon = "eye", Opened = true })
-Visuales:Toggle({
-    Title = "ESP HIGHLIGHT",
-    Value = false,
-    Callback = function(state)
-        espEnabled = state
-        for _, data in pairs(activeESPs) do
-            if not state then
-                espTools.clearHighlight(data)
-            elseif data.Char and data.Char.Parent then
-                if not data.Highlight then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Name = "MATRIXHUB_ESP"
-                    highlight.FillTransparency = 0.6
-                    highlight.OutlineTransparency = 1
-                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    highlight.FillColor = espColor
-                    highlight.OutlineColor = espColor
-                    highlight.Adornee = data.Char
-                    highlight.Parent = espFolder
-                    data.Highlight = highlight
-                end
-            end
-        end
-    end
-})
-Visuales:Colorpicker({
-    Title = "COLOR DEL ESP / TRACERS / SKELETON",
-    Default = Color3.fromRGB(170, 0, 255),
-    Callback = function(color)
-        espColor = color
-        for _, data in pairs(activeESPs) do
-            if data.Highlight then
-                data.Highlight.FillColor = color
-                data.Highlight.OutlineColor = color
-            end
-            if data.Tracer then data.Tracer.BackgroundColor3 = color end
-            if data.SkeletonLines then
-                for _, line in ipairs(data.SkeletonLines) do
-                    line.BackgroundColor3 = color
-                end
-            end
-        end
-    end
-})
-Visuales:Toggle({
-    Title = "TRACERS",
-    Value = false,
-    Callback = function(state)
-        espVisualState.TracersEnabled = state
-        if not state then
-            for _, data in pairs(activeESPs) do espTools.clearTracer(data) end
-        end
-    end
-})
-Visuales:Dropdown({
-    Title = "POSICIÓN DE TRACERS",
-    Values = {"CENTRO", "ABAJO"},
-    Value = "CENTRO",
-    Callback = function(value)
-        espVisualState.TracerOrigin = value == "ABAJO" and "ABAJO" or "CENTRO"
-    end
-})
-Visuales:Toggle({
-    Title = "SKELETON ESP",
-    Value = false,
-    Callback = function(state)
-        espVisualState.SkeletonEnabled = state
-        if not state then
-            for _, data in pairs(activeESPs) do espTools.clearSkeleton(data) end
-        end
-    end
-})
-
--- FOV CAMERA // 0 en el slider equivale al FOV base de 70 grados.
-do
-    local fovEnabled = false
-    local fovOffset = 0
-    local originalFovByCamera = setmetatable({}, { __mode = "k" })
-
-    local function applyMatrixFov(camera)
-        if not camera or not fovEnabled then return end
-        if originalFovByCamera[camera] == nil then
-            originalFovByCamera[camera] = camera.FieldOfView
-        end
-        camera.FieldOfView = math.clamp(70 + fovOffset, 1, 120)
-    end
-
-    local function restoreMatrixFov(camera)
-        if not camera then return end
-        local original = originalFovByCamera[camera]
-        if original ~= nil then
-            camera.FieldOfView = original
-            originalFovByCamera[camera] = nil
-        end
-    end
-
-    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-        local camera = workspace.CurrentCamera
-        if fovEnabled then applyMatrixFov(camera) end
-    end)
-
-    Visuales:Toggle({
-        Title = "FOV CAMERA",
-        Value = false,
-        Callback = function(enabled)
-            fovEnabled = enabled == true
-            local camera = workspace.CurrentCamera
-            if fovEnabled then
-                applyMatrixFov(camera)
-            else
-                for savedCamera in pairs(originalFovByCamera) do
-                    restoreMatrixFov(savedCamera)
-                end
-            end
-        end
-    })
-
-    Visuales:Slider({
-        Title = "AUMENTO DE FOV (0 = 70°)",
-        Step = 1,
-        Value = { Min = 0, Max = 50, Default = 0 },
-        Callback = function(value)
-            fovOffset = math.clamp(math.floor(tonumber(value) or 0), 0, 50)
-            if fovEnabled then applyMatrixFov(workspace.CurrentCamera) end
-        end
-    })
-end
+Visuales:Toggle({ Title = "ESP HIGHILGHT", Value = false, Callback = function(s) espEnabled = s if not s then for _, p in pairs(Players:GetPlayers()) do local h = espFolder:FindFirstChild(p.Name .. "MATRIXHUB") if h then h:Destroy() end activeESPs[p] = nil end end end })
+Visuales:Colorpicker({ Title = "COLOR DEL ESP", Default = Color3.fromRGB(255, 0, 0), Callback = function(c) espColor = c for _, v in pairs(activeESPs) do if v.Highlight then v.Highlight.FillColor = c end end end })
 
 -- MATRIX RIPPLE // indicador visual del punto tocado. No modifica entradas ni camara.
 do
@@ -3906,117 +3840,35 @@ end
 
 task.spawn(function()
     while task.wait(0.2) do
-        local anyVisualESP = espEnabled or espVisualState.TracersEnabled or espVisualState.SkeletonEnabled
-        if anyVisualESP and IsInMatchStrict() then
-            local myChar = LP.Character
-            local myHead = myChar and myChar:FindFirstChild("Head")
-            local myPos = myHead and myHead.Position
-            for _, p in ipairs(Players:GetPlayers()) do
+        if espEnabled and IsInMatchStrict() then
+            local myChar = LP.Character local myHead = myChar and myChar:FindFirstChild("Head") local myPos = myHead and myHead.Position
+            for _, p in pairs(Players:GetPlayers()) do
                 if p ~= LP then
-                    local char = p.Character
-                    local dead = char and serverDeadCharacters[char] == true
-                    local head = char and char:FindFirstChild("Head")
-                    if char and not dead and head and esEnemigoValido(p) then
-                        local dist = myPos and (head.Position - myPos).Magnitude or 0
+                    local char = p.Character local dead = char and serverDeadCharacters[char] == true
+                    if char and not dead and char:FindFirstChild("Head") and esEnemigoValido(p) then
+                        local dist = myPos and (char.Head.Position - myPos).Magnitude or 0
                         if dist <= MAX_ESP_DISTANCE then
-                            local data = activeESPs[p]
-                            if data and data.Char ~= char then
-                                cleanESP(p)
-                                data = nil
+                            if activeESPs[p] and activeESPs[p].Char ~= char then cleanESP(p) end
+                            if not activeESPs[p] then
+                                local highlight = Instance.new("Highlight")
+                                highlight.Name = p.Name .. "MATRIXHUB"
+                                highlight.FillTransparency = 0.6
+                                highlight.OutlineTransparency = 1
+                                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                highlight.FillColor = espColor
+                                highlight.OutlineColor = espColor
+                                highlight.Adornee = char
+                                highlight.Parent = espFolder
+                                activeESPs[p] = { Highlight = highlight, Char = char }
                             end
-                            if not data then
-                                data = {Char = char}
-                                activeESPs[p] = data
-                            end
-
-                            if espEnabled then
-                                if not data.Highlight then
-                                    local highlight = Instance.new("Highlight")
-                                    highlight.Name = p.Name .. "MATRIXHUB"
-                                    highlight.FillTransparency = 0.6
-                                    highlight.OutlineTransparency = 1
-                                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                    highlight.FillColor = espColor
-                                    highlight.OutlineColor = espColor
-                                    highlight.Adornee = char
-                                    highlight.Parent = espFolder
-                                    data.Highlight = highlight
-                                end
-                            else
-                                espTools.clearHighlight(data)
-                            end
-                        else
-                            cleanESP(p)
-                        end
-                    else
-                        cleanESP(p)
-                    end
+                            local espObj = activeESPs[p]
+                            if espObj.Highlight.FillColor ~= espColor then espObj.Highlight.FillColor = espColor espObj.Highlight.OutlineColor = espColor end
+                        else cleanESP(p) end
+                    else cleanESP(p) end
                 end
             end
         else
-            for _, p in ipairs(Players:GetPlayers()) do cleanESP(p) end
-        end
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if not (espVisualState.TracersEnabled or espVisualState.SkeletonEnabled) then return end
-    local currentCamera = workspace.CurrentCamera
-    if not currentCamera then return end
-    local viewport = currentCamera.ViewportSize
-    local tracerOrigin = espVisualState.TracerOrigin == "ABAJO" and Vector2.new(viewport.X * 0.5, viewport.Y - 4) or Vector2.new(viewport.X * 0.5, viewport.Y * 0.5)
-
-    for targetPlayer, data in pairs(activeESPs) do
-        local char = data.Char
-        if not char or not char.Parent then
-            cleanESP(targetPlayer)
-        else
-            if espVisualState.TracersEnabled then
-                if not data.Tracer then
-                    data.Tracer = espTools.createLine("MATRIXHUB_Tracer_" .. targetPlayer.Name)
-                end
-                local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-                local targetPoint = espTools.projectPart(root, currentCamera)
-                if targetPoint then
-                    espTools.updateLine(data.Tracer, tracerOrigin, targetPoint, espColor)
-                else
-                    data.Tracer.Visible = false
-                end
-            else
-                espTools.clearTracer(data)
-            end
-
-            if espVisualState.SkeletonEnabled then
-                local isR15 = char:FindFirstChild("UpperTorso") ~= nil
-                local links = isR15 and espTools.R15Skeleton or espTools.R6Skeleton
-                if not data.SkeletonLines then data.SkeletonLines = {} end
-
-                for index, link in ipairs(links) do
-                    local line = data.SkeletonLines[index]
-                    if not line then
-                        line = espTools.createLine("MATRIXHUB_Skeleton_" .. targetPlayer.Name .. "_" .. index)
-                        data.SkeletonLines[index] = line
-                    end
-                    local partA = char:FindFirstChild(link[1])
-                    local partB = char:FindFirstChild(link[2])
-                    local pointA = espTools.projectPart(partA, currentCamera)
-                    local pointB = espTools.projectPart(partB, currentCamera)
-                    if pointA and pointB then
-                        espTools.updateLine(line, pointA, pointB, espColor)
-                    else
-                        line.Visible = false
-                    end
-                end
-
-                for index = #links + 1, #data.SkeletonLines do
-                    if data.SkeletonLines[index] then
-                        espTools.destroyLine(data.SkeletonLines[index])
-                        data.SkeletonLines[index] = nil
-                    end
-                end
-            else
-                espTools.clearSkeleton(data)
-            end
+            for _, p in pairs(Players:GetPlayers()) do cleanESP(p) end
         end
     end
 end)
@@ -4222,78 +4074,6 @@ if LP.Character then
     task.spawn(captureDefaultAnimationIds, LP.Character)
 end
 
-
-do -- MATRIXHUB_FAKE_AVATAR // SOLO FAKE HEADLESS
-local MATRIXHUB_FAKE_AVATAR = {
-    Headless = false,
-    HeadOriginals = setmetatable({}, { __mode = "k" })
-}
-
-local function MATRIXHUB_SaveAndHidePart(part)
-    if not part or not part:IsA("BasePart") then return end
-    if MATRIXHUB_FAKE_AVATAR.HeadOriginals[part] == nil then
-        MATRIXHUB_FAKE_AVATAR.HeadOriginals[part] = part.LocalTransparencyModifier
-    end
-    part.LocalTransparencyModifier = 1
-end
-
-local function MATRIXHUB_ApplyFakeHeadless(character)
-    if not character then return end
-    local head = character:FindFirstChild("Head")
-    if not head then return end
-    MATRIXHUB_SaveAndHidePart(head)
-    for _, object in ipairs(head:GetDescendants()) do
-        if object:IsA("Decal") or object:IsA("Texture") then
-            if MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] == nil then
-                MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] = object.Transparency
-            end
-            object.Transparency = 1
-        end
-    end
-end
-
-local function MATRIXHUB_RestoreFakeHeadless()
-    for object, original in pairs(MATRIXHUB_FAKE_AVATAR.HeadOriginals) do
-        if object and object.Parent then
-            pcall(function()
-                if object:IsA("BasePart") then
-                    object.LocalTransparencyModifier = original
-                elseif object:IsA("Decal") or object:IsA("Texture") then
-                    object.Transparency = original
-                end
-            end)
-        end
-        MATRIXHUB_FAKE_AVATAR.HeadOriginals[object] = nil
-    end
-end
-
-local function MATRIXHUB_SetFakeHeadless(enabled)
-    MATRIXHUB_FAKE_AVATAR.Headless = enabled == true
-    if MATRIXHUB_FAKE_AVATAR.Headless then
-        MATRIXHUB_ApplyFakeHeadless(LP.Character)
-    else
-        MATRIXHUB_RestoreFakeHeadless()
-    end
-end
-
-Animaciones:Section({ Title = "APARIENCIA FALSA // LOCAL", Icon = "user-round", Opened = true })
-Animaciones:Toggle({
-    Title = "FAKE HEADLESS",
-    Icon = "eye-off",
-    Value = false,
-    Callback = MATRIXHUB_SetFakeHeadless
-})
-
-LP.CharacterAdded:Connect(function(character)
-    task.defer(function()
-        character:WaitForChild("Head", 10)
-        if LP.Character == character and MATRIXHUB_FAKE_AVATAR.Headless then
-            MATRIXHUB_ApplyFakeHeadless(character)
-        end
-    end)
-end)
-end -- FIN DEL ÁMBITO FAKE AVATAR
-
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
 Animaciones:Button({ Title = "Aplicar Paquete Completo", Icon = "sparkles", Callback = function()
@@ -4419,12 +4199,14 @@ Animaciones:Button({
     end
 })
 
+-- Seccion de creditos eliminada por rediseño de interfaz.
+
 AutoKills:Section({ Title = "HITBOX EXPANDER", Icon = "box" })
 
 local hitboxEnabled = false
 local hitboxInvisible = false
 local hitboxSize = 3.5
-local hitboxColor = Color3.fromRGB(170, 0, 255)
+local hitboxColor = Color3.fromRGB(255, 0, 0)
 
 local function limpiarHitboxes()
     for _, targetPlayer in ipairs(Players:GetPlayers()) do
@@ -4454,13 +4236,13 @@ AutoKills:Toggle({
 AutoKills:Slider({
     Title = "TAMAÑO",
     Step = 0.5,
-    Value = { Min = 1.0, Max = 32.0, Default = 5.0 },
+    Value = { Min = 1.0, Max = 18.0, Default = 3.5 },
     Callback = function(v) hitboxSize = v end
 })
 
 AutoKills:Colorpicker({
     Title = "COLOR DE LA HITBOX",
-    Default = Color3.fromRGB(170, 0, 255),
+    Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c) hitboxColor = c end
 })
 
@@ -4666,171 +4448,6 @@ Otros:Input({
                     modifiedNameLabels[label] = nil
                 end
             end
-        end
-    end
-})
-
-
--- PROTECCIÓN DE OTROS JUGADORES // etiquetas locales, independientes del modo streamer.
--- Solo cambia lo que ve este cliente. No modifica nombres ni datos del servidor.
-local protectOthersEnabled = false
-local protectOthersPlayerAddedConnection = nil
-local protectOthersPlayerRemovingConnection = nil
-local protectOthersCharacterConnections = {}
-local protectOthersStates = {}
-local protectOthersNumbers = {}
-local protectOthersNumberOwners = {}
-
-local function getProtectOthersNumber(targetPlayer)
-    if targetPlayer == LocalPlayer then return nil end
-    local existing = protectOthersNumbers[targetPlayer]
-    if existing then return existing end
-
-    for number = 1, 29 do
-        if not protectOthersNumberOwners[number] then
-            protectOthersNumbers[targetPlayer] = number
-            protectOthersNumberOwners[number] = targetPlayer
-            return number
-        end
-    end
-    return nil
-end
-
-local function cleanupProtectOthersPlayer(targetPlayer)
-    local saved = protectOthersStates[targetPlayer]
-    if not saved then return end
-
-    if saved.Billboard and saved.Billboard.Parent then
-        saved.Billboard:Destroy()
-    end
-    if saved.Humanoid and saved.OriginalDisplayDistanceType ~= nil then
-        pcall(function()
-            saved.Humanoid.DisplayDistanceType = saved.OriginalDisplayDistanceType
-        end)
-    end
-    protectOthersStates[targetPlayer] = nil
-end
-
-local function applyProtectOthersPlayer(targetPlayer, character)
-    local number = getProtectOthersNumber(targetPlayer)
-    if not number or not character then return end
-
-    task.spawn(function()
-        local humanoid = character:WaitForChild("Humanoid", 10)
-        local head = character:WaitForChild("Head", 10)
-        if not protectOthersEnabled or targetPlayer.Character ~= character
-            or not humanoid or not head then
-            return
-        end
-
-        cleanupProtectOthersPlayer(targetPlayer)
-
-        local originalDisplayDistanceType = humanoid.DisplayDistanceType
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "MATRIXHUB_OTHER_PLAYER_TAG"
-        billboard.Adornee = head
-        billboard.Size = UDim2.fromOffset(150, 30)
-        billboard.StudsOffset = Vector3.new(0, 2.7, 0)
-        billboard.AlwaysOnTop = true
-        billboard.LightInfluence = 0
-        billboard.MaxDistance = 150
-
-        local label = Instance.new("TextLabel")
-        label.Name = "PlayerLabel"
-        label.BackgroundTransparency = 1
-        label.BorderSizePixel = 0
-        label.Size = UDim2.fromScale(1, 1)
-        label.Font = Enum.Font.GothamBold
-        label.Text = "Matrix Hub " .. tostring(number)
-        label.TextSize = 14
-        label.TextColor3 = Color3.fromRGB(120, 255, 175)
-        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        label.TextStrokeTransparency = 0.3
-        label.Parent = billboard
-
-        billboard.Parent = PlayerGui
-        protectOthersStates[targetPlayer] = {
-            Character = character,
-            Humanoid = humanoid,
-            OriginalDisplayDistanceType = originalDisplayDistanceType,
-            Billboard = billboard
-        }
-
-        pcall(function()
-            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-        end)
-    end)
-end
-
-local function hookProtectOthersPlayer(targetPlayer)
-    if targetPlayer == LocalPlayer then return end
-    getProtectOthersNumber(targetPlayer)
-
-    if not protectOthersCharacterConnections[targetPlayer] then
-        protectOthersCharacterConnections[targetPlayer] = targetPlayer.CharacterAdded:Connect(function(character)
-            cleanupProtectOthersPlayer(targetPlayer)
-            applyProtectOthersPlayer(targetPlayer, character)
-        end)
-    end
-
-    if targetPlayer.Character then
-        applyProtectOthersPlayer(targetPlayer, targetPlayer.Character)
-    end
-end
-
-local function stopProtectOthers()
-    if protectOthersPlayerAddedConnection then
-        protectOthersPlayerAddedConnection:Disconnect()
-        protectOthersPlayerAddedConnection = nil
-    end
-    if protectOthersPlayerRemovingConnection then
-        protectOthersPlayerRemovingConnection:Disconnect()
-        protectOthersPlayerRemovingConnection = nil
-    end
-
-    for targetPlayer, connection in pairs(protectOthersCharacterConnections) do
-        if connection then connection:Disconnect() end
-        protectOthersCharacterConnections[targetPlayer] = nil
-    end
-    for targetPlayer in pairs(protectOthersStates) do
-        cleanupProtectOthersPlayer(targetPlayer)
-    end
-
-    table.clear(protectOthersNumbers)
-    table.clear(protectOthersNumberOwners)
-end
-
-Otros:Toggle({
-    Title = "PROTECCIÓN DE OTROS JUGADORES",
-    Value = false,
-    Callback = function(state)
-        state = state == true
-        if state == protectOthersEnabled then return end
-        protectOthersEnabled = state
-
-        if not state then
-            stopProtectOthers()
-            return
-        end
-
-        protectOthersPlayerAddedConnection = Players.PlayerAdded:Connect(hookProtectOthersPlayer)
-        protectOthersPlayerRemovingConnection = Players.PlayerRemoving:Connect(function(targetPlayer)
-            local connection = protectOthersCharacterConnections[targetPlayer]
-            if connection then
-                connection:Disconnect()
-                protectOthersCharacterConnections[targetPlayer] = nil
-            end
-            cleanupProtectOthersPlayer(targetPlayer)
-
-            local number = protectOthersNumbers[targetPlayer]
-            if number then
-                protectOthersNumbers[targetPlayer] = nil
-                protectOthersNumberOwners[number] = nil
-            end
-        end)
-
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            hookProtectOthersPlayer(targetPlayer)
         end
     end
 })
@@ -5065,8 +4682,6 @@ local MATRIXHUB_cframeOn = false
 local MATRIXHUB_flyConn = nil
 local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
-local MATRIXHUB_flyDownEnabled = false
-local MATRIXHUB_flyDownBaseY = 0
 local MATRIXHUB_speed = 1.2
 local MATRIXHUB_LP = game:GetService("Players").LocalPlayer
 local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=false, Shift=false}
@@ -5141,7 +4756,7 @@ local function MATRIXHUB_StartFly()
         local h = c:FindFirstChildOfClass("Humanoid")
         if not root or not h then return end
         local cam = workspace.CurrentCamera
-        local speed = MATRIXHUB_speed
+        local speed = MATRIXHUB_cframeOn and MATRIXHUB_speed or 0.6
         local dir = Vector3.zero
         if MATRIXHUB_keys.Up then dir += Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
         if MATRIXHUB_keys.Down then dir -= Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
@@ -5159,17 +4774,11 @@ local function MATRIXHUB_StartFly()
             root.CFrame = CFrame.new(root.Position + move) * rot
         else
             root.Anchored = false
-            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - 50) or (MATRIXHUB_baseY + MATRIXHUB_altura)
+            local targetY = MATRIXHUB_baseY + MATRIXHUB_altura
             local diff = targetY - root.Position.Y
             local upAuto = 0
             if math.abs(diff) > 0.5 then upAuto = math.clamp(diff * 0.08, -1.2, 1.2) end
-            local verticalMove = upAuto + y
-            if MATRIXHUB_flyDownEnabled then
-                -- Fly descendente: no permite subir y limita el descenso a 50 studs.
-                verticalMove = math.min(verticalMove, 0)
-                verticalMove = math.max(verticalMove, targetY - root.Position.Y)
-            end
-            local move = Vector3.new(dir.X * speed, verticalMove, dir.Z * speed)
+            local move = Vector3.new(dir.X * speed, upAuto + y, dir.Z * speed)
             local rot = root.CFrame - root.CFrame.Position
             root.CFrame = CFrame.new(root.Position + move) * rot
         end
@@ -5209,27 +4818,6 @@ Movimiento:Toggle({
     end
 })
 
-Movimiento:Toggle({
-    Title = "FLY DESCENDENTE (-50 STUDS)",
-    Icon = "arrow-down",
-    Value = false,
-    Callback = function(state)
-        MATRIXHUB_flyDownEnabled = state == true
-        if MATRIXHUB_flyDownEnabled then
-            local char = MATRIXHUB_LP.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if not root then
-                MATRIXHUB_flyDownEnabled = false
-                return
-            end
-            MATRIXHUB_flyDownBaseY = root.Position.Y
-            MATRIXHUB_StartFly()
-        else
-            MATRIXHUB_StopFly()
-        end
-    end
-})
-
 Movimiento:Slider({
     Title = "FLY ALTURA",
     Icon = "arrow-up",
@@ -5244,8 +4832,17 @@ Movimiento:Slider({
     end
 })
 
+Movimiento:Toggle({
+    Title = "SPEED CFRAME",
+    Icon = "zap",
+    Value = false,
+    Callback = function(state)
+        MATRIXHUB_cframeOn = state
+    end
+})
+
 Movimiento:Slider({
-    Title = "VELOCIDAD FLY",
+    Title = "SPEED CFRAME",
     Icon = "gauge",
     Value = { Min = 0.5, Max = 5, Default = 1.2 },
     Callback = function(v)
@@ -5253,33 +4850,4 @@ Movimiento:Slider({
     end
 })
 
--- WindUI conserva su apertura normal; el splash la cubre durante la carga.
-
 end -- FIN DE launchMatrixHub
-
--- El splash permanece durante la carga real y tiene una duración mínima visible.
--- No se muestra porcentaje, barra ni contador: solo la lluvia digital.
-task.spawn(function()
-    local startupStartedAt = os.clock()
-    local ok, err = pcall(launchMatrixHub)
-    if not ok then warn("[MATRIXHUB] Error al iniciar: " .. tostring(err)) end
-    local elapsed = os.clock() - startupStartedAt
-    local minimumDisplayTime = 3.5
-    if elapsed < minimumDisplayTime then
-        task.wait(minimumDisplayTime - elapsed)
-    end
-    -- Mantener la ventana oculta hasta que el splash haya desaparecido.
-    if startupWindowMain and startupWindowMain.Parent then
-        startupWindowMain.Visible = false
-    end
-    closeMatrixStartup()
-
-    -- Liberar el guard y mostrar la ventana solo después de retirar el splash.
-    if startupWindowGuard then
-        startupWindowGuard:Disconnect()
-        startupWindowGuard = nil
-    end
-    if startupWindowMain and startupWindowMain.Parent then
-        startupWindowMain.Visible = true
-    end
-end)
