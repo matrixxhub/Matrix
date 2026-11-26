@@ -4963,7 +4963,7 @@ local function MATRIXHUB_StartFly()
         local h = c:FindFirstChildOfClass("Humanoid")
         if not root or not h then return end
         local cam = workspace.CurrentCamera
-        local speed = MATRIXHUB_cframeOn and MATRIXHUB_speed or 0.6
+        local speed = MATRIXHUB_speed
         local dir = Vector3.zero
         if MATRIXHUB_keys.Up then dir += Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
         if MATRIXHUB_keys.Down then dir -= Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
@@ -5066,17 +5066,8 @@ Movimiento:Slider({
     end
 })
 
-Movimiento:Toggle({
-    Title = "SPEED CFRAME",
-    Icon = "zap",
-    Value = false,
-    Callback = function(state)
-        MATRIXHUB_cframeOn = state
-    end
-})
-
 Movimiento:Slider({
-    Title = "SPEED CFRAME",
+    Title = "VELOCIDAD FLY",
     Icon = "gauge",
     Value = { Min = 0.5, Max = 5, Default = 1.2 },
     Callback = function(v)
