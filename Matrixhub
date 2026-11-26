@@ -4069,6 +4069,7 @@ local AnimationNodes = {
     {Parent = "fall", Child = "FallAnim", Key = "fall"},
 }
 local OriginalAnimationIds = setmetatable({}, {__mode = "k"})
+local MATRIXHUB_localAnimationsEnabled = true
 
 local function getAnimationObject(animate, node)
     local folder = animate and animate:FindFirstChild(node.Parent)
@@ -4122,6 +4123,10 @@ local function stopCharacterAnimationTracks(hum)
 end
 
 local function ApplyAnims(ids)
+    if not MATRIXHUB_localAnimationsEnabled then
+        warn("Matrix Hub: activa ANIMACIONES LOCALES para aplicar un paquete.")
+        return false
+    end
     local char = LP.Character
     if not char then return false end
 
@@ -4293,6 +4298,23 @@ LP.CharacterAdded:Connect(function(character)
     end)
 end)
 end -- FIN DEL ÁMBITO FAKE AVATAR
+
+Animaciones:Section({ Title = "ANIMACIONES LOCALES", Icon = "monitor", Opened = true })
+Animaciones:Paragraph({
+    Title = "SOLO CLIENTE",
+    Desc = "Los cambios se aplican desde tu cliente. Roblox y cada experiencia controlan si una animación también se replica a otros jugadores; no se puede garantizar que solo tú la veas."
+})
+Animaciones:Toggle({
+    Title = "ACTIVAR ANIMACIONES LOCALES",
+    Icon = "footprints",
+    Value = true,
+    Callback = function(state)
+        MATRIXHUB_localAnimationsEnabled = state == true
+        if not MATRIXHUB_localAnimationsEnabled then
+            task.spawn(RestoreDefaultAnims)
+        end
+    end
+})
 
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
@@ -4632,6 +4654,11 @@ Otros:Toggle({
         -- Solo se revisan los contenedores donde normalmente aparecen interfaces
         -- y etiquetas sobre personajes, no todos los servicios del juego.
         watchNameRoot(workspace)
+
+        -- La lista de jugadores de Roblox vive en CoreGui, fuera de PlayerGui.
+        -- Se intenta observar de forma protegida para no romper el modo streamer si el executor lo bloquea.
+        local coreGui = game:GetService("CoreGui")
+        pcall(watchNameRoot, coreGui)
 
         local playerGui = player:FindFirstChildOfClass("PlayerGui")
         if playerGui then
@@ -5067,6 +5094,7 @@ local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
 local MATRIXHUB_flyDownEnabled = false
 local MATRIXHUB_flyDownBaseY = 0
+local MATRIXHUB_flyDownDepth = 50
 local MATRIXHUB_speed = 1.2
 local MATRIXHUB_LP = game:GetService("Players").LocalPlayer
 local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=false, Shift=false}
@@ -5159,7 +5187,7 @@ local function MATRIXHUB_StartFly()
             root.CFrame = CFrame.new(root.Position + move) * rot
         else
             root.Anchored = false
-            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - 50) or (MATRIXHUB_baseY + MATRIXHUB_altura)
+            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - MATRIXHUB_flyDownDepth) or (MATRIXHUB_baseY + MATRIXHUB_altura)
             local diff = targetY - root.Position.Y
             local upAuto = 0
             if math.abs(diff) > 0.5 then upAuto = math.clamp(diff * 0.08, -1.2, 1.2) end
@@ -5209,8 +5237,14 @@ Movimiento:Toggle({
     end
 })
 
+Movimiento:Paragraph({
+    Title = "AVISO: FLY DESCENDENTE",
+    Desc = "Esto puede hacer que mueras en el vacío. Ajusta la profundidad antes de activarlo."
+})
+
 Movimiento:Toggle({
-    Title = "FLY DESCENDENTE (-50 STUDS)",
+    Title = "FLY DESCENDENTE",
+
     Icon = "arrow-down",
     Value = false,
     Callback = function(state)
@@ -5227,6 +5261,15 @@ Movimiento:Toggle({
         else
             MATRIXHUB_StopFly()
         end
+    end
+})
+
+Movimiento:Slider({
+    Title = "PROFUNDIDAD FLY DESCENDENTE",
+    Icon = "arrow-down",
+    Value = { Min = 20, Max = 100, Default = 50 },
+    Callback = function(v)
+        MATRIXHUB_flyDownDepth = math.clamp(tonumber(v) or 50, 20, 100)
     end
 })
 
