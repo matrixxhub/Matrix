@@ -986,9 +986,8 @@ MATRIXHUB_KEY_ACTIONS.Menu = function()
     MATRIXHUB:Toggle()
 end
 
--- PESTANAS PRINCIPALES: BOTONES queda en la zona media, no al final.
-local Home = MATRIXHUB:Tab({ Title = "OVERVIEW", Icon = "house" })
-local MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = nil
+-- PESTANAS PRINCIPALES: HOME se crea primero para abrir como pantalla inicial.
+local Home = MATRIXHUB:Tab({ Title = "HOME", Icon = "house" })
 local Cheats = MATRIXHUB:Tab({ Title = "CHEATS", Icon = "crosshair" })
 local Visuales = MATRIXHUB:Tab({ Title = "VISUAL ENGINE", Icon = "eye" })
 local Botones = MATRIXHUB:Tab({ Title = "BOTONES", Icon = "app-window" })
@@ -1789,15 +1788,6 @@ do
             "FPS: %d   PING: %s\nPLAYERS: %d/%d\nERRORS: %d",
             fps, pingText, playersNow, maxPlayers, #MATRIXHUB_ERROR_LOG
         )
-        if MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH then
-            local homeText = string.format(
-                "▣ FPS  %d      ◈ PING  %s\n▤ MEMORIA  %s      ♟ JUGADORES  %d/%d\n\nFPS HISTORY  %s",
-                fps, pingText, memoryText, playersNow, maxPlayers, fpsGraph
-            )
-            pcall(function()
-                MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH:SetDesc(homeText)
-            end)
-        end
         if performanceAlert then
             hudStroke.Color = Color3.fromRGB(255, 175, 65)
             header.TextColor3 = Color3.fromRGB(255, 205, 125)
@@ -2119,25 +2109,48 @@ AutoKills:Toggle({
     end
 })
 
--- INICIO: aviso, panel de rendimiento en vivo e información general.
+-- HOME: acceso prioritario a la comunidad y avisos generales.
+local MATRIXHUB_DISCORD_INVITE = "https://discord.gg/vuXmpnQuX"
+local MATRIXHUB_COMMUNITY_STATUS = Home:Paragraph({
+    Title = "MATRIX COMMUNITY",
+    Desc = "Únete a nuestra comunidad para recibir novedades y compartir sugerencias."
+})
+Home:Button({
+    Title = "ÚNETE A NUESTRA COMUNIDAD",
+    Icon = "users",
+    Callback = function()
+        local copied = false
+        if type(setclipboard) == "function" then
+            copied = pcall(setclipboard, MATRIXHUB_DISCORD_INVITE)
+        elseif type(toclipboard) == "function" then
+            copied = pcall(toclipboard, MATRIXHUB_DISCORD_INVITE)
+        elseif type(writeclipboard) == "function" then
+            copied = pcall(writeclipboard, MATRIXHUB_DISCORD_INVITE)
+        end
+        if copied then
+            pcall(function()
+                MATRIXHUB_COMMUNITY_STATUS:SetDesc("¡Enlace de Discord copiado! Pégalo para unirte: " .. MATRIXHUB_DISCORD_INVITE)
+            end)
+        else
+            pcall(function()
+                MATRIXHUB_COMMUNITY_STATUS:SetDesc("Tu ejecutor no ofrece función de copiar. Enlace: " .. MATRIXHUB_DISCORD_INVITE)
+            end)
+        end
+    end
+})
 Home:Section({ Title = "AVISO DE BANEOS", Icon = "alert-triangle", Opened = true })
 Home:Paragraph({
     Title = "AVISO DE BANEOS",
     Desc = "Matrix Hub no se hace responsable de baneos, suspensiones o pérdidas de acceso derivadas de su uso. Utilizarlo es responsabilidad del usuario y podría incumplir las normas de Roblox."
 })
-Home:Section({ Title = "MATRIX // PERFORMANCE", Icon = "activity", Opened = true })
-MATRIXHUB_HOME_PERFORMANCE_PARAGRAPH = Home:Paragraph({
-    Title = "◈ RENDIMIENTO EN TIEMPO REAL",
-    Desc = "▣ FPS  --      ◈ PING  --\n▤ MEMORIA  --      ♟ JUGADORES  --/--\n\nFPS HISTORY  --"
-})
 Home:Section({ Title = "MATRIX HUB // INFORMACIÓN Y NOVEDADES", Icon = "info", Opened = true })
 Home:Paragraph({
     Title = "NOVEDADES",
-    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• Panel de rendimiento en vivo integrado en OVERVIEW.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
+    Desc = "• Pantalla de inicio estilo Windows 98/2000.\n• Panel principal Matrix Green con efecto glass y lluvia digital.\n• Diez mensajes secretos de alguien atrapado en Matrix, con probabilidades del 30% al 5%.\n• MATRIX RIPPLE: indicador verde de toque con animación y exclusión del joystick móvil.\n• Restauración de animaciones corregida: conserva el controlador Animate y recupera los IDs originales."
 })
 Home:Paragraph({
     Title = "SISTEMAS DEL HUB",
-    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla y monitor principal integrado en OVERVIEW."
+    Desc = "CHEATS, VISUAL ENGINE, BOTONES, MOBILITY, PERSONAJE, AUTOMATION, AUTO KILL, configuración, sonidos y herramientas adicionales.\nLIVE STATUS HUD opcional en pantalla."
 })
 -- QUICK BUTTONS // setters compartidos con las opciones originales del menú.
 setSilentAimQuick = function(enabled)
