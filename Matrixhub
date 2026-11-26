@@ -3882,16 +3882,12 @@ do
         RippleEnv.MATRIXHUB_TOUCH_RIPPLE_CONNECTION = RippleConnection
     end
 
--- MATRIX SKYBOX // Selector local de cielos
--- Los modelos del Creator Store se cargan y se extraen como objetos Sky.
+-- MATRIX SKYBOX // Modelos del Creator Store
+-- La carga ocurre en segundo plano para evitar congelar la interfaz.
 do
     local LightingService = game:GetService("Lighting")
-    local SKYBOX_IMAGES = {
-        ["IMAGEN 1"] = "rbxassetid://76981839876175",
-        ["IMAGEN 2"] = "rbxassetid://137163080514754",
-        ["IMAGEN 3"] = "rbxassetid://128047927855303",
-        ["NEGRO"] = nil
-    }
+    local InsertService = game:GetService("InsertService")
+
     local SKYBOX_MODELS = {
         ["ALIEN HARBOR"] = "108743092193471",
         ["AMMONIA"] = "73737952108384",
@@ -3900,16 +3896,22 @@ do
         ["SUMMER DAY"] = "133154146467731"
     }
     local skyboxNames = {
-        "IMAGEN 1", "IMAGEN 2", "IMAGEN 3", "NEGRO",
-        "ALIEN HARBOR", "AMMONIA", "ARMAGEDDON", "LIGHT BLUE", "SUMMER DAY"
+        "ALIEN HARBOR",
+        "AMMONIA",
+        "ARMAGEDDON",
+        "LIGHT BLUE",
+        "SUMMER DAY",
+        "NEGRO"
     }
-    local selectedSkybox = "IMAGEN 1"
-    local activeSkybox = nil
-    local originalSkyObjects = nil
     local skyboxFaces = {
         "SkyboxBk", "SkyboxDn", "SkyboxFt",
         "SkyboxLf", "SkyboxRt", "SkyboxUp"
     }
+
+    local selectedSkybox = "ALIEN HARBOR"
+    local activeSkybox = nil
+    local originalSkyObjects = nil
+    local loadingSkybox = false
 
     local function saveOriginalSky()
         if originalSkyObjects ~= nil then return end
@@ -3950,101 +3952,116 @@ do
         end
     end
 
-    local function loadSkyFromModel(assetId)
-        if type(game.GetObjects) ~= "function" then
-            return nil, "Este ejecutor no ofrece game:GetObjects para cargar modelos."
+    local function findSky(objects)
+        for _, root in ipairs(objects) do
+            if root:IsA("Sky") then return root end
+            local ok, descendants = pcall(function()
+                return root:GetDescendants()
+            end)
+            if ok then
+                for _, item in ipairs(descendants) do
+                    if item:IsA("Sky") then return item end
+                end
+            end
         end
+        return nil
+    end
 
-        local ok, objects = pcall(function()
+    local function loadSkyFromModel(assetId)
+        local objects
+        local getObjectsOk, getObjectsResult = pcall(function()
             return game:GetObjects("rbxassetid://" .. tostring(assetId))
         end)
-        if not ok or type(objects) ~= "table" then
-            return nil, "No se pudo cargar el modelo " .. tostring(assetId) .. ": " .. tostring(objects)
-        end
-
-        local sourceSky = nil
-        for _, root in ipairs(objects) do
-            if root:IsA("Sky") then
-                sourceSky = root
-                break
-            end
-            for _, descendant in ipairs(root:GetDescendants()) do
-                if descendant:IsA("Sky") then
-                    sourceSky = descendant
-                    break
-                end
-            end
-            if sourceSky then break end
-        end
-
-        local resultSky = nil
-        if sourceSky then
-            local okCreate, created = pcall(function()
-                local newSky = Instance.new("Sky")
-                for _, face in ipairs(skyboxFaces) do
-                    newSky[face] = sourceSky[face]
-                end
-                newSky.Name = "MATRIXHUB_LOCAL_SKYBOX"
-                return newSky
+        if getObjectsOk and type(getObjectsResult) == "table" and #getObjectsResult > 0 then
+            objects = getObjectsResult
+        else
+            local insertOk, insertResult = pcall(function()
+                return InsertService:LoadAsset(tonumber(assetId))
             end)
-            if okCreate then
-                resultSky = created
+            if insertOk and insertResult then
+                objects = {insertResult}
+            else
+                return nil, "Delta no pudo cargar el modelo " .. tostring(assetId)
+                    .. ". GetObjects: " .. tostring(getObjectsResult)
+                    .. " | LoadAsset: " .. tostring(insertResult)
             end
         end
+
+        local sourceSky = findSky(objects)
+        if not sourceSky then
+            for _, root in ipairs(objects) do
+                pcall(function() root:Destroy() end)
+            end
+            return nil, "El modelo " .. tostring(assetId) .. " no contiene un objeto Sky."
+        end
+
+        local okCreate, newSky = pcall(function()
+            local copy = Instance.new("Sky")
+            for _, face in ipairs(skyboxFaces) do
+                copy[face] = sourceSky[face]
+            end
+            copy.Name = "MATRIXHUB_LOCAL_SKYBOX"
+            return copy
+        end)
 
         for _, root in ipairs(objects) do
             pcall(function() root:Destroy() end)
         end
 
-        if not resultSky then
-            return nil, "El modelo se cargó, pero no contiene un objeto Sky con sus seis caras."
+        if not okCreate then
+            return nil, "No se pudieron copiar las seis caras: " .. tostring(newSky)
         end
-        return resultSky
+        return newSky
     end
 
     local function applySelectedSky()
-        local imageId = SKYBOX_IMAGES[selectedSkybox]
+        if loadingSkybox then
+            warn("MATRIX SKYBOX: ya hay una carga en curso.")
+            return
+        end
+
         local modelId = SKYBOX_MODELS[selectedSkybox]
-        if imageId == nil and modelId == nil and selectedSkybox ~= "NEGRO" then
-            warn("MATRIX SKYBOX: selección no válida: " .. tostring(selectedSkybox))
-            return
-        end
+        loadingSkybox = true
 
-        local sky
-        if modelId then
+        task.spawn(function()
+            local newSky
             local loadError
-            sky, loadError = loadSkyFromModel(modelId)
-            if not sky then
-                warn("MATRIX SKYBOX: " .. tostring(loadError))
-                return
-            end
-        else
-            sky = Instance.new("Sky")
-            sky.Name = "MATRIXHUB_LOCAL_SKYBOX"
-            local ok, err = pcall(function()
-                for _, face in ipairs(skyboxFaces) do
-                    sky[face] = imageId or ""
-                end
-            end)
-            if not ok then
-                pcall(function() sky:Destroy() end)
-                warn("MATRIX SKYBOX: no se pudieron asignar las imágenes: " .. tostring(err))
-                return
-            end
-        end
 
-        saveOriginalSky()
-        removeActiveSky()
-        local okParent, parentError = pcall(function()
-            sky.Name = "MATRIXHUB_LOCAL_SKYBOX"
-            sky.Parent = LightingService
+            if selectedSkybox == "NEGRO" then
+                newSky = Instance.new("Sky")
+                newSky.Name = "MATRIXHUB_LOCAL_SKYBOX"
+                for _, face in ipairs(skyboxFaces) do
+                    newSky[face] = ""
+                end
+            elseif modelId then
+                newSky, loadError = loadSkyFromModel(modelId)
+            else
+                loadError = "La selección no corresponde a un cielo disponible."
+            end
+
+            if not newSky then
+                warn("MATRIX SKYBOX: " .. tostring(loadError))
+                loadingSkybox = false
+                return
+            end
+
+            saveOriginalSky()
+            removeActiveSky()
+
+            local parentOk, parentError = pcall(function()
+                newSky.Parent = LightingService
+            end)
+            if not parentOk then
+                pcall(function() newSky:Destroy() end)
+                warn("MATRIX SKYBOX: no se pudo aplicar: " .. tostring(parentError))
+                loadingSkybox = false
+                return
+            end
+
+            activeSkybox = newSky
+            loadingSkybox = false
+            print("MATRIX SKYBOX: aplicado " .. tostring(selectedSkybox))
         end)
-        if not okParent then
-            pcall(function() sky:Destroy() end)
-            warn("MATRIX SKYBOX: no se pudo aplicar el cielo: " .. tostring(parentError))
-            return
-        end
-        activeSkybox = sky
     end
 
     Visuales:Section({ Title = "MATRIX SKYBOX", Icon = "cloud-sun", Opened = true })
@@ -4053,7 +4070,7 @@ do
         Values = skyboxNames,
         Value = selectedSkybox,
         Callback = function(value)
-            if SKYBOX_IMAGES[value] ~= nil or SKYBOX_MODELS[value] ~= nil or value == "NEGRO" then
+            if SKYBOX_MODELS[value] ~= nil or value == "NEGRO" then
                 selectedSkybox = value
             end
         end
