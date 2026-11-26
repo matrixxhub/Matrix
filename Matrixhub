@@ -4069,6 +4069,7 @@ local AnimationNodes = {
     {Parent = "fall", Child = "FallAnim", Key = "fall"},
 }
 local OriginalAnimationIds = setmetatable({}, {__mode = "k"})
+local MATRIXHUB_localAnimationsEnabled = true
 
 local function getAnimationObject(animate, node)
     local folder = animate and animate:FindFirstChild(node.Parent)
@@ -4122,6 +4123,10 @@ local function stopCharacterAnimationTracks(hum)
 end
 
 local function ApplyAnims(ids)
+    if not MATRIXHUB_localAnimationsEnabled then
+        warn("Matrix Hub: activa ANIMACIONES LOCALES para aplicar un paquete.")
+        return false
+    end
     local char = LP.Character
     if not char then return false end
 
@@ -4293,6 +4298,23 @@ LP.CharacterAdded:Connect(function(character)
     end)
 end)
 end -- FIN DEL ÁMBITO FAKE AVATAR
+
+Animaciones:Section({ Title = "ANIMACIONES LOCALES", Icon = "monitor", Opened = true })
+Animaciones:Paragraph({
+    Title = "SOLO CLIENTE",
+    Desc = "Los cambios se aplican desde tu cliente. Roblox y cada experiencia controlan si una animación también se replica a otros jugadores; no se puede garantizar que solo tú la veas."
+})
+Animaciones:Toggle({
+    Title = "ACTIVAR ANIMACIONES LOCALES",
+    Icon = "footprints",
+    Value = true,
+    Callback = function(state)
+        MATRIXHUB_localAnimationsEnabled = state == true
+        if not MATRIXHUB_localAnimationsEnabled then
+            task.spawn(RestoreDefaultAnims)
+        end
+    end
+})
 
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
@@ -4523,22 +4545,64 @@ Otros:Section({ Title = "MODO STREAMER", Icon = "user-x" })
 local spoofNameText = "MATRIXHUB"
 local isWorkspaceLooping = false
 
--- Seguimiento por eventos: evita recorrer todo el juego cada segundo.
+-- Las conexiones se gestionan explícitamente para evitar duplicados y fugas.
 local nameRootConnections = {}
 local nameTextConnections = {}
-local trackedNameLabels = {}
+local trackedNameLabels = setmetatable({}, { __mode = "k" })
+local watchedNameRoots = setmetatable({}, { __mode = "k" })
 local modifiedNameLabels = setmetatable({}, { __mode = "k" })
+local originalNameTexts = setmetatable({}, { __mode = "k" })
 
 local function safeReplace(str, findText, replaceText)
     if type(str) ~= "string" or type(findText) ~= "string" or findText == "" then
         return str
     end
-
     local safeFind = findText:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
-    -- Usar función de reemplazo para que '%' escrito por el usuario sea literal.
     return (str:gsub(safeFind, function()
         return replaceText
     end))
+end
+
+local function escapeRichText(str)
+    return tostring(str or "")
+        :gsub("&", "&amp;")
+        :gsub("<", "&lt;")
+        :gsub(">", "&gt;")
+        :gsub('"', "&quot;")
+        :gsub("'", "&apos;")
+end
+
+local function replacePlayerNames(text, myName, myDisplayName, replacement)
+    if type(text) ~= "string" then return text end
+    local names = {}
+    if type(myName) == "string" and myName ~= "" then
+        names[#names + 1] = myName
+    end
+    if type(myDisplayName) == "string" and myDisplayName ~= "" and myDisplayName ~= myName then
+        names[#names + 1] = myDisplayName
+    end
+    table.sort(names, function(a, b) return #a > #b end)
+
+    -- Sustitución literal de una sola pasada: el nombre falso no se vuelve a procesar
+    -- aunque contenga parte del nombre real o caracteres especiales.
+    local output, index = {}, 1
+    while index <= #text do
+        local matchedName
+        for _, name in ipairs(names) do
+            if text:sub(index, index + #name - 1) == name then
+                matchedName = name
+                break
+            end
+        end
+        if matchedName then
+            output[#output + 1] = replacement
+            index = index + #matchedName
+        else
+            output[#output + 1] = text:sub(index, index)
+            index = index + 1
+        end
+    end
+    return table.concat(output)
 end
 
 local function processText(v, myName, myDisp)
@@ -4552,34 +4616,15 @@ local function processText(v, myName, myDisp)
     end
 
     local txt = v.Text
-    if not txt or txt == "" then return end
+    if type(txt) ~= "string" or txt == "" then return end
 
-    local hasName = (myName ~= "" and string.find(txt, myName, 1, true) ~= nil)
-        or (myDisp ~= "" and string.find(txt, myDisp, 1, true) ~= nil)
-
-    if hasName then
-        v.RichText = true
-        local newText = safeReplace(txt, myName, spoofNameText)
-        newText = safeReplace(newText, myDisp, spoofNameText)
-
-        if newText ~= txt then
-            modifiedNameLabels[v] = true
-            v.Text = newText
-        end
+    local replacement = v.RichText and escapeRichText(spoofNameText) or spoofNameText
+    local newText = replacePlayerNames(txt, myName, myDisp, replacement)
+    if newText ~= txt then
+        originalNameTexts[v] = txt
+        modifiedNameLabels[v] = true
+        v.Text = newText
     end
-end
-
-local function disconnectNameWatcher()
-    for _, connection in ipairs(nameRootConnections) do
-        if connection then connection:Disconnect() end
-    end
-    for _, connection in ipairs(nameTextConnections) do
-        if connection then connection:Disconnect() end
-    end
-
-    table.clear(nameRootConnections)
-    table.clear(nameTextConnections)
-    table.clear(trackedNameLabels)
 end
 
 local function attachNameTextObject(v)
@@ -4587,50 +4632,111 @@ local function attachNameTextObject(v)
     if not (v:IsA("TextLabel") or v:IsA("TextBox") or v:IsA("TextButton")) then return end
 
     trackedNameLabels[v] = true
-
-    local connection = v:GetPropertyChangedSignal("Text"):Connect(function()
-        if isWorkspaceLooping then
-            pcall(processText, v, player.Name, player.DisplayName)
-        end
+    local ok, connection = pcall(function()
+        return v:GetPropertyChangedSignal("Text"):Connect(function()
+            if isWorkspaceLooping then
+                pcall(processText, v, player.Name, player.DisplayName)
+            end
+        end)
     end)
-    table.insert(nameTextConnections, connection)
-
+    if ok and connection then
+        table.insert(nameTextConnections, connection)
+    end
     pcall(processText, v, player.Name, player.DisplayName)
 end
 
 local function watchNameRoot(root)
-    if not root or not isWorkspaceLooping then return end
+    if not root or not isWorkspaceLooping or watchedNameRoots[root] then return end
+    watchedNameRoots[root] = true
 
-    table.insert(nameRootConnections, root.DescendantAdded:Connect(attachNameTextObject))
+    local ok, connection = pcall(function()
+        return root.DescendantAdded:Connect(attachNameTextObject)
+    end)
+    if ok and connection then
+        table.insert(nameRootConnections, connection)
+    end
 
-    -- Una sola inspección inicial, dividida en bloques para no congelar la interfaz.
     task.spawn(function()
-        local descendants = root:GetDescendants()
+        local okDescendants, descendants = pcall(function()
+            return root:GetDescendants()
+        end)
+        if not okDescendants or type(descendants) ~= "table" then return end
         for index, descendant in ipairs(descendants) do
             if not isWorkspaceLooping then return end
             attachNameTextObject(descendant)
-
-            if index % 150 == 0 then
-                task.wait()
-            end
+            if index % 150 == 0 then task.wait() end
         end
     end)
+end
+
+local function watchCoreGuiNames()
+    -- CoreGui puede estar bloqueado por algunos ejecutores; no debe detener el menú.
+    local ok, coreGui = pcall(function()
+        return game:GetService("CoreGui")
+    end)
+    if not ok or not coreGui then return end
+
+    local robloxGui = coreGui:FindFirstChild("RobloxGui")
+    if robloxGui then
+        watchNameRoot(robloxGui)
+        return
+    end
+
+    local okConnection, connection = pcall(function()
+        return coreGui.DescendantAdded:Connect(function(descendant)
+            if isWorkspaceLooping and descendant.Name == "RobloxGui" then
+                watchNameRoot(descendant)
+            end
+        end)
+    end)
+    if okConnection and connection then
+        table.insert(nameRootConnections, connection)
+    end
+end
+
+local function restoreNameLabels()
+    for label, originalText in pairs(originalNameTexts) do
+        if label and label.Parent then
+            pcall(function()
+                local replacement = label.RichText and escapeRichText(spoofNameText) or spoofNameText
+                if replacement ~= "" and string.find(label.Text, replacement, 1, true) then
+                    label.Text = originalText
+                end
+            end)
+        end
+    end
+    table.clear(originalNameTexts)
+    table.clear(modifiedNameLabels)
+end
+
+local function disconnectNameWatcher()
+    for _, connection in ipairs(nameRootConnections) do
+        if connection then pcall(function() connection:Disconnect() end) end
+    end
+    for _, connection in ipairs(nameTextConnections) do
+        if connection then pcall(function() connection:Disconnect() end) end
+    end
+
+    table.clear(nameRootConnections)
+    table.clear(nameTextConnections)
+    table.clear(trackedNameLabels)
+    table.clear(watchedNameRoots)
 end
 
 Otros:Toggle({
     Title = "OCULTAR NOMBRE",
     Value = false,
     Callback = function(state)
+        state = state == true
         if state == isWorkspaceLooping then return end
         isWorkspaceLooping = state
 
         if not state then
             disconnectNameWatcher()
+            restoreNameLabels()
             return
         end
 
-        -- Solo se revisan los contenedores donde normalmente aparecen interfaces
-        -- y etiquetas sobre personajes, no todos los servicios del juego.
         watchNameRoot(workspace)
 
         local playerGui = player:FindFirstChildOfClass("PlayerGui")
@@ -4638,7 +4744,10 @@ Otros:Toggle({
             watchNameRoot(playerGui)
         end
 
-        -- También cubre el caso en que PlayerGui aparezca después de activar la opción.
+        -- La lista de jugadores estándar está dentro de RobloxGui/CoreGui.
+        -- Se limita el escaneo a RobloxGui, no a todo CoreGui, para reducir trabajo.
+        pcall(watchCoreGuiNames)
+
         table.insert(nameRootConnections, player.ChildAdded:Connect(function(child)
             if isWorkspaceLooping and child:IsA("PlayerGui") then
                 watchNameRoot(child)
@@ -4652,19 +4761,23 @@ Otros:Input({
     Placeholder = "XXX-XXXX-XXX",
     Value = "MATRIXHUB",
     Callback = function(text)
-        if text ~= "" and text ~= spoofNameText then
-            local previousName = spoofNameText
-            spoofNameText = text
+        text = tostring(text or ""):gsub("^%s*(.-)%s*$", "%1")
+        if text == "" or text == spoofNameText then return end
+        if #text > 32 then text = text:sub(1, 32) end
 
-            -- Actualiza solo los textos que esta función ya había modificado.
-            for label in pairs(modifiedNameLabels) do
-                if label and label.Parent then
-                    pcall(function()
-                        label.Text = safeReplace(label.Text, previousName, spoofNameText)
-                    end)
-                else
-                    modifiedNameLabels[label] = nil
-                end
+        local previousName = spoofNameText
+        spoofNameText = text
+
+        for label in pairs(modifiedNameLabels) do
+            if label and label.Parent then
+                pcall(function()
+                    local oldText = label.RichText and escapeRichText(previousName) or previousName
+                    local newText = label.RichText and escapeRichText(spoofNameText) or spoofNameText
+                    label.Text = safeReplace(label.Text, oldText, newText)
+                end)
+            else
+                modifiedNameLabels[label] = nil
+                originalNameTexts[label] = nil
             end
         end
     end
@@ -4902,6 +5015,7 @@ local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
 local MATRIXHUB_flyDownEnabled = false
 local MATRIXHUB_flyDownBaseY = 0
+local MATRIXHUB_flyDownDepth = 50
 local MATRIXHUB_speed = 1.2
 local MATRIXHUB_LP = game:GetService("Players").LocalPlayer
 local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=false, Shift=false}
@@ -4976,6 +5090,7 @@ local function MATRIXHUB_StartFly()
         local h = c:FindFirstChildOfClass("Humanoid")
         if not root or not h then return end
         local cam = workspace.CurrentCamera
+        if not cam then return end
         local speed = MATRIXHUB_speed
         local dir = Vector3.zero
         if MATRIXHUB_keys.Up then dir += Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z) end
@@ -4994,15 +5109,19 @@ local function MATRIXHUB_StartFly()
             root.CFrame = CFrame.new(root.Position + move) * rot
         else
             root.Anchored = false
-            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - 50) or (MATRIXHUB_baseY + MATRIXHUB_altura)
+            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - MATRIXHUB_flyDownDepth) or (MATRIXHUB_baseY + MATRIXHUB_altura)
             local diff = targetY - root.Position.Y
             local upAuto = 0
             if math.abs(diff) > 0.5 then upAuto = math.clamp(diff * 0.08, -1.2, 1.2) end
             local verticalMove = upAuto + y
             if MATRIXHUB_flyDownEnabled then
-                -- Fly descendente: no permite subir y limita el descenso a 50 studs.
-                verticalMove = math.min(verticalMove, 0)
-                verticalMove = math.max(verticalMove, targetY - root.Position.Y)
+                -- Mantiene el movimiento dentro del rango entre la posición actual y el límite.
+                -- Si ya se rebasó el límite, no intenta subir automáticamente.
+                if diff < 0 then
+                    verticalMove = math.clamp(verticalMove, diff, 0)
+                else
+                    verticalMove = 0
+                end
             end
             local move = Vector3.new(dir.X * speed, verticalMove, dir.Z * speed)
             local rot = root.CFrame - root.CFrame.Position
@@ -5044,8 +5163,13 @@ Movimiento:Toggle({
     end
 })
 
+Movimiento:Paragraph({
+    Title = "AVISO: FLY DESCENDENTE",
+    Desc = "Esto puede hacer que mueras en el vacío. Ajusta la profundidad antes de activarlo."
+})
+
 Movimiento:Toggle({
-    Title = "FLY DESCENDENTE (-50 STUDS)",
+    Title = "FLY DESCENDENTE",
     Icon = "arrow-down",
     Value = false,
     Callback = function(state)
@@ -5062,6 +5186,15 @@ Movimiento:Toggle({
         else
             MATRIXHUB_StopFly()
         end
+    end
+})
+
+Movimiento:Slider({
+    Title = "PROFUNDIDAD FLY DESCENDENTE",
+    Icon = "arrow-down",
+    Value = { Min = 20, Max = 100, Default = 50 },
+    Callback = function(v)
+        MATRIXHUB_flyDownDepth = math.clamp(tonumber(v) or 50, 20, 100)
     end
 })
 
