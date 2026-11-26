@@ -4887,6 +4887,8 @@ local MATRIXHUB_cframeOn = false
 local MATRIXHUB_flyConn = nil
 local MATRIXHUB_altura = 100
 local MATRIXHUB_baseY = 0
+local MATRIXHUB_flyDownEnabled = false
+local MATRIXHUB_flyDownBaseY = 0
 local MATRIXHUB_speed = 1.2
 local MATRIXHUB_LP = game:GetService("Players").LocalPlayer
 local MATRIXHUB_keys = {Up=false, Down=false, Left=false, Right=false, Space=false, Shift=false}
@@ -4979,11 +4981,17 @@ local function MATRIXHUB_StartFly()
             root.CFrame = CFrame.new(root.Position + move) * rot
         else
             root.Anchored = false
-            local targetY = MATRIXHUB_baseY + MATRIXHUB_altura
+            local targetY = MATRIXHUB_flyDownEnabled and (MATRIXHUB_flyDownBaseY - 50) or (MATRIXHUB_baseY + MATRIXHUB_altura)
             local diff = targetY - root.Position.Y
             local upAuto = 0
             if math.abs(diff) > 0.5 then upAuto = math.clamp(diff * 0.08, -1.2, 1.2) end
-            local move = Vector3.new(dir.X * speed, upAuto + y, dir.Z * speed)
+            local verticalMove = upAuto + y
+            if MATRIXHUB_flyDownEnabled then
+                -- Fly descendente: no permite subir y limita el descenso a 50 studs.
+                verticalMove = math.min(verticalMove, 0)
+                verticalMove = math.max(verticalMove, targetY - root.Position.Y)
+            end
+            local move = Vector3.new(dir.X * speed, verticalMove, dir.Z * speed)
             local rot = root.CFrame - root.CFrame.Position
             root.CFrame = CFrame.new(root.Position + move) * rot
         end
@@ -5020,6 +5028,27 @@ Movimiento:Toggle({
     Value = false,
     Callback = function(state)
         if state then MATRIXHUB_StartFly() else MATRIXHUB_StopFly() end
+    end
+})
+
+Movimiento:Toggle({
+    Title = "FLY DESCENDENTE (-50 STUDS)",
+    Icon = "arrow-down",
+    Value = false,
+    Callback = function(state)
+        MATRIXHUB_flyDownEnabled = state == true
+        if MATRIXHUB_flyDownEnabled then
+            local char = MATRIXHUB_LP.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not root then
+                MATRIXHUB_flyDownEnabled = false
+                return
+            end
+            MATRIXHUB_flyDownBaseY = root.Position.Y
+            MATRIXHUB_StartFly()
+        else
+            MATRIXHUB_StopFly()
+        end
     end
 })
 
