@@ -4686,15 +4686,14 @@ local function getProtectOthersNumber(targetPlayer)
     local existing = protectOthersNumbers[targetPlayer]
     if existing then return existing end
 
-    -- Busca el primer número libre sin imponer un límite de 29 jugadores.
-    local number = 1
-    while protectOthersNumberOwners[number] do
-        number += 1
+    for number = 1, 29 do
+        if not protectOthersNumberOwners[number] then
+            protectOthersNumbers[targetPlayer] = number
+            protectOthersNumberOwners[number] = targetPlayer
+            return number
+        end
     end
-
-    protectOthersNumbers[targetPlayer] = number
-    protectOthersNumberOwners[number] = targetPlayer
-    return number
+    return nil
 end
 
 local function cleanupProtectOthersPlayer(targetPlayer)
