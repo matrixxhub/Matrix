@@ -99,7 +99,7 @@ task.spawn(function()
         if targetChar == " " then
             settledCount = index
         else
-            local scrambleSteps = startupRandom:NextInteger(6, 10)
+            local scrambleSteps = startupRandom:NextInteger(4, 7)
             for _ = 1, scrambleSteps do
                 local display = {}
                 for position = 1, #startupTitleTarget do
@@ -113,7 +113,7 @@ task.spawn(function()
                     end
                 end
                 startupTitle.Text = table.concat(display)
-                task.wait(0.045)
+                task.wait(0.03)
             end
             settledCount = index
         end
@@ -128,7 +128,7 @@ task.spawn(function()
             end
         end
         startupTitle.Text = table.concat(display)
-        task.wait(0.06)
+        task.wait(0.035)
     end
     startupTitle.Text = startupTitleTarget
     startupTitleAnimationDone = true
