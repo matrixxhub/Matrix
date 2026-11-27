@@ -272,6 +272,7 @@ local MATRIXHUB_CONFIG = {
     UIScale = 1.08,
     AnimationSpeed = 1,
     GunSlotSpamCPS = 8,
+    TouchMacroDelay = 0.5,
     AccentIntensity = 1,
     PanelTransparency = 0.24,
     GlowEnabled = true,
@@ -331,6 +332,8 @@ local function LoadMatrixHubConfig()
     if type(saved.Theme) == "string" then MATRIXHUB_CONFIG.Theme = saved.Theme end
     local savedSlot2CPS = tonumber(saved.GunSlotSpamCPS)
     if savedSlot2CPS then MATRIXHUB_CONFIG.GunSlotSpamCPS = math.clamp(math.floor(savedSlot2CPS), 2, 15) end
+    local savedTouchMacroDelay = tonumber(saved.TouchMacroDelay)
+    if savedTouchMacroDelay then MATRIXHUB_CONFIG.TouchMacroDelay = math.clamp(savedTouchMacroDelay, 0.1, 3) end
     for _, key in ipairs({ "FPSBoost", "AntiLag", "StatusHud", "GlowEnabled", "UIAudioEnabled", "KillSoundEnabled", "UseCustomKillSound" }) do
         if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
     end
@@ -3042,9 +3045,178 @@ do
 
     MATRIXHUB_UpdateSlot2Info()
 
+    -- MACRO TÁCTIL SLOT 2 // activa la segunda herramienta al tocar una zona libre de la pantalla.
+    Botones:Section({ Title = "MACRO TÁCTIL // SLOT 2", Icon = "hand", Opened = true })
 
+    local TOUCH_MACRO_DELAY_MIN = 0.1
+    local TOUCH_MACRO_DELAY_MAX = 3
+    local TOUCH_MACRO_DELAY = math.clamp(
+        tonumber(MATRIXHUB_CONFIG.TouchMacroDelay) or 0.5,
+        TOUCH_MACRO_DELAY_MIN,
+        TOUCH_MACRO_DELAY_MAX
+    )
+    local TOUCH_MACRO_DURATION = 0.5
+    local TOUCH_MACRO_EQUIP_TIMEOUT = 1.5
+    local touchMacroEnabled = false
+    local touchMacroBusy = false
+    local touchMacroLastFinish = 0
+    local touchMacroCharacterVersion = 0
 
+    local touchMacroInfo = Botones:Paragraph({
+        Title = "MACRO TÁCTIL",
+        Desc = "ESTADO: OFF\\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) ..
+            " s\\nActiva la segunda herramienta al tocar fuera de los botones de la interfaz."
+    })
 
+    local function MATRIXHUB_UpdateTouchMacroInfo(message)
+        local status = touchMacroEnabled and "ON" or "OFF"
+        local extra = message and ("\\n" .. tostring(message)) or ""
+        pcall(function()
+            touchMacroInfo:SetDesc(
+                "ESTADO: " .. status ..
+                "\\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) .. " s" ..
+                "\\nDURACIÓN: " .. string.format("%.1f", TOUCH_MACRO_DURATION) .. " s" ..
+                extra
+            )
+        end)
+    end
+
+    local function MATRIXHUB_GetTouchMacroTool(character, backpack)
+        local tools = {}
+        local seen = {}
+        for _, container in ipairs({ backpack, character }) do
+            if container then
+                for _, item in ipairs(container:GetChildren()) do
+                    if item:IsA("Tool") and not seen[item] then
+                        seen[item] = true
+                        table.insert(tools, item)
+                    end
+                end
+            end
+        end
+        table.sort(tools, function(a, b)
+            if a.Name == b.Name then
+                return tostring(a) < tostring(b)
+            end
+            return a.Name:lower() < b.Name:lower()
+        end)
+        return tools[2]
+    end
+
+    local function MATRIXHUB_TouchMacroOverButton(position)
+        local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then return false end
+        local ok, guiObjects = pcall(function()
+            return playerGui:GetGuiObjectsAtPosition(position.X, position.Y)
+        end)
+        if not ok or type(guiObjects) ~= "table" then return false end
+        for _, guiObject in ipairs(guiObjects) do
+            if guiObject:IsA("GuiButton") and guiObject.Visible and guiObject.Active then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function MATRIXHUB_RunTouchMacro()
+        if not touchMacroEnabled or touchMacroBusy then return end
+        if os.clock() - touchMacroLastFinish < TOUCH_MACRO_DELAY then return end
+
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+        if not character or not humanoid or humanoid.Health <= 0 or not backpack then return end
+
+        local tool = MATRIXHUB_GetTouchMacroTool(character, backpack)
+        if not tool then
+            MATRIXHUB_UpdateTouchMacroInfo("No se encontró una segunda herramienta.")
+            return
+        end
+
+        touchMacroBusy = true
+        local characterVersion = touchMacroCharacterVersion
+        local ok, err = pcall(function()
+            if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
+            humanoid:EquipTool(tool)
+
+            local equipStarted = os.clock()
+            while tool.Parent ~= character do
+                if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
+                if not character.Parent or humanoid.Health <= 0 or not tool.Parent then return end
+                if os.clock() - equipStarted >= TOUCH_MACRO_EQUIP_TIMEOUT then
+                    MATRIXHUB_UpdateTouchMacroInfo("No se pudo equipar la herramienta a tiempo.")
+                    return
+                end
+                task.wait(0.05)
+            end
+
+            if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
+            if humanoid.Health <= 0 or tool.Parent ~= character then return end
+            tool:Activate()
+            task.wait(TOUCH_MACRO_DURATION)
+        end)
+
+        if characterVersion == touchMacroCharacterVersion
+            and LocalPlayer.Character == character
+            and humanoid.Parent == character
+            and humanoid.Health > 0 then
+            pcall(function()
+                humanoid:UnequipTools()
+            end)
+        end
+
+        touchMacroBusy = false
+        touchMacroLastFinish = os.clock()
+        if not ok then
+            RecordMatrixHubError("MACRO TÁCTIL SLOT 2", err)
+            warn("[Matrix Hub] Macro táctil Slot 2: " .. tostring(err))
+            MATRIXHUB_UpdateTouchMacroInfo("Ocurrió un error; revisa el registro.")
+        end
+    end
+
+    local touchMacroInputService = game:GetService("UserInputService")
+    touchMacroInputService.TouchTap:Connect(function(positions, gameProcessed)
+        if not touchMacroEnabled or touchMacroBusy or gameProcessed then return end
+        if not positions or not positions[1] then return end
+        if touchMacroInputService:GetFocusedTextBox() then return end
+        if MATRIXHUB_TouchMacroOverButton(positions[1]) then return end
+        task.spawn(MATRIXHUB_RunTouchMacro)
+    end)
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        touchMacroCharacterVersion += 1
+        touchMacroBusy = false
+        touchMacroLastFinish = 0
+    end)
+
+    Botones:Slider({
+        Title = "DELAY MACRO TÁCTIL (0.1-3.0 S)",
+        Icon = "timer",
+        Step = 0.1,
+        Value = { Min = TOUCH_MACRO_DELAY_MIN, Max = TOUCH_MACRO_DELAY_MAX, Default = TOUCH_MACRO_DELAY },
+        Callback = function(value)
+            TOUCH_MACRO_DELAY = math.clamp(tonumber(value) or 0.5, TOUCH_MACRO_DELAY_MIN, TOUCH_MACRO_DELAY_MAX)
+            MATRIXHUB_CONFIG.TouchMacroDelay = TOUCH_MACRO_DELAY
+            SaveMatrixHubConfig()
+            MATRIXHUB_UpdateTouchMacroInfo()
+        end
+    })
+
+    Botones:Toggle({
+        Title = "ACTIVAR MACRO TÁCTIL SLOT 2",
+        Icon = "hand",
+        Value = false,
+        Callback = function(enabled)
+            touchMacroEnabled = enabled == true
+            if not touchMacroEnabled then
+                MATRIXHUB_UpdateTouchMacroInfo("Macro detenido.")
+            else
+                touchMacroLastFinish = 0
+                MATRIXHUB_UpdateTouchMacroInfo("Toca una zona libre de la pantalla.")
+            end
+            PlayMatrixUISound("Toggle")
+        end
+    })
 
 end
 
