@@ -3674,58 +3674,55 @@ Players.PlayerAdded:Connect(function(p) if p ~= LP then if p.Character then Watc
 Visuales:Section({ Title = "VISUAL ENGINE", Icon = "eye", Opened = true })
 
 -- SATURACIÓN VISUAL: postprocesado local; no modifica assets del juego.
-do
-    local saturationEffect = Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION")
-    if not saturationEffect then
-        saturationEffect = Instance.new("ColorCorrectionEffect")
-        saturationEffect.Name = "MATRIXHUB_LOCAL_COLOR_CORRECTION"
-        saturationEffect.Parent = Lighting
-    end
-    saturationEffect.Enabled = false
-    saturationEffect.Saturation = 0.35
-    saturationEffect.Contrast = 0
-
-    Visuales:Section({ Title = "TEXTURAS // SATURACIÓN", Icon = "palette", Opened = true })
-    Visuales:Paragraph({
-        Title = "MEJORA DE COLOR",
-        Desc = "Intensifica los colores visibles mediante un filtro visual local. No reemplaza ni edita las texturas originales."
-    })
-    Visuales:Toggle({
-        Title = "ACTIVAR SATURACIÓN",
-        Icon = "droplets",
-        Value = false,
-        Callback = function(enabled)
-            saturationEffect.Enabled = enabled == true
-        end
-    })
-    Visuales:Slider({
-        Title = "INTENSIDAD DE SATURACIÓN",
-        Icon = "palette",
-        Step = 0.05,
-        Value = { Min = 0, Max = 1, Default = 0.35 },
-        Callback = function(value)
-            saturationEffect.Saturation = math.clamp(tonumber(value) or 0.35, 0, 1)
-        end
-    })
-    Visuales:Slider({
-        Title = "CONTRASTE",
-        Icon = "contrast",
-        Step = 0.05,
-        Value = { Min = -0.2, Max = 0.3, Default = 0 },
-        Callback = function(value)
-            saturationEffect.Contrast = math.clamp(tonumber(value) or 0, -0.2, 0.3)
-        end
-    })
-    Visuales:Button({
-        Title = "RESTABLECER COLORES",
-        Icon = "rotate-ccw",
-        Callback = function()
-            saturationEffect.Saturation = 0.35
-            saturationEffect.Contrast = 0
-            saturationEffect.Enabled = false
-        end
-    })
+if not Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION") then
+    Instance.new("ColorCorrectionEffect", Lighting).Name = "MATRIXHUB_LOCAL_COLOR_CORRECTION"
 end
+Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Enabled = false
+Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Saturation = 0.35
+Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Contrast = 0
+
+Visuales:Section({ Title = "TEXTURAS // SATURACIÓN", Icon = "palette", Opened = true })
+Visuales:Paragraph({
+    Title = "MEJORA DE COLOR",
+    Desc = "Intensifica los colores visibles mediante un filtro visual local. No reemplaza ni edita las texturas originales."
+})
+Visuales:Toggle({
+    Title = "ACTIVAR SATURACIÓN",
+    Icon = "droplets",
+    Value = false,
+    Callback = function(enabled)
+        Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Enabled = enabled == true
+    end
+})
+Visuales:Slider({
+    Title = "INTENSIDAD DE SATURACIÓN",
+    Icon = "palette",
+    Step = 0.05,
+    Value = { Min = 0, Max = 1, Default = 0.35 },
+    Callback = function(value)
+        Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Saturation = math.clamp(tonumber(value) or 0.35, 0, 1)
+    end
+})
+Visuales:Slider({
+    Title = "CONTRASTE",
+    Icon = "contrast",
+    Step = 0.05,
+    Value = { Min = -0.2, Max = 0.3, Default = 0 },
+    Callback = function(value)
+        Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION").Contrast = math.clamp(tonumber(value) or 0, -0.2, 0.3)
+    end
+})
+Visuales:Button({
+    Title = "RESTABLECER COLORES",
+    Icon = "rotate-ccw",
+    Callback = function()
+        local effect = Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION")
+        if not effect then return end
+        effect.Saturation = 0.35
+        effect.Contrast = 0
+        effect.Enabled = false
+    end
+})
 
 Visuales:Toggle({
     Title = "ESP HIGHLIGHT",
