@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body class="is-loading">
 <title>Matrix Hub</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap">
@@ -155,8 +155,97 @@ button.ghost:hover { box-shadow: 0 0 26px rgba(224,164,88,.55); }
   h1::before, h1::after { animation: none; opacity: 0; }
   button { transition: none; }
 }
+
+/* ---------- intro de carga MATRIX HUB ---------- */
+body.is-loading main {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .45s ease;
+}
+body:not(.is-loading) main {
+  visibility: visible;
+  opacity: 1;
+}
+#matrix-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 10, 5, .94);
+  transition: opacity .45s ease, visibility .45s ease;
+}
+#matrix-loader.is-done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.matrix-loader-inner {
+  width: min(100%, 760px);
+  text-align: center;
+}
+.matrix-loader-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .04em;
+  min-height: 1.2em;
+  color: var(--green);
+  font-family: var(--display);
+  font-size: clamp(2.3rem, 11vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .02em;
+  text-shadow: 0 0 18px rgba(0,255,106,.65);
+}
+.matrix-loader-title .matrix-letter { display: inline-block; min-width: .62em; }
+.matrix-loader-title .matrix-space { min-width: .3em; }
+.matrix-loader-status {
+  margin-top: 22px;
+  color: var(--green-dim);
+  font: 11px var(--mono);
+  letter-spacing: .24em;
+  text-transform: uppercase;
+}
+.matrix-loader-track {
+  width: min(320px, 78vw);
+  height: 2px;
+  margin: 14px auto 0;
+  overflow: hidden;
+  background: rgba(0,255,106,.16);
+}
+.matrix-loader-progress {
+  width: 0;
+  height: 100%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  transition: width .12s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  #matrix-loader, body.is-loading main { transition: none; }
+}
 </style>
 
+<div id="matrix-loader" role="status" aria-label="Cargando Matrix Hub">
+  <div class="matrix-loader-inner">
+    <div class="matrix-loader-title" aria-hidden="true">
+      <span class="matrix-letter" data-final="M">?</span>
+      <span class="matrix-letter" data-final="A">?</span>
+      <span class="matrix-letter" data-final="T">?</span>
+      <span class="matrix-letter" data-final="R">?</span>
+      <span class="matrix-letter" data-final="I">?</span>
+      <span class="matrix-letter" data-final="X">?</span>
+      <span class="matrix-space" aria-hidden="true">&nbsp;</span>
+      <span class="matrix-letter" data-final="H">?</span>
+      <span class="matrix-letter" data-final="U">?</span>
+      <span class="matrix-letter" data-final="B">?</span>
+    </div>
+    <div class="matrix-loader-status">Inicializando sistema...</div>
+    <div class="matrix-loader-track"><div class="matrix-loader-progress"></div></div>
+  </div>
+</div>
 <canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="cookies" aria-hidden="true"></canvas>
 
@@ -328,4 +417,71 @@ button.ghost:hover { box-shadow: 0 0 26px rgba(224,164,88,.55); }
 })();
 </script>
 
+<script>
+(function () {
+  var loader = document.getElementById('matrix-loader');
+  if (!loader) return;
+  var letters = Array.prototype.slice.call(loader.querySelectorAll('.matrix-letter'));
+  var progress = loader.querySelector('.matrix-loader-progress');
+  var status = loader.querySelector('.matrix-loader-status');
+  var glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789アイウエオカキクケコサシスセソ<>/{}$#';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function revealPanel() {
+    progress.style.width = '100%';
+    status.textContent = 'Acceso concedido';
+    window.setTimeout(function () {
+      loader.classList.add('is-done');
+      document.body.classList.remove('is-loading');
+      window.setTimeout(function () { loader.remove(); }, 500);
+    }, reduced ? 0 : 280);
+  }
+
+  if (reduced) {
+    letters.forEach(function (el) { el.textContent = el.getAttribute('data-final'); });
+    revealPanel();
+    return;
+  }
+
+  var startedAt = performance.now();
+  var startDelays = letters.map(function () { return Math.random() * 650; });
+  var durations = letters.map(function () { return 850 + Math.random() * 850; });
+  var lastChanges = letters.map(function () { return 0; });
+  var finished = 0;
+  var totalTime = Math.max.apply(null, startDelays.map(function (d, i) { return d + durations[i]; }));
+
+  function tick(now) {
+    var elapsed = now - startedAt;
+    finished = 0;
+
+    letters.forEach(function (el, i) {
+      var local = elapsed - startDelays[i];
+      var target = el.getAttribute('data-final');
+      if (local >= durations[i]) {
+        if (el.textContent !== target) el.textContent = target;
+        el.classList.add('is-settled');
+        finished++;
+        return;
+      }
+      if (local < 0) {
+        el.textContent = glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+        return;
+      }
+      if (now - lastChanges[i] > 48) {
+        el.textContent = glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+        lastChanges[i] = now;
+      }
+    });
+
+    progress.style.width = Math.min(99, (elapsed / totalTime) * 100) + '%';
+    if (finished === letters.length) {
+      revealPanel();
+    } else {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  requestAnimationFrame(tick);
+})();
+</script>
 </body></html>
