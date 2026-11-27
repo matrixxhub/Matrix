@@ -2101,6 +2101,114 @@ esPistola = function(tool)
     if not tool or not tool:IsA("Tool") then return false end
     return tool:FindFirstChild("showBeam") ~= nil
 end
+
+-- MATRIXHUB // DETECTOR DEFENSIVO DE POSIBLE KILL ALL
+-- Solo observa eliminaciones atribuidas por el juego; no sanciona ni interviene.
+do
+    local StarterGui = game:GetService("StarterGui")
+    local detectorKills = {}
+    local detectorLastAlert = {}
+    local detectorHooked = setmetatable({}, { __mode = "k" })
+    local detectorConnections = {}
+
+    local function detectorGetKiller(humanoid)
+        for _, tagName in ipairs({"creator", "Creator", "killer", "Killer", "LastDamager"}) do
+            local tag = humanoid:FindFirstChild(tagName)
+            if tag and tag:IsA("ObjectValue") and tag.Value and tag.Value:IsA("Player") then
+                return tag.Value
+            end
+        end
+        return nil
+    end
+
+    local function detectorGetWeapon(attacker)
+        local character = attacker.Character
+        local backpack = attacker:FindFirstChildOfClass("Backpack")
+        local containers = {character, backpack}
+        for _, container in ipairs(containers) do
+            if container then
+                for _, item in ipairs(container:GetChildren()) do
+                    if item:IsA("Tool") then
+                        if esCuchillo(item) then return "Cuchillo" end
+                        if esPistola(item) then return "Pistola" end
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
+    local function detectorNotify(attacker, weapon)
+        local now = os.clock()
+        local last = detectorLastAlert[attacker] or 0
+        if now - last < 20 then return end
+        detectorLastAlert[attacker] = now
+        local message = "Posible Kill All con " .. weapon .. ": " .. attacker.Name
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "MATRIX HUB | ALERTA",
+                Text = message,
+                Duration = 5
+            })
+        end)
+    end
+
+    local function detectorRecordKill(attacker)
+        if not attacker or attacker == player or not attacker.Parent then return end
+        local weapon = detectorGetWeapon(attacker)
+        if not weapon then return end
+
+        local now = os.clock()
+        local state = detectorKills[attacker]
+        if not state or state.weapon ~= weapon then
+            state = {weapon = weapon, times = {}}
+            detectorKills[attacker] = state
+        end
+
+        local kept = {}
+        for _, stamp in ipairs(state.times) do
+            if now - stamp <= 4 then kept[#kept + 1] = stamp end
+        end
+        kept[#kept + 1] = now
+        state.times = kept
+
+        if #kept >= 3 then
+            detectorNotify(attacker, weapon)
+            state.times = {}
+        end
+    end
+
+    local function detectorHookCharacter(targetPlayer, character)
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+            or character:WaitForChild("Humanoid", 5)
+        if not humanoid or detectorHooked[humanoid] then return end
+        detectorHooked[humanoid] = true
+        humanoid.Died:Connect(function()
+            local attacker = detectorGetKiller(humanoid)
+            if attacker then detectorRecordKill(attacker) end
+        end)
+    end
+
+    local function detectorHookPlayer(targetPlayer)
+        if not targetPlayer or targetPlayer == player then return end
+        if targetPlayer.Character then
+            task.spawn(detectorHookCharacter, targetPlayer, targetPlayer.Character)
+        end
+        detectorConnections[#detectorConnections + 1] = targetPlayer.CharacterAdded:Connect(function(character)
+            task.spawn(detectorHookCharacter, targetPlayer, character)
+        end)
+    end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        detectorHookPlayer(targetPlayer)
+    end
+    detectorConnections[#detectorConnections + 1] = Players.PlayerAdded:Connect(detectorHookPlayer)
+    detectorConnections[#detectorConnections + 1] = Players.PlayerRemoving:Connect(function(targetPlayer)
+        detectorKills[targetPlayer] = nil
+        detectorLastAlert[targetPlayer] = nil
+    end)
+end
 end
 startTargetMonitor()
 
