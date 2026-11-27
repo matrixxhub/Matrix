@@ -75,7 +75,7 @@ startupTitle.Position = UDim2.fromScale(0.5, 0.5)
 startupTitle.Size = UDim2.new(0.94, 0, 0, 78)
 startupTitle.BackgroundTransparency = 1
 startupTitle.Font = Enum.Font.GothamBlack
-startupTitle.Text = "MATRIXHUB"
+startupTitle.Text = "MATRIX HUB"
 startupTitle.TextColor3 = Color3.fromRGB(120, 255, 175)
 startupTitle.TextSize = 48
 startupTitle.TextScaled = true
@@ -88,6 +88,51 @@ local titleConstraint = Instance.new("UITextSizeConstraint")
 titleConstraint.MinTextSize = 25
 titleConstraint.MaxTextSize = 48
 titleConstraint.Parent = startupTitle
+
+-- Cada carácter se descifra por separado y queda fijado antes del siguiente.
+local startupTitleTarget = "MATRIX HUB"
+local startupTitleAnimationDone = false
+task.spawn(function()
+    local settledCount = 0
+    for index = 1, #startupTitleTarget do
+        local targetChar = startupTitleTarget:sub(index, index)
+        if targetChar == " " then
+            settledCount = index
+        else
+            local scrambleSteps = startupRandom:NextInteger(6, 10)
+            for _ = 1, scrambleSteps do
+                local display = {}
+                for position = 1, #startupTitleTarget do
+                    local char = startupTitleTarget:sub(position, position)
+                    if position <= settledCount or char == " " then
+                        display[position] = char
+                    elseif position == index then
+                        display[position] = startupGlyphs[startupRandom:NextInteger(1, #startupGlyphs)]
+                    else
+                        display[position] = startupGlyphs[startupRandom:NextInteger(1, #startupGlyphs)]
+                    end
+                end
+                startupTitle.Text = table.concat(display)
+                task.wait(0.045)
+            end
+            settledCount = index
+        end
+
+        local display = {}
+        for position = 1, #startupTitleTarget do
+            local char = startupTitleTarget:sub(position, position)
+            if position <= settledCount or char == " " then
+                display[position] = char
+            else
+                display[position] = startupGlyphs[startupRandom:NextInteger(1, #startupGlyphs)]
+            end
+        end
+        startupTitle.Text = table.concat(display)
+        task.wait(0.06)
+    end
+    startupTitle.Text = startupTitleTarget
+    startupTitleAnimationDone = true
+end)
 
 local startupSubtitle = Instance.new("TextLabel")
 startupSubtitle.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -5157,6 +5202,10 @@ task.spawn(function()
     local minimumDisplayTime = 3.5
     if elapsed < minimumDisplayTime then
         task.wait(minimumDisplayTime - elapsed)
+    end
+    -- El panel no se revela hasta que termine la animación de todas las letras.
+    while not startupTitleAnimationDone do
+        task.wait(0.05)
     end
     -- Mantener la ventana oculta hasta que el splash haya desaparecido.
     if startupWindowMain and startupWindowMain.Parent then
