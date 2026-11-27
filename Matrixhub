@@ -4672,6 +4672,165 @@ Otros:Button({
     end
 })
 
+
+-- MATRIXHUB // MACRO TÁCTIL SLOT 2
+-- Módulo independiente: no modifica el Auto Clicker ni sus variables.
+local MatrixMacroPlayers = game:GetService("Players")
+local MatrixMacroUIS = game:GetService("UserInputService")
+local MatrixMacroRunService = game:GetService("RunService")
+local MatrixMacroVIM = game:GetService("VirtualInputManager")
+local MatrixMacroHttp = game:GetService("HttpService")
+local MatrixMacroPlayer = MatrixMacroPlayers.LocalPlayer
+local MATRIXHUB_MACRO_CONFIG_FILE = "MatrixHub_MacroSlot2.json"
+local MATRIXHUB_MACRO_CONFIG = { Enabled = false, DelayEnabled = false, Delay = 0.05 }
+local MATRIXHUB_MacroRunning = false
+local MATRIXHUB_MacroRunId = 0
+local MATRIXHUB_MacroConnections = {}
+
+local function MatrixMacroLoadConfig()
+    local ok, data = pcall(function()
+        if type(isfile) == "function" and isfile(MATRIXHUB_MACRO_CONFIG_FILE) then
+            return MatrixMacroHttp:JSONDecode(readfile(MATRIXHUB_MACRO_CONFIG_FILE))
+        end
+    end)
+    if ok and type(data) == "table" then
+        if type(data.Enabled) == "boolean" then MATRIXHUB_MACRO_CONFIG.Enabled = data.Enabled end
+        if type(data.DelayEnabled) == "boolean" then MATRIXHUB_MACRO_CONFIG.DelayEnabled = data.DelayEnabled end
+        if type(data.Delay) == "number" then MATRIXHUB_MACRO_CONFIG.Delay = math.clamp(data.Delay, 0, 5) end
+    end
+end
+
+local function MatrixMacroSaveConfig()
+    pcall(function()
+        if type(writefile) == "function" then
+            writefile(MATRIXHUB_MACRO_CONFIG_FILE, MatrixMacroHttp:JSONEncode(MATRIXHUB_MACRO_CONFIG))
+        end
+    end)
+end
+MatrixMacroLoadConfig()
+
+local function MatrixMacroGetHumanoid()
+    local character = MatrixMacroPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health > 0 then return humanoid, character end
+    return nil, nil
+end
+
+local function MatrixMacroGetEquippedTool(character)
+    return character and character:FindFirstChildOfClass("Tool")
+end
+
+local function MatrixMacroWaitForTool(character, runId, timeout)
+    local started = os.clock()
+    while os.clock() - started < timeout do
+        if runId ~= MATRIXHUB_MacroRunId then return nil end
+        local tool = MatrixMacroGetEquippedTool(character)
+        if tool then return tool end
+        MatrixMacroRunService.Heartbeat:Wait()
+    end
+    return nil
+end
+
+local function MatrixMacroPressKey(key)
+    MatrixMacroVIM:SendKeyEvent(true, key, false, game)
+    MatrixMacroVIM:SendKeyEvent(false, key, false, game)
+end
+
+local function MatrixMacroClickAt(position)
+    MatrixMacroVIM:SendMouseButtonEvent(position.X, position.Y, 0, true, game, 0)
+    MatrixMacroVIM:SendMouseButtonEvent(position.X, position.Y, 0, false, game, 0)
+end
+
+local function MatrixMacroExecute(position)
+    if MATRIXHUB_MacroRunning or not MATRIXHUB_MACRO_CONFIG.Enabled then return end
+    local humanoid, character = MatrixMacroGetHumanoid()
+    if not humanoid then return end
+
+    MATRIXHUB_MacroRunning = true
+    MATRIXHUB_MacroRunId += 1
+    local thisRun = MATRIXHUB_MacroRunId
+    local ok, err = pcall(function()
+        humanoid:UnequipTools()
+        MatrixMacroRunService.Heartbeat:Wait()
+        if thisRun ~= MATRIXHUB_MacroRunId then return end
+
+        MatrixMacroPressKey(Enum.KeyCode.Two)
+        local tool = MatrixMacroWaitForTool(character, thisRun, 0.35)
+        if not tool or thisRun ~= MATRIXHUB_MacroRunId then return end
+
+        if MATRIXHUB_MACRO_CONFIG.DelayEnabled and MATRIXHUB_MACRO_CONFIG.Delay > 0 then
+            task.wait(MATRIXHUB_MACRO_CONFIG.Delay)
+            if thisRun ~= MATRIXHUB_MacroRunId then return end
+        end
+
+        local currentHumanoid, currentCharacter = MatrixMacroGetHumanoid()
+        if not currentHumanoid or currentCharacter ~= character or tool.Parent ~= character then return end
+        MatrixMacroClickAt(position)
+        pcall(function() tool:Activate() end)
+    end)
+
+    pcall(function()
+        local currentHumanoid = MatrixMacroGetHumanoid()
+        if currentHumanoid then currentHumanoid:UnequipTools() end
+    end)
+    MATRIXHUB_MacroRunning = false
+    if not ok then warn("[Matrix Hub Macro Slot 2] " .. tostring(err)) end
+end
+
+local macroTouchConnection = MatrixMacroUIS.TouchTapInWorld:Connect(function(position, processedByUI)
+    if processedByUI or not MATRIXHUB_MACRO_CONFIG.Enabled or not MatrixMacroUIS.TouchEnabled then return end
+    task.spawn(MatrixMacroExecute, position)
+end)
+table.insert(MATRIXHUB_MacroConnections, macroTouchConnection)
+
+local function MatrixMacroOnCharacter(character)
+    MATRIXHUB_MacroRunId += 1
+    MATRIXHUB_MacroRunning = false
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if humanoid then
+        table.insert(MATRIXHUB_MacroConnections, humanoid.Died:Connect(function()
+            MATRIXHUB_MacroRunId += 1
+            MATRIXHUB_MacroRunning = false
+        end))
+    end
+end
+table.insert(MATRIXHUB_MacroConnections, MatrixMacroPlayer.CharacterAdded:Connect(MatrixMacroOnCharacter))
+if MatrixMacroPlayer.Character then task.spawn(MatrixMacroOnCharacter, MatrixMacroPlayer.Character) end
+
+Otros:Section({ Title = "MACRO TÁCTIL // SLOT 2", Icon = "smartphone", Opened = true })
+Otros:Paragraph({
+    Title = "ACTIVACIÓN TÁCTIL",
+    Desc = "Al detectar un toque corto en el mundo, intenta equipar la herramienta del espacio 2, ejecutar la acción y guardarla. Ignora toques procesados por la interfaz."
+})
+Otros:Toggle({
+    Title = "ACTIVAR MACRO TÁCTIL",
+    Icon = "hand",
+    Value = MATRIXHUB_MACRO_CONFIG.Enabled,
+    Callback = function(enabled)
+        MATRIXHUB_MACRO_CONFIG.Enabled = enabled == true
+        MatrixMacroSaveConfig()
+    end
+})
+Otros:Toggle({
+    Title = "ACTIVAR DELAY",
+    Icon = "timer",
+    Value = MATRIXHUB_MACRO_CONFIG.DelayEnabled,
+    Callback = function(enabled)
+        MATRIXHUB_MACRO_CONFIG.DelayEnabled = enabled == true
+        MatrixMacroSaveConfig()
+    end
+})
+Otros:Input({
+    Title = "DELAY (SEGUNDOS)",
+    Value = tostring(MATRIXHUB_MACRO_CONFIG.Delay),
+    Placeholder = "0.05",
+    Callback = function(value)
+        local delayValue = tonumber(value)
+        if delayValue then MATRIXHUB_MACRO_CONFIG.Delay = math.clamp(delayValue, 0, 5) end
+        MatrixMacroSaveConfig()
+    end
+})
+
 Otros:Section({ Title = "MODO STREAMER", Icon = "user-x" })
 
 local spoofNameText = "MATRIXHUB"
