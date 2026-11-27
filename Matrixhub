@@ -1917,7 +1917,7 @@ AntiBanLive:Button({
     Icon = "log-out",
     Callback = function()
         local now = os.clock()
-        if now - privacyExitWindowStart > 2.5 then
+        if privacyExitTapCount == 0 or now - privacyExitWindowStart > 2.5 then
             privacyExitTapCount = 0
             privacyExitWindowStart = now
         end
