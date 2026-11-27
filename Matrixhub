@@ -3065,18 +3065,18 @@ do
 
     local touchMacroInfo = Botones:Paragraph({
         Title = "MACRO TÁCTIL",
-        Desc = "ESTADO: OFF\\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) ..
-            " s\\nActiva la segunda herramienta (orden alfabético) al tocar fuera de los botones de la interfaz."
+        Desc = "ESTADO: OFF\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) ..
+            " s\nActiva la segunda herramienta (orden alfabético) al tocar fuera de los botones de la interfaz."
     })
 
     local function MATRIXHUB_UpdateTouchMacroInfo(message)
         local status = touchMacroEnabled and "ON" or "OFF"
-        local extra = message and ("\\n" .. tostring(message)) or ""
+        local extra = message and ("\n" .. tostring(message)) or ""
         pcall(function()
             touchMacroInfo:SetDesc(
                 "ESTADO: " .. status ..
-                "\\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) .. " s" ..
-                "\\nDURACIÓN: " .. string.format("%.1f", TOUCH_MACRO_DURATION) .. " s" ..
+                "\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) .. " s" ..
+                "\nDURACIÓN: " .. string.format("%.1f", TOUCH_MACRO_DURATION) .. " s" ..
                 extra
             )
         end)
