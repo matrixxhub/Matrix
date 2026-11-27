@@ -1043,6 +1043,7 @@ local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
+local AntiBanLive = MATRIXHUB:Tab({ Title = "ANTI BAN LIVE", Icon = "shield-check" })
 local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
  
 -- MATRIXHUB // CREDITOS
@@ -1902,7 +1903,39 @@ Otros:Button({
     end
 })
 
-
+-- PRIVACY EXIT // salida voluntaria con confirmación por 5 pulsaciones.
+-- El control permanece visible y discreto; no se activa mediante una zona oculta.
+AntiBanLive:Section({ Title = "PRIVACIDAD", Icon = "lock", Opened = true })
+local privacyExitTapCount = 0
+local privacyExitWindowStart = 0
+local privacyExitInfo = AntiBanLive:Paragraph({
+    Title = "PRIVACY EXIT",
+    Desc = "Pulsa el botón 5 veces en un máximo de 2.5 segundos para salir."
+})
+AntiBanLive:Button({
+    Title = "PRIVACY EXIT // 5 TOQUES",
+    Icon = "log-out",
+    Callback = function()
+        local now = os.clock()
+        if now - privacyExitWindowStart > 2.5 then
+            privacyExitTapCount = 0
+            privacyExitWindowStart = now
+        end
+        privacyExitTapCount += 1
+        if privacyExitTapCount >= 5 then
+            privacyExitTapCount = 0
+            pcall(function()
+                privacyExitInfo:SetDesc("Protección de privacidad. Cerrando la sesión...")
+            end)
+            task.wait(0.1)
+            LocalPlayer:Kick("Protección de privacidad")
+        else
+            pcall(function()
+                privacyExitInfo:SetDesc(("Toques: %d/5. Tiempo máximo: 2.5 segundos."):format(privacyExitTapCount))
+            end)
+        end
+    end
+})
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4371,8 +4404,8 @@ local function MATRIXHUB_SetFakeHeadless(enabled)
     end
 end
 
-Animaciones:Section({ Title = "APARIENCIA FALSA // LOCAL", Icon = "user-round", Opened = true })
-Animaciones:Toggle({
+AntiBanLive:Section({ Title = "AVATAR Y APARIENCIA", Icon = "user-round", Opened = true })
+AntiBanLive:Toggle({
     Title = "FAKE HEADLESS",
     Icon = "eye-off",
     Value = false,
@@ -4492,14 +4525,14 @@ LocalPlayer01.CharacterAdded:Connect(function(char)
     mount01(char,hum,State01.template)
 end)
 local userParaCopiar01 = "Loser"
-Animaciones:Section({ Title = "AVATAR", Icon = "user" })
-Animaciones:Input({
+AntiBanLive:Section({ Title = "CAMBIO DE AVATAR", Icon = "user" })
+AntiBanLive:Input({
     Title = "COPY AVATAR BETA",
     Callback = function(text)
         userParaCopiar01 = text
     end
 })
-Animaciones:Button({
+AntiBanLive:Button({
     Title = "COPIAR AVATAR",
     Icon = "copy",
     Callback = function()
@@ -4511,7 +4544,7 @@ Animaciones:Button({
         end)
     end
 })
-Animaciones:Button({
+AntiBanLive:Button({
     Title = "QUITAR AVATAR",
     Icon = "trash",
     Callback = function()
@@ -4717,7 +4750,7 @@ local function watchNameRoot(root)
     end)
 end
 
-Otros:Toggle({
+AntiBanLive:Toggle({
     Title = "OCULTAR NOMBRE",
     Value = false,
     Callback = function(state)
@@ -4747,7 +4780,7 @@ Otros:Toggle({
     end
 })
 
-Otros:Input({
+AntiBanLive:Input({
     Title = "NOMBRE FALSO",
     Placeholder = "XXX-XXXX-XXX",
     Value = "MATRIXHUB",
