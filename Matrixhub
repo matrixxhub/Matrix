@@ -3061,11 +3061,12 @@ do
     local touchMacroBusy = false
     local touchMacroLastFinish = 0
     local touchMacroCharacterVersion = 0
+    local touchMacroRunId = 0
 
     local touchMacroInfo = Botones:Paragraph({
         Title = "MACRO TÁCTIL",
         Desc = "ESTADO: OFF\\nDELAY: " .. string.format("%.1f", TOUCH_MACRO_DELAY) ..
-            " s\\nActiva la segunda herramienta al tocar fuera de los botones de la interfaz."
+            " s\\nActiva la segunda herramienta (orden alfabético) al tocar fuera de los botones de la interfaz."
     })
 
     local function MATRIXHUB_UpdateTouchMacroInfo(message)
@@ -3134,6 +3135,8 @@ do
         end
 
         touchMacroBusy = true
+        touchMacroRunId += 1
+        local runId = touchMacroRunId
         local characterVersion = touchMacroCharacterVersion
         local ok, err = pcall(function()
             if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
@@ -3141,7 +3144,7 @@ do
 
             local equipStarted = os.clock()
             while tool.Parent ~= character do
-                if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
+                if not touchMacroEnabled or runId ~= touchMacroRunId or characterVersion ~= touchMacroCharacterVersion then return end
                 if not character.Parent or humanoid.Health <= 0 or not tool.Parent then return end
                 if os.clock() - equipStarted >= TOUCH_MACRO_EQUIP_TIMEOUT then
                     MATRIXHUB_UpdateTouchMacroInfo("No se pudo equipar la herramienta a tiempo.")
@@ -3150,7 +3153,7 @@ do
                 task.wait(0.05)
             end
 
-            if not touchMacroEnabled or characterVersion ~= touchMacroCharacterVersion then return end
+            if not touchMacroEnabled or runId ~= touchMacroRunId or characterVersion ~= touchMacroCharacterVersion then return end
             if humanoid.Health <= 0 or tool.Parent ~= character then return end
             tool:Activate()
             task.wait(TOUCH_MACRO_DURATION)
@@ -3165,8 +3168,10 @@ do
             end)
         end
 
-        touchMacroBusy = false
-        touchMacroLastFinish = os.clock()
+        if runId == touchMacroRunId then
+            touchMacroBusy = false
+            touchMacroLastFinish = os.clock()
+        end
         if not ok then
             RecordMatrixHubError("MACRO TÁCTIL SLOT 2", err)
             warn("[Matrix Hub] Macro táctil Slot 2: " .. tostring(err))
@@ -3185,6 +3190,7 @@ do
 
     LocalPlayer.CharacterAdded:Connect(function()
         touchMacroCharacterVersion += 1
+        touchMacroRunId += 1
         touchMacroBusy = false
         touchMacroLastFinish = 0
     end)
