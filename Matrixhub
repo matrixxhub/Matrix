@@ -3673,60 +3673,60 @@ for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then if p.Character then 
 Players.PlayerAdded:Connect(function(p) if p ~= LP then if p.Character then WatchServerDeath(p.Character) end p.CharacterAdded:Connect(function(c) WatchServerDeath(c) end) end end)
 Visuales:Section({ Title = "VISUAL ENGINE", Icon = "eye", Opened = true })
 
--- SATURACIÓN VISUAL: postprocesado local; no modifica texturas ni assets del juego.
-local saturationEffectName = "MATRIXHUB_LOCAL_COLOR_CORRECTION"
-local previousSaturationEffect = Lighting:FindFirstChild(saturationEffectName)
-if previousSaturationEffect then
-    previousSaturationEffect:Destroy()
+-- SATURACIÓN VISUAL: postprocesado local; no modifica assets del juego.
+do
+    local saturationEffect = Lighting:FindFirstChild("MATRIXHUB_LOCAL_COLOR_CORRECTION")
+    if not saturationEffect then
+        saturationEffect = Instance.new("ColorCorrectionEffect")
+        saturationEffect.Name = "MATRIXHUB_LOCAL_COLOR_CORRECTION"
+        saturationEffect.Parent = Lighting
+    end
+    saturationEffect.Enabled = false
+    saturationEffect.Saturation = 0.35
+    saturationEffect.Contrast = 0
+
+    Visuales:Section({ Title = "TEXTURAS // SATURACIÓN", Icon = "palette", Opened = true })
+    Visuales:Paragraph({
+        Title = "MEJORA DE COLOR",
+        Desc = "Intensifica los colores visibles mediante un filtro visual local. No reemplaza ni edita las texturas originales."
+    })
+    Visuales:Toggle({
+        Title = "ACTIVAR SATURACIÓN",
+        Icon = "droplets",
+        Value = false,
+        Callback = function(enabled)
+            saturationEffect.Enabled = enabled == true
+        end
+    })
+    Visuales:Slider({
+        Title = "INTENSIDAD DE SATURACIÓN",
+        Icon = "palette",
+        Step = 0.05,
+        Value = { Min = 0, Max = 1, Default = 0.35 },
+        Callback = function(value)
+            saturationEffect.Saturation = math.clamp(tonumber(value) or 0.35, 0, 1)
+        end
+    })
+    Visuales:Slider({
+        Title = "CONTRASTE",
+        Icon = "contrast",
+        Step = 0.05,
+        Value = { Min = -0.2, Max = 0.3, Default = 0 },
+        Callback = function(value)
+            saturationEffect.Contrast = math.clamp(tonumber(value) or 0, -0.2, 0.3)
+        end
+    })
+    Visuales:Button({
+        Title = "RESTABLECER COLORES",
+        Icon = "rotate-ccw",
+        Callback = function()
+            saturationEffect.Saturation = 0.35
+            saturationEffect.Contrast = 0
+            saturationEffect.Enabled = false
+        end
+    })
 end
 
-local saturationEffect = Instance.new("ColorCorrectionEffect")
-saturationEffect.Name = saturationEffectName
-saturationEffect.Enabled = false
-saturationEffect.Saturation = 0.35
-saturationEffect.Contrast = 0
-saturationEffect.Parent = Lighting
-
-Visuales:Section({ Title = "TEXTURAS // SATURACIÓN", Icon = "palette", Opened = true })
-Visuales:Paragraph({
-    Title = "MEJORA DE COLOR",
-    Desc = "Intensifica los colores visibles mediante un filtro visual local. No reemplaza ni edita las texturas originales."
-})
-Visuales:Toggle({
-    Title = "ACTIVAR SATURACIÓN",
-    Icon = "droplets",
-    Value = false,
-    Callback = function(enabled)
-        saturationEffect.Enabled = enabled == true
-    end
-})
-Visuales:Slider({
-    Title = "INTENSIDAD DE SATURACIÓN",
-    Icon = "palette",
-    Step = 0.05,
-    Value = { Min = 0, Max = 1, Default = 0.35 },
-    Callback = function(value)
-        saturationEffect.Saturation = math.clamp(tonumber(value) or 0.35, 0, 1)
-    end
-})
-Visuales:Slider({
-    Title = "CONTRASTE",
-    Icon = "contrast",
-    Step = 0.05,
-    Value = { Min = -0.2, Max = 0.3, Default = 0 },
-    Callback = function(value)
-        saturationEffect.Contrast = math.clamp(tonumber(value) or 0, -0.2, 0.3)
-    end
-})
-Visuales:Button({
-    Title = "RESTABLECER COLORES",
-    Icon = "rotate-ccw",
-    Callback = function()
-        saturationEffect.Saturation = 0.35
-        saturationEffect.Contrast = 0
-        saturationEffect.Enabled = false
-    end
-})
 Visuales:Toggle({
     Title = "ESP HIGHLIGHT",
     Value = false,
