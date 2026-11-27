@@ -4066,6 +4066,41 @@ local AllPacks = {
     SuperHero = { idle1="rbxassetid://616111295", idle2="rbxassetid://616113536", walk="rbxassetid://616122287", run="rbxassetid://616117076", jump="rbxassetid://616115533", fall="rbxassetid://616108001" },
     Zombie = { idle1="rbxassetid://616158929", idle2="rbxassetid://616160636", walk="rbxassetid://616168032", run="rbxassetid://616163682", jump="rbxassetid://616161997", fall="rbxassetid://616157476" },
     Confident = { idle1="rbxassetid://1069977950", idle2="rbxassetid://1069987858", walk="rbxassetid://1070017263", run="rbxassetid://1070001516", jump="rbxassetid://1069984524", fall="rbxassetid://1069973677" },
+    Levitation = {
+        idle1="rbxassetid://616006778", idle2="rbxassetid://616008087",
+        walk="rbxassetid://616013216", run="rbxassetid://616010382",
+        jump="rbxassetid://616008936", fall="rbxassetid://616005863",
+        swim="rbxassetid://616011509", swimIdle="rbxassetid://616012453",
+        climb="rbxassetid://616003713"
+    },
+    Mage = {
+        idle1="rbxassetid://707742142", idle2="rbxassetid://707855907",
+        walk="rbxassetid://707897309", run="rbxassetid://707861613",
+        jump="rbxassetid://707853694", fall="rbxassetid://707829716",
+        swim="rbxassetid://707876443", swimIdle="rbxassetid://707894699",
+        climb="rbxassetid://707826056"
+    },
+    Vampire = {
+        idle1="rbxassetid://1083445855", idle2="rbxassetid://1083450166",
+        walk="rbxassetid://1083473930", run="rbxassetid://1083462077",
+        jump="rbxassetid://1083455352", fall="rbxassetid://1083443587",
+        swim="rbxassetid://1083464683", swimIdle="rbxassetid://1083467779",
+        climb="rbxassetid://1083439238"
+    },
+    Werewolf = {
+        idle1="rbxassetid://1083195517", idle2="rbxassetid://1083214717",
+        walk="rbxassetid://1083178339", run="rbxassetid://1083216690",
+        jump="rbxassetid://1083218792", fall="rbxassetid://1083189019",
+        swim="rbxassetid://1083222527", swimIdle="rbxassetid://1083225406",
+        climb="rbxassetid://1083182000"
+    },
+    Oldschool = {
+        idle1="rbxassetid://5319922112", idle2="rbxassetid://5319922112",
+        walk="rbxassetid://5319909330", run="rbxassetid://5319900634",
+        jump="rbxassetid://5319917561", fall="rbxassetid://5319914476",
+        swim="rbxassetid://5319927054", swimIdle="rbxassetid://5319927054",
+        climb="rbxassetid://5319931619"
+    },
 }
 local PackNames = {"Ninguno"} for name in pairs(AllPacks) do table.insert(PackNames, name) end table.sort(PackNames)
 local SelectedPack = "Ninguno"
@@ -4079,6 +4114,9 @@ local AnimationNodes = {
     {Parent = "run", Child = "RunAnim", Key = "run"},
     {Parent = "jump", Child = "JumpAnim", Key = "jump"},
     {Parent = "fall", Child = "FallAnim", Key = "fall"},
+    {Parent = "swim", Child = "Swim", Key = "swim"},
+    {Parent = "swimidle", Child = "SwimIdle", Key = "swimIdle"},
+    {Parent = "climb", Child = "ClimbAnim", Key = "climb"},
 }
 local OriginalAnimationIds = setmetatable({}, {__mode = "k"})
 
@@ -4317,12 +4355,14 @@ Animaciones:Button({ Title = "Restaurar Default", Icon = "rotate-ccw", Callback 
     task.spawn(RestoreDefaultAnims)
 end })
 Animaciones:Section({ Title = "Mezclador de Animaciones", Icon = "layers" })
-local Mix = { Reposo="Ninguno", Caminar="Ninguno", Correr="Ninguno", Saltar="Ninguno", Caer="Ninguno" }
+local Mix = { Reposo="Ninguno", Caminar="Ninguno", Correr="Ninguno", Saltar="Ninguno", Caer="Ninguno", Nadar="Ninguno", Escalar="Ninguno" }
 Animaciones:Dropdown({ Title = "Reposo", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Reposo = v end })
 Animaciones:Dropdown({ Title = "Caminar", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Caminar = v end })
 Animaciones:Dropdown({ Title = "Correr", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Correr = v end })
 Animaciones:Dropdown({ Title = "Saltar", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Saltar = v end })
 Animaciones:Dropdown({ Title = "Caer", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Caer = v end })
+Animaciones:Dropdown({ Title = "Nadar", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Nadar = v end })
+Animaciones:Dropdown({ Title = "Escalar", Values = PackNames, Value = "Ninguno", Callback = function(v) Mix.Escalar = v end })
 Animaciones:Button({ Title = "Combinar y Aplicar", Icon = "sparkles", Callback = function()
     local final = {
         idle1 = AllPacks[Mix.Reposo] and AllPacks[Mix.Reposo].idle1 or "rbxassetid://0",
@@ -4331,6 +4371,9 @@ Animaciones:Button({ Title = "Combinar y Aplicar", Icon = "sparkles", Callback =
         run = AllPacks[Mix.Correr] and AllPacks[Mix.Correr].run or "rbxassetid://0",
         jump = AllPacks[Mix.Saltar] and AllPacks[Mix.Saltar].jump or "rbxassetid://0",
         fall = AllPacks[Mix.Caer] and AllPacks[Mix.Caer].fall or "rbxassetid://0",
+        swim = AllPacks[Mix.Nadar] and AllPacks[Mix.Nadar].swim or "rbxassetid://0",
+        swimIdle = AllPacks[Mix.Nadar] and AllPacks[Mix.Nadar].swimIdle or "rbxassetid://0",
+        climb = AllPacks[Mix.Escalar] and AllPacks[Mix.Escalar].climb or "rbxassetid://0",
     }
     ApplyAnims(final)
 end })
