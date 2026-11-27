@@ -1042,6 +1042,7 @@ local AutoFarm = MATRIXHUB:Tab({ Title = "AUTOMATION", Icon = "coins" })
 local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
+local AntiBan = MATRIXHUB:Tab({ Title = "ANTI BAN", Icon = "shield" })
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
 local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
  
@@ -5185,6 +5186,147 @@ Movimiento:Slider({
     Value = { Min = 0.5, Max = 5, Default = 1.2 },
     Callback = function(v)
         MATRIXHUB_speed = v
+    end
+})
+
+
+-- ANTI BAN // herramientas locales de interfaz y apariencia visual.
+-- Estas opciones solo controlan elementos creados por Matrix Hub en este cliente.
+AntiBan:Section({ Title = "PRIVACIDAD VISUAL", Icon = "eye-off", Opened = true })
+
+local matrixQuickGui = Instance.new("ScreenGui")
+matrixQuickGui.Name = "MATRIXHUB_QUICK_PRIVACY"
+matrixQuickGui.ResetOnSpawn = false
+matrixQuickGui.IgnoreGuiInset = true
+matrixQuickGui.DisplayOrder = 2000000001
+matrixQuickGui.Parent = PlayerGui
+
+local matrixQuickButton = Instance.new("TextButton")
+matrixQuickButton.Name = "QuickHide"
+matrixQuickButton.Size = UDim2.fromOffset(48, 48)
+matrixQuickButton.Position = UDim2.new(1, -68, 0.5, -24)
+matrixQuickButton.BackgroundColor3 = Color3.fromRGB(0, 45, 24)
+matrixQuickButton.TextColor3 = Color3.fromRGB(130, 255, 175)
+matrixQuickButton.Text = "M"
+matrixQuickButton.TextSize = 22
+matrixQuickButton.Font = Enum.Font.GothamBlack
+matrixQuickButton.AutoButtonColor = true
+matrixQuickButton.Parent = matrixQuickGui
+local quickCorner = Instance.new("UICorner")
+quickCorner.CornerRadius = UDim.new(0, 12)
+quickCorner.Parent = matrixQuickButton
+local quickStroke = Instance.new("UIStroke")
+quickStroke.Color = Color3.fromRGB(0, 200, 90)
+quickStroke.Thickness = 1.5
+quickStroke.Parent = matrixQuickButton
+
+local quickTapTimes = {}
+local quickMenuHidden = false
+local emergencyClosed = false
+
+local function setMatrixMenuVisible(visible)
+    if emergencyClosed then return end
+    quickMenuHidden = not visible
+    if startupWindowMain and startupWindowMain.Parent then
+        startupWindowMain.Visible = visible
+    end
+end
+
+local function closeMatrixHubLocal()
+    if emergencyClosed then return end
+    emergencyClosed = true
+    pcall(function() disconnectNameWatcher() end)
+    if startupRainConnection then
+        startupRainConnection:Disconnect()
+        startupRainConnection = nil
+    end
+    if startupWindowGuard then
+        startupWindowGuard:Disconnect()
+        startupWindowGuard = nil
+    end
+    pcall(function()
+        for _, sound in pairs(MatrixUISoundObjects) do
+            if sound then sound:Stop() end
+        end
+    end)
+    pcall(function()
+        if KillSoundPlayer then KillSoundPlayer:Stop() end
+    end)
+    if matrixQuickGui and matrixQuickGui.Parent then
+        matrixQuickGui:Destroy()
+    end
+    if startupGui and startupGui.Parent then
+        startupGui:Destroy()
+    end
+    local matrixScreen = startupWindowMain and startupWindowMain:FindFirstAncestorOfClass("ScreenGui")
+    if matrixScreen and matrixScreen.Parent then
+        matrixScreen:Destroy()
+    elseif startupWindowMain and startupWindowMain.Parent then
+        startupWindowMain:Destroy()
+    end
+end
+
+matrixQuickButton.Activated:Connect(function()
+    if emergencyClosed then return end
+    local now = os.clock()
+    table.insert(quickTapTimes, now)
+    while #quickTapTimes > 0 and now - quickTapTimes[1] > 2 do
+        table.remove(quickTapTimes, 1)
+    end
+    if #quickTapTimes >= 5 then
+        closeMatrixHubLocal()
+        return
+    end
+    setMatrixMenuVisible(quickMenuHidden)
+end)
+
+AntiBan:Toggle({
+    Title = "BOTÓN RÁPIDO VISIBLE",
+    Icon = "app-window",
+    Value = true,
+    Callback = function(enabled)
+        if matrixQuickButton and matrixQuickButton.Parent then
+            matrixQuickButton.Visible = enabled == true
+        end
+    end
+})
+
+AntiBan:Paragraph({
+    Title = "CIERRE DE EMERGENCIA",
+    Desc = "Pulsa el botón flotante M cinco veces en menos de 2 segundos para cerrar Matrix Hub y retirar su interfaz local."
+})
+
+AntiBan:Input({
+    Title = "NOMBRE VISUAL PERSONALIZADO",
+    Placeholder = "Escribe el texto que quieres mostrar",
+    Value = spoofNameText,
+    Callback = function(value)
+        local nextName = tostring(value or "")
+        if nextName == "" or nextName == spoofNameText then return end
+        local previousName = spoofNameText
+        spoofNameText = nextName
+        for label in pairs(modifiedNameLabels) do
+            if label and label.Parent then
+                pcall(function()
+                    label.Text = safeReplace(label.Text, previousName, spoofNameText)
+                end)
+            else
+                modifiedNameLabels[label] = nil
+            end
+        end
+    end
+})
+
+AntiBan:Paragraph({
+    Title = "CAMBIO DE SKIN",
+    Desc = "Las opciones de apariencia y paquetes de personaje están en la pestaña PERSONAJE. Esta sección no altera la apariencia de otros jugadores ni modifica datos del servidor."
+})
+
+AntiBan:Button({
+    Title = "OCULTAR / MOSTRAR MENÚ",
+    Icon = "eye-off",
+    Callback = function()
+        setMatrixMenuVisible(quickMenuHidden)
     end
 })
 
