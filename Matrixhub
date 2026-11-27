@@ -1004,6 +1004,12 @@ local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
 Creditos:Section({ Title = "CRÉDITOS", Icon = "crown", Opened = true })
 
 Creditos:Paragraph({
+    Title = "NOTS1MPLE7 // INSPIRACIÓN INICIAL",
+    Desc = '<font color="#7DFFAF">[APORTE INICIAL]</font>\\nReconocimiento por aportar la idea que ayudó a dar forma al proyecto.',
+    ImageSize = 90
+})
+
+Creditos:Paragraph({
     Title = "SANOX // CREADOR PRINCIPAL",
     Desc = '<font color="#7DFFAF">[CREADOR PRINCIPAL]</font>\nCreador y desarrollador principal de Matrix Hub. Responsable de la dirección del proyecto, sus modificaciones y su evolución.',
     ImageSize = 90
@@ -1015,6 +1021,10 @@ Creditos:Paragraph({
     Image = "rbxassetid://76111147434526",
     ImageSize = 90
 })
+
+Creditos:Section({ Title = "PERSONAS QUE DEJARON HUELLA EN EL CAMINO", Icon = "heart-handshake", Opened = true })
+Creditos:Paragraph({ Title = "juliocliped", Desc = "Agradecimiento por su apoyo durante el desarrollo de Matrix Hub." })
+Creditos:Paragraph({ Title = "pendejo478", Desc = "Agradecimiento por su apoyo durante el desarrollo de Matrix Hub." })
 
 -- AUTOMATION // AUTO FARM HALLOWEEN
 -- Worker único: evita crear varios loops si el usuario apaga/enciende la opción.
@@ -4042,6 +4052,7 @@ RunService.RenderStepped:Connect(function()
 end)
 Players.PlayerRemoving:Connect(function(p) cleanESP(p) end)
 local AllPacks = {
+    Tieso = { walk = "rbxassetid://98277462212808" },
     Astronaut = { idle1= "rbxassetid://891621366", idle2="rbxassetid://891633237", walk="rbxassetid://891667138", run="rbxassetid://891636393", jump="rbxassetid://891627522", fall="rbxassetid://891617961" },
     Bubbly = { idle1="rbxassetid://910004836", idle2="rbxassetid://910009958", walk="rbxassetid://910034870", run="rbxassetid://910025107", jump="rbxassetid://910016857", fall="rbxassetid://910001910" },
     Cartoony = { idle1="rbxassetid://742637544", idle2="rbxassetid://742638445", walk="rbxassetid://742640026", run="rbxassetid://742638842", jump="rbxassetid://742637942", fall="rbxassetid://742637151" },
