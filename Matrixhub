@@ -5254,7 +5254,7 @@ Movimiento:Slider({
 do
     local info = Home:Paragraph({Title = "MATRIX HUB // SERVIDOR", Desc = ("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId))})
     task.spawn(function()
-        while info and info.Parent do
+        while true do
             task.wait(10)
             pcall(function()
                 info:SetDesc(("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId)))
@@ -5331,6 +5331,7 @@ do
     player.Volume = 0.5
     player.Parent = SoundService
     local songs, current = {}, 1
+    local loadGeneration = 0
     local songName, songId, shuffle = "", "", false
     local dropdown
     local function label(s) return s.Name .. " (" .. s.Id .. ")" end
@@ -5344,11 +5345,14 @@ do
         local s = songs[index]
         if not s then return end
         current = index
+        loadGeneration += 1
+        local generation = loadGeneration
         player:Stop()
         player.SoundId = "rbxassetid://" .. s.Id
         task.spawn(function()
             local started = os.clock()
             while os.clock() - started < 10 do
+                if generation ~= loadGeneration then return end
                 if player.IsLoaded or player.TimeLength > 0 then player:Play(); return end
                 task.wait(0.2)
             end
