@@ -1043,6 +1043,8 @@ local AutoKills = MATRIXHUB:Tab({ Title = "AUTO KILL", Icon = "skull" })
 local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
+local Audio = MATRIXHUB:Tab({ Title = "MATRIX AUDIO", Icon = "music" })
+local Perfiles = MATRIXHUB:Tab({ Title = "PERFILES", Icon = "save" })
 local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
  
 -- MATRIXHUB // CREDITOS
@@ -5243,6 +5245,207 @@ Movimiento:Slider({
 })
 
 -- WindUI conserva su apertura normal; el splash la cubre durante la carga.
+
+
+-- MATRIX HUB // MODULOS ADAPTADOS DE OPEN HUB
+-- Se conservan la identidad, las funciones y la persistencia propias de Matrix Hub.
+
+-- INFORMACIÓN DEL SERVIDOR
+do
+    local info = Home:Paragraph({Title = "MATRIX HUB // SERVIDOR", Desc = ("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId))})
+    task.spawn(function()
+        while info and info.Parent do
+            task.wait(10)
+            pcall(function()
+                info:SetDesc(("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId)))
+            end)
+        end
+    end)
+end
+
+-- PERFILES: snapshots de preferencias Matrix, sin reactivar automatizaciones.
+do
+    local folder = "MATRIXHUB/Profiles"
+    local name, selected = "", "Ninguno"
+    local dropdown
+    local function safeName(s) return tostring(s or ""):gsub("[^%w%s%-_]", ""):sub(1, 32) end
+    local function refresh()
+        local values = {"Ninguno"}
+        if type(listfiles) == "function" then
+            local ok, files = pcall(listfiles, folder)
+            if ok and type(files) == "table" then
+                for _, file in ipairs(files) do
+                    local n = tostring(file):match("([^/\\]+)%.json$")
+                    if n then table.insert(values, n) end
+                end
+            end
+        end
+        table.sort(values)
+        if dropdown then pcall(function() dropdown:Refresh(values) end) end
+        if not table.find(values, selected) then selected = "Ninguno" end
+    end
+    Perfiles:Section({Title = "GESTOR DE PERFILES", Icon = "save", Opened = true})
+    Perfiles:Paragraph({Title = "Preferencias Matrix", Desc = "Guarda preferencias de interfaz y accesos. No restaura funciones de juego automáticamente."})
+    Perfiles:Input({Title = "Nombre del perfil", Placeholder = "Mi configuración", Callback = function(v) name = safeName(v) end})
+    dropdown = Perfiles:Dropdown({Title = "Perfil", Values = {"Ninguno"}, Value = "Ninguno", Callback = function(v) selected = v end})
+    Perfiles:Button({Title = "Actualizar lista", Icon = "refresh-cw", Callback = refresh})
+    Perfiles:Button({Title = "Guardar perfil", Icon = "save", Callback = function()
+        if name == "" or type(writefile) ~= "function" then return end
+        if type(makefolder) == "function" then
+            if type(isfolder) ~= "function" or not isfolder("MATRIXHUB") then pcall(makefolder, "MATRIXHUB") end
+            if type(isfolder) ~= "function" or not isfolder(folder) then pcall(makefolder, folder) end
+        end
+        local ok, data = pcall(function() return MatrixHubHttpService:JSONEncode(MATRIXHUB_CONFIG) end)
+        if ok then
+            local wrote = pcall(writefile, folder .. "/" .. name .. ".json", data)
+            if wrote then selected = name; refresh() end
+        end
+    end})
+    Perfiles:Button({Title = "Cargar perfil", Icon = "folder-open", Callback = function()
+        if selected == "Ninguno" or type(readfile) ~= "function" then return end
+        local path = folder .. "/" .. selected .. ".json"
+        if type(isfile) == "function" then local ok, exists = pcall(isfile, path); if not ok or not exists then return end end
+        local ok, raw = pcall(readfile, path)
+        if not ok or type(raw) ~= "string" then return end
+        local decodedOk, saved = pcall(function() return MatrixHubHttpService:JSONDecode(raw) end)
+        if not decodedOk or type(saved) ~= "table" then return end
+        for _, key in ipairs({"UIAudioEnabled", "UIAudioVolume", "UIScale", "AnimationSpeed", "AccentIntensity", "PanelTransparency", "GlowEnabled"}) do
+            if saved[key] ~= nil then MATRIXHUB_CONFIG[key] = saved[key] end
+        end
+        if type(saved.Keybinds) == "table" then
+            for _, key in ipairs({"Menu", "Fly", "Fantasma", "Silent", "AutoShoot"}) do
+                local v = saved.Keybinds[key]
+                if type(v) == "string" and Enum.KeyCode[v] then MATRIXHUB_CONFIG.Keybinds[key] = v end
+            end
+        end
+        SaveMatrixHubConfig(true)
+    end})
+    refresh()
+end
+
+-- REPRODUCTOR LOCAL: lista de IDs que el usuario agregue.
+do
+    local SoundService = game:GetService("SoundService")
+    local player = Instance.new("Sound")
+    player.Name = "MATRIXHUB_AudioPlayer"
+    player.Volume = 0.5
+    player.Parent = SoundService
+    local songs, current = {}, 1
+    local songName, songId, shuffle = "", "", false
+    local dropdown
+    local function label(s) return s.Name .. " (" .. s.Id .. ")" end
+    local function refresh()
+        local values = {}
+        for _, s in ipairs(songs) do table.insert(values, label(s)) end
+        if #values == 0 then values = {"Lista vacía"} end
+        if dropdown then pcall(function() dropdown:Refresh(values) end) end
+    end
+    local function play(index)
+        local s = songs[index]
+        if not s then return end
+        current = index
+        player:Stop()
+        player.SoundId = "rbxassetid://" .. s.Id
+        task.spawn(function()
+            local started = os.clock()
+            while os.clock() - started < 10 do
+                if player.IsLoaded or player.TimeLength > 0 then player:Play(); return end
+                task.wait(0.2)
+            end
+            RecordMatrixHubError("MATRIX AUDIO", "El audio no cargó o no está disponible.")
+        end)
+    end
+    Audio:Section({Title = "MATRIX AUDIO", Icon = "music", Opened = true})
+    dropdown = Audio:Dropdown({Title = "Lista", Values = {"Lista vacía"}, Value = "Lista vacía", Callback = function(v)
+        for i, s in ipairs(songs) do if v == label(s) then current = i break end end
+    end})
+    Audio:Input({Title = "Nombre", Placeholder = "Nombre del audio", Callback = function(v) songName = tostring(v or "") end})
+    Audio:Input({Title = "ID de audio", Placeholder = "ID numérico de Roblox", Callback = function(v) songId = tostring(v or ""):match("%d+") or "" end})
+    Audio:Button({Title = "Añadir a la lista", Icon = "list-plus", Callback = function()
+        if songName == "" or #songId < 6 then return end
+        for _, s in ipairs(songs) do if s.Id == songId then return end end
+        table.insert(songs, {Name = songName:sub(1, 40), Id = songId})
+        current = #songs
+        refresh()
+    end})
+    Audio:Button({Title = "Reproducir", Icon = "play", Callback = function() play(current) end})
+    Audio:Button({Title = "Anterior", Icon = "skip-back", Callback = function()
+        if #songs == 0 then return end
+        current = current - 1
+        if current < 1 then current = #songs end
+        play(current)
+    end})
+    Audio:Button({Title = "Siguiente", Icon = "skip-forward", Callback = function()
+        if #songs == 0 then return end
+        if shuffle then current = math.random(1, #songs) else current = current + 1 end
+        if current > #songs then current = 1 end
+        play(current)
+    end})
+    Audio:Button({Title = "Pausar / reanudar", Icon = "pause", Callback = function()
+        if player.Playing then player:Pause() elseif player.SoundId ~= "" then player:Resume() end
+    end})
+    Audio:Button({Title = "Detener", Icon = "square", Callback = function() player:Stop() end})
+    Audio:Toggle({Title = "Aleatorio", Value = false, Callback = function(v) shuffle = v == true end})
+    Audio:Toggle({Title = "Repetir", Value = false, Callback = function(v) player.Looped = v == true end})
+    Audio:Slider({Title = "Volumen", Value = {Min = 0, Max = 100, Default = 50}, Callback = function(v) player.Volume = math.clamp(v / 100, 0, 1) end})
+    player.Ended:Connect(function()
+        if player.Looped or #songs == 0 then return end
+        if shuffle then current = math.random(1, #songs) else current = current + 1 end
+        if current > #songs then current = 1 end
+        play(current)
+    end)
+end
+
+-- EMOTES R15: solo se detiene el track creado por Matrix Hub.
+do
+    local emotes = {
+        {Name="Wave", Id="507770239", Loop=false}, {Name="Point", Id="507770453", Loop=false},
+        {Name="Cheer", Id="507770677", Loop=false}, {Name="Laugh", Id="507770818", Loop=false},
+        {Name="Dance 1", Id="507771019", Loop=true}, {Name="Dance 2", Id="507776043", Loop=true},
+        {Name="Dance 3", Id="507777268", Loop=true}, {Name="Hype Dance", Id="3695333486", Loop=true},
+        {Name="Around Town", Id="3303391864", Loop=true}, {Name="Line Dance", Id="4049037604", Loop=true}
+    }
+    local selected, customName, customId, customLoop = 1, "", "", true
+    local currentTrack, dropdown
+    local function stop()
+        if currentTrack then pcall(function() currentTrack:Stop(0.15) end); currentTrack = nil end
+    end
+    local function refresh()
+        local values = {}
+        for _, e in ipairs(emotes) do table.insert(values, e.Name .. " (" .. e.Id .. ")") end
+        if dropdown then pcall(function() dropdown:Refresh(values) end) end
+    end
+    Animaciones:Section({Title = "MATRIX EMOTES", Icon = "smile", Opened = true})
+    dropdown = Animaciones:Dropdown({Title = "Seleccionar emote", Values = (function()
+        local t = {}; for _, e in ipairs(emotes) do table.insert(t, e.Name .. " (" .. e.Id .. ")") end; return t
+    end)(), Callback = function(v)
+        for i, e in ipairs(emotes) do if v == e.Name .. " (" .. e.Id .. ")" then selected = i break end end
+    end})
+    Animaciones:Button({Title = "Reproducir emote", Icon = "play", Callback = function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.RigType ~= Enum.HumanoidRigType.R15 then return end
+        local animator = hum:FindFirstChildOfClass("Animator")
+        if not animator then animator = Instance.new("Animator"); animator.Parent = hum end
+        local e = emotes[selected]; if not e then return end
+        stop()
+        local anim = Instance.new("Animation"); anim.AnimationId = "rbxassetid://" .. e.Id
+        local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
+        if ok and track then currentTrack = track; track.Looped = e.Loop; track.Priority = Enum.AnimationPriority.Action; track:Play(0.12) end
+    end})
+    Animaciones:Button({Title = "Detener emote", Icon = "square", Callback = stop})
+    Animaciones:Input({Title = "Emote personalizado", Placeholder = "Nombre", Callback = function(v) customName = tostring(v or "") end})
+    Animaciones:Input({Title = "ID de animación", Placeholder = "Solo números", Callback = function(v) customId = tostring(v or ""):match("%d+") or "" end})
+    Animaciones:Toggle({Title = "Repetir personalizado", Value = true, Callback = function(v) customLoop = v == true end})
+    Animaciones:Button({Title = "Añadir emote", Icon = "plus", Callback = function()
+        if customName == "" or #customId < 6 then return end
+        for _, e in ipairs(emotes) do if e.Id == customId then return end end
+        table.insert(emotes, {Name=customName:sub(1,32), Id=customId, Loop=customLoop})
+        selected = #emotes; refresh()
+    end})
+    LocalPlayer.CharacterAdded:Connect(function() stop() end)
+end
+
 
 end -- FIN DE launchMatrixHub
 
