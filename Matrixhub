@@ -5136,6 +5136,57 @@ Sonidos:Button({
     end
 })
 
+-- MATRIX AUDIO // efecto manual cosmético, independiente de las armas.
+-- No detecta disparos, no escucha herramientas y nunca modifica sonidos del juego.
+local MatrixManualShotProfiles = {
+    ["Revolver"] = "680140087",
+    ["Magia de Anime"] = "109296938403067",
+    ["Láser"] = "4400449399"
+}
+local MatrixManualShotSelected = "Revolver"
+local MatrixManualShotVolume = 1
+local MatrixManualShotPlayer = Instance.new("Sound")
+MatrixManualShotPlayer.Name = "MATRIXHUB_ManualShotEffect"
+MatrixManualShotPlayer.Volume = MatrixManualShotVolume
+MatrixManualShotPlayer.Looped = false
+MatrixManualShotPlayer.Parent = game:GetService("SoundService")
+
+Sonidos:Section({ Title = "EFECTO DE DISPARO // MANUAL", Icon = "volume-2", Opened = true })
+Sonidos:Paragraph({
+    Title = "REPRODUCCIÓN LOCAL",
+    Desc = "Efecto cosmético que solo se reproduce al pulsar el botón. No se conecta a armas ni detecta disparos."
+})
+Sonidos:Dropdown({
+    Title = "PERFIL DE SONIDO",
+    Values = { "Revolver", "Magia de Anime", "Láser" },
+    Value = MatrixManualShotSelected,
+    Callback = function(selected)
+        if MatrixManualShotProfiles[selected] then
+            MatrixManualShotSelected = selected
+        end
+    end
+})
+Sonidos:Slider({
+    Title = "VOLUMEN DEL EFECTO",
+    Value = { Min = 0, Max = 3, Default = MatrixManualShotVolume },
+    Callback = function(value)
+        MatrixManualShotVolume = math.clamp(tonumber(value) or 1, 0, 3)
+        MatrixManualShotPlayer.Volume = MatrixManualShotVolume
+    end
+})
+Sonidos:Button({
+    Title = "REPRODUCIR EFECTO",
+    Icon = "play",
+    Callback = function()
+        local soundId = MatrixManualShotProfiles[MatrixManualShotSelected]
+        if not soundId then return end
+        MatrixManualShotPlayer:Stop()
+        MatrixManualShotPlayer.SoundId = "rbxassetid://" .. soundId
+        MatrixManualShotPlayer.Volume = MatrixManualShotVolume
+        MatrixManualShotPlayer:Play()
+    end
+})
+
 -- MATRIX AUDIO // efectos de interfaz independientes del sonido de muerte.
 Sonidos:Section({ Title = "MATRIX AUDIO // INTERFAZ", Icon = "volume-2", Opened = true })
 Sonidos:Toggle({
