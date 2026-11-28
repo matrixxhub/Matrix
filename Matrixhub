@@ -5137,7 +5137,7 @@ Sonidos:Button({
 })
 
 -- MATRIX AUDIO // efecto manual cosmético, independiente de las armas.
--- No detecta disparos, no escucha herramientas y nunca modifica sonidos del juego.
+-- La creación del Sound se aplaza hasta pulsar reproducir para no afectar el arranque.
 local MatrixManualShotProfiles = {
     ["Revolver"] = "680140087",
     ["Magia de Anime"] = "109296938403067",
@@ -5145,47 +5145,74 @@ local MatrixManualShotProfiles = {
 }
 local MatrixManualShotSelected = "Revolver"
 local MatrixManualShotVolume = 1
-local MatrixManualShotPlayer = Instance.new("Sound")
-MatrixManualShotPlayer.Name = "MATRIXHUB_ManualShotEffect"
-MatrixManualShotPlayer.Volume = MatrixManualShotVolume
-MatrixManualShotPlayer.Looped = false
-MatrixManualShotPlayer.Parent = game:GetService("SoundService")
+local MatrixManualShotPlayer = nil
 
-Sonidos:Section({ Title = "EFECTO DE DISPARO // MANUAL", Icon = "volume-2", Opened = true })
-Sonidos:Paragraph({
-    Title = "REPRODUCCIÓN LOCAL",
-    Desc = "Efecto cosmético que solo se reproduce al pulsar el botón. No se conecta a armas ni detecta disparos."
-})
-Sonidos:Dropdown({
-    Title = "PERFIL DE SONIDO",
-    Values = { "Revolver", "Magia de Anime", "Láser" },
-    Value = MatrixManualShotSelected,
-    Callback = function(selected)
-        if MatrixManualShotProfiles[selected] then
-            MatrixManualShotSelected = selected
+local function MatrixManualShotEnsurePlayer()
+    if MatrixManualShotPlayer and MatrixManualShotPlayer.Parent then
+        return MatrixManualShotPlayer
+    end
+
+    local soundService = game:GetService("SoundService")
+    local sound = Instance.new("Sound")
+    sound.Name = "MATRIXHUB_ManualShotEffect"
+    sound.Volume = MatrixManualShotVolume
+    sound.Looped = false
+    sound.Parent = soundService
+    MatrixManualShotPlayer = sound
+    return sound
+end
+
+-- Un fallo de este módulo no debe detener la construcción del resto del menú.
+local MatrixManualShotUIOk, MatrixManualShotUIError = pcall(function()
+    Sonidos:Section({ Title = "EFECTO DE DISPARO // MANUAL", Icon = "volume-2", Opened = true })
+    Sonidos:Paragraph({
+        Title = "REPRODUCCIÓN LOCAL",
+        Desc = "Efecto cosmético que solo se reproduce al pulsar el botón. No se conecta a armas ni detecta disparos."
+    })
+    Sonidos:Dropdown({
+        Title = "PERFIL DE SONIDO",
+        Values = { "Revolver", "Magia de Anime", "Láser" },
+        Value = MatrixManualShotSelected,
+        Callback = function(selected)
+            if MatrixManualShotProfiles[selected] then
+                MatrixManualShotSelected = selected
+            end
         end
-    end
-})
-Sonidos:Slider({
-    Title = "VOLUMEN DEL EFECTO",
-    Value = { Min = 0, Max = 3, Default = MatrixManualShotVolume },
-    Callback = function(value)
-        MatrixManualShotVolume = math.clamp(tonumber(value) or 1, 0, 3)
-        MatrixManualShotPlayer.Volume = MatrixManualShotVolume
-    end
-})
-Sonidos:Button({
-    Title = "REPRODUCIR EFECTO",
-    Icon = "play",
-    Callback = function()
-        local soundId = MatrixManualShotProfiles[MatrixManualShotSelected]
-        if not soundId then return end
-        MatrixManualShotPlayer:Stop()
-        MatrixManualShotPlayer.SoundId = "rbxassetid://" .. soundId
-        MatrixManualShotPlayer.Volume = MatrixManualShotVolume
-        MatrixManualShotPlayer:Play()
-    end
-})
+    })
+    Sonidos:Slider({
+        Title = "VOLUMEN DEL EFECTO",
+        Value = { Min = 0, Max = 3, Default = MatrixManualShotVolume },
+        Callback = function(value)
+            MatrixManualShotVolume = math.clamp(tonumber(value) or 1, 0, 3)
+            if MatrixManualShotPlayer and MatrixManualShotPlayer.Parent then
+                MatrixManualShotPlayer.Volume = MatrixManualShotVolume
+            end
+        end
+    })
+    Sonidos:Button({
+        Title = "REPRODUCIR EFECTO",
+        Icon = "play",
+        Callback = function()
+            local soundId = MatrixManualShotProfiles[MatrixManualShotSelected]
+            if not soundId then return end
+
+            local ok, err = pcall(function()
+                local player = MatrixManualShotEnsurePlayer()
+                player:Stop()
+                player.SoundId = "rbxassetid://" .. soundId
+                player.Volume = MatrixManualShotVolume
+                player:Play()
+            end)
+            if not ok then
+                warn("[Matrix Hub] No se pudo reproducir el efecto manual: " .. tostring(err))
+            end
+        end
+    })
+end)
+
+if not MatrixManualShotUIOk then
+    warn("[Matrix Hub] No se pudo construir el módulo de sonido manual: " .. tostring(MatrixManualShotUIError))
+end
 
 -- MATRIX AUDIO // efectos de interfaz independientes del sonido de muerte.
 Sonidos:Section({ Title = "MATRIX AUDIO // INTERFAZ", Icon = "volume-2", Opened = true })
