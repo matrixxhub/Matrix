@@ -5252,15 +5252,18 @@ Movimiento:Slider({
 
 -- INFORMACIÓN DEL SERVIDOR
 do
-    local info = Home:Paragraph({Title = "MATRIX HUB // SERVIDOR", Desc = ("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId))})
-    task.spawn(function()
-        while true do
-            task.wait(10)
-            pcall(function()
-                info:SetDesc(("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId)))
-            end)
-        end
-    end)
+    local function serverDescription()
+        return ("PlaceId: %s\nJugadores: %d/%d\nJobId: %s"):format(
+            tostring(game.PlaceId), #Players:GetPlayers(), Players.MaxPlayers, tostring(game.JobId)
+        )
+    end
+    local info = Home:Paragraph({Title = "MATRIX HUB // SERVIDOR", Desc = serverDescription()})
+    local function updateServerInfo()
+        pcall(function() info:SetDesc(serverDescription()) end)
+    end
+    -- El contador solo cambia cuando entra o sale alguien; no hace falta un bucle infinito.
+    Players.PlayerAdded:Connect(updateServerInfo)
+    Players.PlayerRemoving:Connect(updateServerInfo)
 end
 
 -- PERFILES: snapshots de preferencias Matrix, sin reactivar automatizaciones.
@@ -5309,13 +5312,30 @@ do
         if not ok or type(raw) ~= "string" then return end
         local decodedOk, saved = pcall(function() return MatrixHubHttpService:JSONDecode(raw) end)
         if not decodedOk or type(saved) ~= "table" then return end
-        for _, key in ipairs({"UIAudioEnabled", "UIAudioVolume", "UIScale", "AnimationSpeed", "AccentIntensity", "PanelTransparency", "GlowEnabled"}) do
-            if saved[key] ~= nil then MATRIXHUB_CONFIG[key] = saved[key] end
+        -- Solo se aceptan tipos y rangos conocidos; un JSON editado no debe contaminar la configuración.
+        local booleanKeys = {"UIAudioEnabled", "GlowEnabled"}
+        for _, key in ipairs(booleanKeys) do
+            if type(saved[key]) == "boolean" then MATRIXHUB_CONFIG[key] = saved[key] end
         end
-        if type(saved.Keybinds) == "table" then
+        local numericLimits = {
+            UIAudioVolume = {0, 1},
+            UIScale = {0.75, 1.35},
+            AnimationSpeed = {0.5, 1.75},
+            AccentIntensity = {0.35, 1},
+            PanelTransparency = {0, 0.45}
+        }
+        for key, limits in pairs(numericLimits) do
+            local value = saved[key]
+            if type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge then
+                MATRIXHUB_CONFIG[key] = math.clamp(value, limits[1], limits[2])
+            end
+        end
+        if type(saved.Keybinds) == "table" and type(MATRIXHUB_CONFIG.Keybinds) == "table" then
             for _, key in ipairs({"Menu", "Fly", "Fantasma", "Silent", "AutoShoot"}) do
-                local v = saved.Keybinds[key]
-                if type(v) == "string" and Enum.KeyCode[v] then MATRIXHUB_CONFIG.Keybinds[key] = v end
+                local value = saved.Keybinds[key]
+                if type(value) == "string" and #value <= 32 and Enum.KeyCode[value] then
+                    MATRIXHUB_CONFIG.Keybinds[key] = value
+                end
             end
         end
         SaveMatrixHubConfig(true)
@@ -5388,7 +5408,11 @@ do
     Audio:Button({Title = "Pausar / reanudar", Icon = "pause", Callback = function()
         if player.Playing then player:Pause() elseif player.SoundId ~= "" then player:Resume() end
     end})
-    Audio:Button({Title = "Detener", Icon = "square", Callback = function() player:Stop() end})
+    Audio:Button({Title = "Detener", Icon = "square", Callback = function()
+        -- Invalida cualquier carga pendiente para impedir que el audio se reanude solo.
+        loadGeneration += 1
+        player:Stop()
+    end})
     Audio:Toggle({Title = "Aleatorio", Value = false, Callback = function(v) shuffle = v == true end})
     Audio:Toggle({Title = "Repetir", Value = false, Callback = function(v) player.Looped = v == true end})
     Audio:Slider({Title = "Volumen", Value = {Min = 0, Max = 100, Default = 50}, Callback = function(v) player.Volume = math.clamp(v / 100, 0, 1) end})
