@@ -1044,6 +1044,241 @@ local Settings = MATRIXHUB:Tab({ Title = "CONFIGURACIÓN", Icon = "settings" })
 local Otros = MATRIXHUB:Tab({ Title = "OTROS", Icon = "wrench" })
 local Sonidos = MATRIXHUB:Tab({ Title = "SONIDOS", Icon = "volume-2" })
 local Creditos = MATRIXHUB:Tab({ Title = "CRÉDITOS", Icon = "gem" })
+
+
+-- MATRIXHUB // ANTI-CHEAT: PANEL INDEPENDIENTE
+local AntiCheat = MATRIXHUB:Tab({ Title = "ANTI-CHEAT", Icon = "shield-check" })
+
+local AC_ENABLED = false
+local AC_KILLS_ENABLED = true
+local AC_MOVEMENT_ENABLED = true
+local AC_CONNECTIONS = {}
+local AC_WATCHED_STATS = {}
+local AC_KILL_EVENTS = {}
+local AC_MOVEMENT_HISTORY = {}
+local AC_LAST_ALERT = {}
+local AC_LAST_SAMPLE = 0
+local AC_ALERTS = {}
+local AC_MAX_ALERTS = 8
+
+local AC_STATUS = AntiCheat:Paragraph({
+    Title = "ESTADO DEL DETECTOR",
+    Desc = "Monitoreo apagado. Actívalo para observar estadísticas y movimiento replicados."
+})
+local AC_FEED = AntiCheat:Paragraph({
+    Title = "REGISTRO DE ALERTAS",
+    Desc = "Todavía no hay alertas."
+})
+
+local function AC_RefreshFeed()
+    if #AC_ALERTS == 0 then
+        pcall(function() AC_FEED:SetDesc("Todavía no hay alertas.") end)
+        return
+    end
+    pcall(function() AC_FEED:SetDesc(table.concat(AC_ALERTS, "\n\n")) end)
+end
+
+local function AC_Alert(message)
+    table.insert(AC_ALERTS, 1, os.date("%H:%M:%S") .. " | " .. message)
+    while #AC_ALERTS > AC_MAX_ALERTS do
+        table.remove(AC_ALERTS)
+    end
+    AC_RefreshFeed()
+end
+
+local function AC_AddConnection(connection)
+    if connection then
+        table.insert(AC_CONNECTIONS, connection)
+    end
+end
+
+local function AC_ClearConnections()
+    for _, connection in ipairs(AC_CONNECTIONS) do
+        pcall(function() connection:Disconnect() end)
+    end
+    table.clear(AC_CONNECTIONS)
+    table.clear(AC_WATCHED_STATS)
+    table.clear(AC_KILL_EVENTS)
+    table.clear(AC_MOVEMENT_HISTORY)
+    table.clear(AC_LAST_ALERT)
+end
+
+local AC_KILL_NAMES = {
+    kills = true, kill = true, kos = true, ko = true,
+    eliminations = true, elimination = true
+}
+
+local function AC_IsKillStat(object)
+    if not object or not (object:IsA("IntValue") or object:IsA("NumberValue")) then
+        return false
+    end
+    return AC_KILL_NAMES[string.lower(object.Name)] == true
+end
+
+local function AC_WatchStat(player, stat)
+    if not AC_ENABLED or player == LocalPlayer or not AC_IsKillStat(stat) or AC_WATCHED_STATS[stat] then
+        return
+    end
+    AC_WATCHED_STATS[stat] = true
+    local previous = stat.Value
+    AC_AddConnection(stat:GetPropertyChangedSignal("Value"):Connect(function()
+        if not AC_ENABLED or not AC_KILLS_ENABLED or not stat.Parent then return end
+        local current = stat.Value
+        local delta = current - previous
+        previous = current
+        if delta <= 0 then return end
+
+        local now = os.clock()
+        local events = AC_KILL_EVENTS[player] or {}
+        AC_KILL_EVENTS[player] = events
+        table.insert(events, { time = now, count = delta })
+
+        local total = 0
+        for index = #events, 1, -1 do
+            if now - events[index].time > 2 then
+                table.remove(events, index)
+            else
+                total = total + events[index].count
+            end
+        end
+
+        if total >= 3 then
+            AC_Alert("POSIBLE KILL RÁPIDO | " .. player.Name .. " | +" .. tostring(total) .. " en 2 s")
+            table.clear(events)
+        end
+    end))
+end
+
+local function AC_WatchCharacter(player, character)
+    if player == LocalPlayer then return end
+    AC_MOVEMENT_HISTORY[player] = {
+        spawnedAt = os.clock(),
+        samples = {},
+        character = character
+    }
+end
+
+local function AC_WatchPlayer(player)
+    if player == LocalPlayer then return end
+    for _, object in ipairs(player:GetDescendants()) do
+        AC_WatchStat(player, object)
+    end
+    AC_AddConnection(player.DescendantAdded:Connect(function(object)
+        AC_WatchStat(player, object)
+    end))
+    AC_AddConnection(player.CharacterAdded:Connect(function(character)
+        AC_WatchCharacter(player, character)
+    end))
+    if player.Character then
+        AC_WatchCharacter(player, player.Character)
+    end
+end
+
+local function AC_Start()
+    AC_ClearConnections()
+    for _, player in ipairs(Players:GetPlayers()) do
+        AC_WatchPlayer(player)
+    end
+    AC_AddConnection(Players.PlayerAdded:Connect(AC_WatchPlayer))
+    AC_AddConnection(Players.PlayerRemoving:Connect(function(player)
+        AC_KILL_EVENTS[player] = nil
+        AC_MOVEMENT_HISTORY[player] = nil
+        AC_LAST_ALERT[player] = nil
+    end))
+    AC_AddConnection(RunService.Heartbeat:Connect(function()
+        if not AC_ENABLED or not AC_MOVEMENT_ENABLED then return end
+        local now = os.clock()
+        if now - AC_LAST_SAMPLE < 0.15 then return end
+        AC_LAST_SAMPLE = now
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local character = player.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local state = AC_MOVEMENT_HISTORY[player]
+                    if not state or state.character ~= character then
+                        AC_WatchCharacter(player, character)
+                        state = AC_MOVEMENT_HISTORY[player]
+                    end
+
+                    if now - state.spawnedAt >= 2 then
+                        local samples = state.samples
+                        table.insert(samples, { y = root.Position.Y, time = now })
+                        while #samples > 1 and now - samples[1].time > 1.1 do
+                            table.remove(samples, 1)
+                        end
+
+                        local first = samples[1]
+                        local elapsed = first and (now - first.time) or 0
+                        if first and elapsed >= 0.85 and elapsed <= 1.1 then
+                            local dy = root.Position.Y - first.y
+                            local lastAlert = AC_LAST_ALERT[player] or 0
+                            if math.abs(dy) >= 50 and now - lastAlert >= 3 then
+                                AC_LAST_ALERT[player] = now
+                                local label = dy < 0 and "POSIBLE FANTASMA" or "POSIBLE FLY"
+                                AC_Alert(label .. " | " .. player.Name .. " | " .. string.format("%.1f studs / %.2f s", dy, elapsed))
+                                table.clear(samples)
+                                table.insert(samples, { y = root.Position.Y, time = now })
+                            end
+                        end
+                    else
+                        table.clear(state.samples)
+                    end
+                end
+            end
+        end
+    end))
+    pcall(function()
+        AC_STATUS:SetDesc("Monitoreo activo. Solo analiza datos que el cliente recibe del juego.")
+    end)
+end
+
+AntiCheat:Section({ Title = "MONITOREO DE JUGADORES", Icon = "shield-check", Opened = true })
+AntiCheat:Toggle({
+    Title = "ACTIVAR MONITOREO",
+    Icon = "activity",
+    Value = false,
+    Callback = function(enabled)
+        AC_ENABLED = enabled == true
+        if AC_ENABLED then
+            AC_Start()
+        else
+            AC_ClearConnections()
+            pcall(function() AC_STATUS:SetDesc("Monitoreo apagado.") end)
+        end
+    end
+})
+AntiCheat:Toggle({
+    Title = "DETECTAR KILLS RÁPIDAS",
+    Icon = "skull",
+    Value = true,
+    Callback = function(enabled)
+        AC_KILLS_ENABLED = enabled == true
+    end
+})
+AntiCheat:Toggle({
+    Title = "DETECTAR FANTASMA / FLY",
+    Icon = "move-vertical",
+    Value = true,
+    Callback = function(enabled)
+        AC_MOVEMENT_ENABLED = enabled == true
+    end
+})
+AntiCheat:Button({
+    Title = "LIMPIAR REGISTRO",
+    Icon = "trash-2",
+    Callback = function()
+        table.clear(AC_ALERTS)
+        AC_RefreshFeed()
+    end
+})
+AntiCheat:Section({ Title = "AVISO", Icon = "info" })
+AntiCheat:Paragraph({
+    Title = "DETECCIÓN ORIENTATIVA",
+    Desc = "Las alertas indican anomalías posibles, no confirman trampas ni aplican sanciones. Solo se pueden observar estadísticas y posiciones replicadas al cliente. Teletransportes, respawns y mecánicas legítimas pueden generar falsos positivos."
+})
+
  
 -- MATRIXHUB // CREDITOS
 Creditos:Section({ Title = "CRÉDITOS", Icon = "crown", Opened = true })
