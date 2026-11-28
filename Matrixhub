@@ -196,7 +196,44 @@ end
 
 launchMatrixHub = function()
 local _version = "1.6.66"
-local  MATRIXHUB_UI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+local MATRIXHUB_UI
+
+-- Carga de WindUI con validación por etapas para evitar llamadas nil.
+local windUIUrl = "https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"
+local httpOk, windUISource = pcall(function()
+    return game:HttpGet(windUIUrl)
+end)
+if not httpOk or type(windUISource) ~= "string" or windUISource == "" then
+    warn("[MATRIXHUB] No se pudo descargar WindUI: " .. tostring(windUISource))
+    return
+end
+
+if type(loadstring) ~= "function" then
+    warn("[MATRIXHUB] Este entorno no proporciona loadstring.")
+    return
+end
+
+local compileOk, windUILoader, compileError = pcall(function()
+    return loadstring(windUISource)
+end)
+if not compileOk or type(windUILoader) ~= "function" then
+    warn("[MATRIXHUB] No se pudo compilar WindUI: " .. tostring(compileError or windUILoader))
+    return
+end
+
+local initOk, windUIResult = pcall(windUILoader)
+if not initOk then
+    warn("[MATRIXHUB] Falló la inicialización de WindUI: " .. tostring(windUIResult))
+    return
+end
+if type(windUIResult) ~= "table"
+    or type(windUIResult.AddTheme) ~= "function"
+    or type(windUIResult.CreateWindow) ~= "function" then
+    warn("[MATRIXHUB] WindUI se cargó, pero su API no contiene AddTheme/CreateWindow.")
+    return
+end
+
+MATRIXHUB_UI = windUIResult
 
 -- MATRIX THEME: controles apagados en gris y activos en verde.
 -- Solo cambia la apariencia; no modifica callbacks ni funciones.
