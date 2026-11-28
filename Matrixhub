@@ -462,8 +462,7 @@ end
 LoadMatrixHubConfig()
 MATRIXHUB_CONFIG.ExecutionCount = (tonumber(MATRIXHUB_CONFIG.ExecutionCount) or 0) + 1
 SaveMatrixHubConfig(true)
--- Menú fijo en su configuración predeterminada; se ignoran personalizaciones antiguas.
-MATRIXHUB_CONFIG.Theme = "Matrix"
+-- La escala y los efectos conservan los valores predeterminados; el tema se carga desde la configuración.
 MATRIXHUB_CONFIG.UIScale = 1.08
 MATRIXHUB_CONFIG.AnimationSpeed = 1
 MATRIXHUB_CONFIG.AccentIntensity = 1
@@ -1137,6 +1136,34 @@ end
 -- Se eliminó TRANSMIT FEEDBACK por solicitud del usuario.
 
 Settings:Section({ Title = "CONFIGURACIÓN", Icon = "settings", Opened = true })
+
+-- APARIENCIA // selector de temas integrado en CONFIGURACIÓN.
+Settings:Section({ Title = "APARIENCIA", Icon = "palette" })
+Settings:Dropdown({
+    Title = "TEMA DE INTERFAZ",
+    Desc = "Cambia la paleta visual de Matrix Hub.",
+    Values = validThemes,
+    Value = MATRIXHUB_CONFIG.Theme,
+    Callback = function(themeName)
+        if type(themeName) ~= "string" or not table.find(validThemes, themeName) then
+            return
+        end
+
+        local ok, themeError = pcall(function()
+            MATRIXHUB_UI:SetTheme(themeName)
+        end)
+
+        if not ok then
+            RecordMatrixHubError("THEME", themeError)
+            warn("[Matrix Hub] No se pudo aplicar el tema: " .. tostring(themeError))
+            return
+        end
+
+        MATRIXHUB_CONFIG.Theme = themeName
+        SaveMatrixHubConfig()
+    end
+})
+
 Settings:Section({ Title = "PERFORMANCE", Icon = "zap" })
 
 -- Rendimiento: FPS BOOST y ANTI LAG con estados independientes.
