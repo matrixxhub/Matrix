@@ -4392,6 +4392,129 @@ LP.CharacterAdded:Connect(function(character)
 end)
 end -- FIN DEL ÁMBITO FAKE AVATAR
 
+-- KORBLOX // APARIENCIA LOCAL
+do
+    local KORBLOX_ASSET_ID = "rbxassetid://139607718"
+    local KORBLOX_TARGET_PART = "RightUpperLeg"
+    local KORBLOX_HIDDEN_PARTS = { "RightUpperLeg", "RightLowerLeg", "RightFoot" }
+    local MATRIXHUB_KorbloxEnabled = false
+    local MATRIXHUB_KorbloxSavedTransparency = setmetatable({}, { __mode = "k" })
+
+    local function MATRIXHUB_RestoreKorblox(character)
+        character = character or LP.Character
+        if not character then return end
+
+        local asset = character:FindFirstChild("MATRIXHUB_Korblox_RightLeg")
+        if asset then
+            pcall(function() asset:Destroy() end)
+        end
+
+        local saved = MATRIXHUB_KorbloxSavedTransparency[character]
+        if saved then
+            for partName, transparency in pairs(saved) do
+                local part = character:FindFirstChild(partName)
+                if part and part:IsA("BasePart") then
+                    pcall(function() part.Transparency = transparency end)
+                end
+            end
+            MATRIXHUB_KorbloxSavedTransparency[character] = nil
+        end
+    end
+
+    local function MATRIXHUB_ApplyKorblox(character)
+        if not MATRIXHUB_KorbloxEnabled then return false end
+        character = character or LP.Character
+        if not character or character ~= LP.Character then return false end
+
+        local targetPart = character:WaitForChild(KORBLOX_TARGET_PART, 8)
+        if not MATRIXHUB_KorbloxEnabled or LP.Character ~= character then return false end
+        if not targetPart or not targetPart:IsA("BasePart") then
+            warn("Matrix Hub: no se encontró RightUpperLeg para aplicar Korblox.")
+            return false
+        end
+
+        local ok, objects = pcall(function()
+            return game:GetObjects(KORBLOX_ASSET_ID)
+        end)
+        if not ok or type(objects) ~= "table" or not objects[1] then
+            warn("Matrix Hub: no se pudo cargar el asset Korblox.")
+            return false
+        end
+
+        local assetModel = objects[1]
+        local mainMesh = assetModel:IsA("BasePart") and assetModel
+            or assetModel:FindFirstChildWhichIsA("BasePart", true)
+        if not mainMesh then
+            pcall(function() assetModel:Destroy() end)
+            warn("Matrix Hub: el asset Korblox no contiene una pieza válida.")
+            return false
+        end
+
+        local attached, attachError = pcall(function()
+            assetModel.Name = "MATRIXHUB_Korblox_RightLeg"
+            mainMesh.CanCollide = false
+            mainMesh.CanTouch = false
+            mainMesh.CanQuery = false
+            mainMesh.Massless = true
+            mainMesh.Anchored = false
+            mainMesh.CFrame = targetPart.CFrame
+
+            local weld = Instance.new("WeldConstraint")
+            weld.Part0 = targetPart
+            weld.Part1 = mainMesh
+            weld.Parent = mainMesh
+
+            assetModel.Parent = character
+        end)
+        if not attached then
+            pcall(function() assetModel:Destroy() end)
+            warn("Matrix Hub: falló la unión visual de Korblox: " .. tostring(attachError))
+            return false
+        end
+
+        local saved = MATRIXHUB_KorbloxSavedTransparency[character]
+        if not saved then
+            saved = {}
+            MATRIXHUB_KorbloxSavedTransparency[character] = saved
+        end
+        for _, partName in ipairs(KORBLOX_HIDDEN_PARTS) do
+            local part = character:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                if saved[partName] == nil then
+                    saved[partName] = part.Transparency
+                end
+                part.Transparency = 1
+            end
+        end
+        return true
+    end
+
+    Animaciones:Section({ Title = "APARIENCIA // LOCAL", Icon = "user-round" })
+    Animaciones:Toggle({
+        Title = "KORBLOX",
+        Icon = "footprints",
+        Value = false,
+        Callback = function(enabled)
+            MATRIXHUB_KorbloxEnabled = enabled == true
+            if MATRIXHUB_KorbloxEnabled then
+                task.spawn(MATRIXHUB_ApplyKorblox, LP.Character)
+            else
+                MATRIXHUB_RestoreKorblox(LP.Character)
+            end
+        end
+    })
+
+    LP.CharacterAdded:Connect(function(character)
+        if not MATRIXHUB_KorbloxEnabled then return end
+        task.defer(function()
+            character:WaitForChild(KORBLOX_TARGET_PART, 10)
+            if MATRIXHUB_KorbloxEnabled and LP.Character == character then
+                MATRIXHUB_ApplyKorblox(character)
+            end
+        end)
+    end)
+end
+
 Animaciones:Section({ Title = "Paquetes Completos", Icon = "package" })
 Animaciones:Dropdown({ Title = "Elegir Paquete", Values = PackNames, Value = "Ninguno", Callback = function(v) SelectedPack = v end })
 Animaciones:Button({ Title = "Aplicar Paquete Completo", Icon = "sparkles", Callback = function()
